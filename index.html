@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TIM Empresas CRM</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a18;min-height:100vh;}
+:root{--border:#e0e0d8;--radius:8px;--radius-lg:12px;}
+input,select,textarea,button{font-family:inherit;}
+input[type=text],input[type=number],input[type=date],input[type=password],input[type=tel],select,textarea{width:100%;height:40px;border-radius:var(--radius);border:1px solid #ddd;background:#fafafa;color:#1a1a18;padding:0 12px;font-size:14px;outline:none;-webkit-appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:#378ADD;background:#fff;}
+textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
+.btn{height:40px;padding:0 16px;font-size:13px;border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#1a1a18;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:hover{background:#f5f5f3;}
+.btn-primary{background:#1a1a18;color:#fff;border-color:#1a1a18;}
+.btn-primary:hover{background:#333;}
+.btn-sm{height:32px;padding:0 10px;font-size:12px;border-radius:var(--radius);border:1px solid #ddd;background:#fff;color:#1a1a18;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+.btn-sm:hover{background:#f5f5f3;}
+.btn-verde{border-color:#1D9E75;color:#085041;}.btn-verde:hover{background:#E1F5EE;}
+.btn-azul{border-color:#185FA5;color:#0C447C;}.btn-azul:hover{background:#E6F1FB;}
+.btn-del{border-color:#E24B4A;color:#A32D2D;}.btn-del:hover{background:#FCEBEB;}
+.btn-purple{border-color:#7F77DD;color:#3C3489;}.btn-purple:hover{background:#EEEDFE;}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;}
+.stat{background:#fff;border-radius:var(--radius);padding:.85rem 1rem;border:1px solid var(--border);}
+.stat .lbl{font-size:11px;color:#888;margin-bottom:2px;}
+.stat .num{font-size:20px;font-weight:500;}
+.stat .sub{font-size:11px;color:#888;margin-top:2px;}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500;}
+.form-label{font-size:12px;color:#666;margin-bottom:4px;display:block;}
+.form-group{margin-bottom:12px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.empty{font-size:13px;color:#aaa;padding:.4rem 0;}
+.notif{border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.notif-ok{background:#EAF3DE;border:1px solid #97C459;color:#27500A;}
+.notif-warn{background:#FAEEDA;border:1px solid #EF9F27;color:#633806;}
+.tab{font-size:13px;padding:10px 16px;cursor:pointer;color:#888;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;}
+.tab.ativo{color:#1a1a18;font-weight:500;border-bottom-color:#1a1a18;}
+.tab:hover{color:#1a1a18;}
+.proposta-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px;}
+.proposta-card.e0{border-left:3px solid #378ADD;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e1{border-left:3px solid #EF9F27;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e2{border-left:3px solid #7F77DD;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e3{border-left:3px solid #D85A30;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e4{border-left:3px solid #1D9E75;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e5{border-left:3px solid #639922;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e6{border-left:3px solid #27500A;border-radius:0 var(--radius-lg) var(--radius-lg) 0;background:#F6FBF0;}
+.proposta-card.perdida{border-left:3px solid #888;border-radius:0 var(--radius-lg) var(--radius-lg) 0;opacity:.7;}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:12px;flex-shrink:0;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:14px;border:1px solid var(--border);padding:1.5rem;width:95%;max-width:580px;margin-bottom:40px;}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:1rem;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;}
+.funil-bar{height:8px;border-radius:4px;background:#f0efea;margin-top:4px;overflow:hidden;}
+.funil-fill{height:100%;border-radius:4px;transition:width .3s;}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f3;}
+.login-box{background:#fff;border-radius:16px;border:1px solid var(--border);padding:2rem;width:95%;max-width:380px;}
+.login-err{background:#FCEBEB;border:1px solid #E24B4A;border-radius:var(--radius);padding:8px 12px;font-size:13px;color:#791F1F;margin-bottom:1rem;display:none;align-items:center;gap:6px;}
+header{background:#fff;border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:12px;height:56px;position:sticky;top:0;z-index:10;flex-wrap:wrap;}
+header h1{font-size:15px;font-weight:500;flex:1;}
+.container{max-width:1100px;margin:0 auto;padding:1.5rem 1rem;}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+.pipe-col{background:#f5f5f3;border-radius:var(--radius-lg);padding:.75rem;min-height:120px;}
+.pipe-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px;cursor:pointer;}
+.pipe-card:hover{border-color:#aaa;}
+.pipe-grid-1{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;}
+.pipe-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.tel-link{font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:3px;}
+.tel-link.tel{color:#185FA5;}.tel-link.wpp{color:#085041;}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:99px;background:#EAF3DE;color:#27500A;display:inline-flex;align-items:center;gap:4px;}
+.sync-badge.erro{background:#FCEBEB;color:#791F1F;}
+.sync-badge.carregando{background:#FAEEDA;color:#633806;}
+@media(max-width:700px){
+  .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr;}
+  .pipe-grid-1,.pipe-grid-2{grid-template-columns:1fr 1fr;}
+  header{height:auto;padding:.75rem 1rem;}
+}
+@media(max-width:480px){.pipe-grid-1,.pipe-grid-2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="view-login" class="login-screen">
+  <div class="login-box">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;">
+      <div style="width:44px;height:44px;border-radius:10px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;">
+        <i class="ti ti-building" style="font-size:22px;color:#0C447C;"></i>
+      </div>
+      <div>
+        <div style="font-size:17px;font-weight:500;">TIM Empresas CRM</div>
+        <div style="font-size:12px;color:#888;">Gestão de propostas comerciais</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Usuário</label>
+      <select id="login-usuario">
+        <option value="master">Marcelo (Gestor)</option>
+        <option value="karla">Karla (Consultora)</option>
+        <option value="lucas">Lucas (Consultor)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <div style="position:relative;">
+        <input type="password" id="login-senha" placeholder="Digite sua senha"/>
+        <button onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:0;" id="btn-eye"><i class="ti ti-eye"></i></button>
+      </div>
+    </div>
+    <div class="login-err" id="login-err"><i class="ti ti-alert-circle"></i> <span id="login-err-msg">Senha incorreta.</span></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" id="btn-login"><i class="ti ti-login"></i> Entrar</button>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e8e8e0;font-size:12px;color:#aaa;text-align:center;">
+      Senhas padrão: <strong>marcelo123</strong> / <strong>karla123</strong> / <strong>lucas123</strong>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL -->
+<div id="view-painel" style="display:none;">
+  <header>
+    <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;" id="hd-av"></div>
+    <h1 id="hd-nome"></h1>
+    <div id="sync-status" class="sync-badge carregando"><i class="ti ti-loader"></i> Conectando...</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn btn-verde" onclick="abrirModalNova()"><i class="ti ti-plus"></i> Nova proposta</button>
+      <button class="btn" onclick="logout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="notif-area"></div>
+    <div class="tabs">
+      <button class="tab ativo" id="tab-pipeline" onclick="setTab('pipeline')"><i class="ti ti-layout-kanban"></i> Pipeline</button>
+      <button class="tab" id="tab-lista" onclick="setTab('lista')"><i class="ti ti-list"></i> Lista</button>
+      <button class="tab" id="tab-metricas" onclick="setTab('metricas')"><i class="ti ti-chart-bar"></i> Métricas</button>
+    </div>
+
+    <div id="view-pipeline">
+      <div class="pipe-grid-1" id="pipe-col1"></div>
+      <div class="pipe-grid-2" id="pipe-col2"></div>
+    </div>
+
+    <div id="view-lista" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+        <select id="filtro-etapa" onchange="renderLista()" style="max-width:220px;"><option value="">Todas as etapas</option></select>
+        <select id="filtro-consultor" onchange="renderLista()" style="max-width:160px;display:none;"><option value="">Todos</option><option value="karla">Karla</option><option value="lucas">Lucas</option></select>
+      </div>
+      <div id="lista-propostas"></div>
+    </div>
+
+    <div id="view-metricas" style="display:none;">
+      <div class="grid-5" style="margin-bottom:1.5rem;" id="met-stats"></div>
+      <div class="grid-2" style="margin-bottom:1.5rem;">
+        <div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Funil de conversão</div><div id="met-funil"></div></div>
+        <div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Por consultor</div><div id="met-consultores"></div></div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Receita potencial por etapa (R$/mês)</div>
+        <div style="height:240px;position:relative;"><canvas id="chart-receita" role="img" aria-label="Receita por etapa"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA/EDITAR -->
+<div class="modal-bg" id="modal-proposta">
+  <div class="modal">
+    <h3 id="modal-titulo"><i class="ti ti-file-plus"></i> Nova proposta</h3>
+    <input type="hidden" id="p-id"/>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Razão social *</label><input type="text" id="p-razao" placeholder="Ex: Silva Ltda"/></div>
+      <div class="form-group"><label class="form-label">CNPJ</label><input type="text" id="p-cnpj" placeholder="00.000.000/0000-00" maxlength="18"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Responsável</label><input type="text" id="p-responsavel" placeholder="Nome do contato"/></div>
+      <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input type="tel" id="p-telefone" placeholder="Ex: 61999990000"/></div>
+    </div>
+    <div class="grid-3">
+      <div class="form-group"><label class="form-label">Qtd. de linhas</label><input type="number" id="p-linhas" placeholder="Ex: 10" min="1"/></div>
+      <div class="form-group"><label class="form-label">Receita mensal (R$)</label><input type="number" id="p-receita" placeholder="Ex: 1500" min="0"/></div>
+      <div class="form-group"><label class="form-label">Data do retorno</label><input type="date" id="p-retorno"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Etapa</label><select id="p-etapa"></select></div>
+      <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor</label><select id="p-consultor"><option value="karla">Karla</option><option value="lucas">Lucas</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Observações</label><textarea id="p-obs" placeholder="Informações relevantes..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-proposta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProposta()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-bg" id="modal-detalhe">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h3 id="det-titulo" style="margin:0;"></h3>
+      <button class="btn-sm" onclick="fecharModal('modal-detalhe')"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="det-conteudo"></div>
+    <div class="modal-footer" id="det-acoes"></div>
+  </div>
+</div>
+
+<!-- MODAL SENHA -->
+<div class="modal-bg" id="modal-senha">
+  <div class="modal" style="max-width:380px;">
+    <h3><i class="ti ti-lock"></i> Alterar senha</h3>
+    <div class="form-group"><label class="form-label">Senha atual</label><input type="password" id="s-atual"/></div>
+    <div class="form-group"><label class="form-label">Nova senha</label><input type="password" id="s-nova"/></div>
+    <div class="form-group"><label class="form-label">Confirmar nova senha</label><input type="password" id="s-confirmar"/></div>
+    <div class="login-err" id="senha-err"><i class="ti ti-alert-circle"></i> <span id="senha-err-msg"></span></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-senha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSenha()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getFirestore,collection,onSnapshot,addDoc,updateDoc,deleteDoc,doc,query,orderBy}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig={
+  apiKey:"AIzaSyAjYj29nbZg3ZStiz-2PHkErcemTs8OJyc",
+  authDomain:"crm-conex-4ceaf.firebaseapp.com",
+  projectId:"crm-conex-4ceaf",
+  storageBucket:"crm-conex-4ceaf.firebasestorage.app",
+  messagingSenderId:"171558044670",
+  appId:"1:171558044670:web:d4917e39b46b62e7be76af"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+const ETAPAS=[
+  {id:0,nome:'Proposta enviada',cor:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'},
+  {id:1,nome:'Aguardando resposta',cor:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},
+  {id:2,nome:'Follow-up',cor:'#7F77DD',bg:'#EEEDFE',tc:'#3C3489'},
+  {id:3,nome:'Aguardando docs',cor:'#D85A30',bg:'#FAECE7',tc:'#712B13'},
+  {id:4,nome:'Gerar contrato',cor:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
+  {id:5,nome:'Aguardando assinatura',cor:'#639922',bg:'#EAF3DE',tc:'#27500A'},
+  {id:6,nome:'Assinado',cor:'#27500A',bg:'#EAF3DE',tc:'#27500A'},
+];
+const USERS={
+  master:{nome:'Marcelo',role:'Gestor master',bg:'#FCEBEB',c:'#791F1F'},
+  karla:{nome:'Karla',role:'Consultora',bg:'#EEEDFE',c:'#3C3489'},
+  lucas:{nome:'Lucas',role:'Consultor',bg:'#E1F5EE',c:'#085041'},
+};
+const SK_SENHAS='crm_senhas_v2';
+const SENHAS_PADRAO={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
+
+let propostas=[];
+let currentUser=null;
+let currentTab='pipeline';
+let _chart=null;
+let _nt=null;
+let _unsubscribe=null;
+
+function getSenhas(){try{const d=localStorage.getItem(SK_SENHAS);return d?JSON.parse(d):SENHAS_PADRAO;}catch(e){return SENHAS_PADRAO;}}
+function setSenhas(s){try{localStorage.setItem(SK_SENHAS,JSON.stringify(s));}catch(e){}}
+function toggleSenha(){const i=document.getElementById('login-senha');const ico=document.getElementById('btn-eye').querySelector('i');if(i.type==='password'){i.type='text';ico.className='ti ti-eye-off';}else{i.type='password';ico.className='ti ti-eye';}}
+window.toggleSenha=toggleSenha;
+
+function showNotif(msg,warn){const a=document.getElementById('notif-area');a.innerHTML='<div class="notif '+(warn?'notif-warn':'notif-ok')+'"><i class="ti ti-bell-ringing"></i> '+msg+'</div>';if(_nt)clearTimeout(_nt);_nt=setTimeout(()=>{a.innerHTML='';},4000);}
+function setSyncStatus(estado){const el=document.getElementById('sync-status');if(estado==='ok'){el.className='sync-badge';el.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';}else if(estado==='erro'){el.className='sync-badge erro';el.innerHTML='<i class="ti ti-cloud-off"></i> Sem conexão';}else{el.className='sync-badge carregando';el.innerHTML='<i class="ti ti-loader"></i> Sincronizando...';}}
+function fmtMoeda(v){return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtCNPJ(v){v=v.replace(/\D/g,'').slice(0,14);if(v.length>12)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8,12)+'-'+v.slice(12);else if(v.length>8)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8);else if(v.length>5)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5);else if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);return v;}
+function fmtTel(t){const d=t.replace(/\D/g,'');if(d.length===11)return'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);if(d.length===10)return'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);return t;}
+function cleanTel(t){return t.replace(/\D/g,'');}
+function initials(n){return n.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();}
+function getPropostas(){return currentUser==='master'?propostas:propostas.filter(p=>p.consultor===currentUser);}
+
+function telLinks(tel){
+  if(!tel)return'';
+  const d=cleanTel(tel);
+  return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;">
+    <a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a>
+    <a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a>
+  </div>`;
+}
+
+// FIREBASE — escutar mudanças em tempo real
+function iniciarSync(){
+  if(_unsubscribe)_unsubscribe();
+  setSyncStatus('carregando');
+  try{
+    const q=query(collection(db,'propostas'),orderBy('criadoEm','desc'));
+    _unsubscribe=onSnapshot(q,(snap)=>{
+      propostas=snap.docs.map(d=>({...d.data(),_docId:d.id}));
+      setSyncStatus('ok');
+      if(currentTab==='pipeline')renderPipeline();
+      else if(currentTab==='lista')renderLista();
+      else renderMetricas();
+    },(err)=>{
+      console.error(err);
+      setSyncStatus('erro');
+    });
+  }catch(e){setSyncStatus('erro');}
+}
+
+function fazerLogin(){
+  const user=document.getElementById('login-usuario').value;
+  const senha=document.getElementById('login-senha').value;
+  const senhas=getSenhas();
+  const errEl=document.getElementById('login-err');
+  if(senha!==senhas[user]){errEl.style.display='flex';return;}
+  errEl.style.display='none';
+  login(user);
+}
+window.fazerLogin=fazerLogin;
+
+function login(user){
+  currentUser=user;
+  const u=USERS[user];
+  const av=document.getElementById('hd-av');
+  av.style.cssText=`background:${u.bg};color:${u.c};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;`;
+  av.textContent=initials(u.nome);
+  document.getElementById('hd-nome').innerHTML=u.nome+' — '+u.role
+    +' &nbsp;<button class="btn-sm btn-purple" onclick="document.getElementById(\'modal-senha\').classList.add(\'open\')" style="font-size:11px;height:26px;"><i class="ti ti-lock"></i> Alterar senha</button>';
+  document.getElementById('filtro-consultor').style.display=user==='master'?'':'none';
+  document.getElementById('wrap-consultor-sel').style.display=user==='master'?'':'none';
+  document.getElementById('view-login').style.display='none';
+  document.getElementById('view-painel').style.display='block';
+  document.getElementById('login-senha').value='';
+  const sel=document.getElementById('p-etapa');
+  sel.innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
+  const fsel=document.getElementById('filtro-etapa');
+  fsel.innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
+  iniciarSync();
+  setTab('pipeline');
+}
+
+function logout(){
+  if(_unsubscribe){_unsubscribe();_unsubscribe=null;}
+  currentUser=null;
+  document.getElementById('view-login').style.display='flex';
+  document.getElementById('view-painel').style.display='none';
+}
+window.logout=logout;
+
+function salvarSenha(){
+  const atual=document.getElementById('s-atual').value;
+  const nova=document.getElementById('s-nova').value;
+  const conf=document.getElementById('s-confirmar').value;
+  const errEl=document.getElementById('senha-err');
+  const msgEl=document.getElementById('senha-err-msg');
+  const senhas=getSenhas();
+  errEl.style.display='none';
+  if(atual!==senhas[currentUser]){msgEl.textContent='Senha atual incorreta.';errEl.style.display='flex';return;}
+  if(nova.length<4){msgEl.textContent='Mínimo 4 caracteres.';errEl.style.display='flex';return;}
+  if(nova!==conf){msgEl.textContent='As senhas não coincidem.';errEl.style.display='flex';return;}
+  senhas[currentUser]=nova;setSenhas(senhas);
+  fecharModal('modal-senha');showNotif('Senha alterada com sucesso!');
+}
+window.salvarSenha=salvarSenha;
+
+function setTab(tab){
+  currentTab=tab;
+  ['pipeline','lista','metricas'].forEach(t=>{
+    document.getElementById('view-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t).classList.toggle('ativo',t===tab);
+  });
+  if(tab==='pipeline')renderPipeline();
+  else if(tab==='lista')renderLista();
+  else renderMetricas();
+}
+window.setTab=setTab;
+
+function renderPipeline(){
+  const lista=getPropostas();
+  const colHTML=(etapa)=>{
+    const ps=lista.filter(p=>p.etapa==etapa.id);
+    const totalLinhas=ps.reduce((s,p)=>s+(+p.linhas||0),0);
+    const cards=ps.length?ps.map(p=>{
+      const u=USERS[p.consultor]||USERS.karla;
+      return`<div class="pipe-card" onclick="verDetalhe('${p._docId}')">
+        <div style="font-size:13px;font-weight:500;margin-bottom:1px;">${p.razao}</div>
+        <div style="font-size:12px;color:#666;">${p.responsavel||''}</div>
+        ${p.telefone?`<div style="font-size:11px;color:#888;margin-top:2px;"><i class="ti ti-phone" style="font-size:11px;"></i> ${fmtTel(p.telefone)}</div>`:''}
+        <div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;">
+          ${p.linhas?`<span style="font-size:11px;padding:1px 7px;border-radius:99px;background:#EEEDFE;color:#3C3489;">${p.linhas} ln</span>`:''}
+          ${p.receita?`<span style="font-size:11px;padding:1px 7px;border-radius:99px;background:#EAF3DE;color:#27500A;">R$${Number(p.receita).toLocaleString('pt-BR')}</span>`:''}
+          ${currentUser==='master'?`<span style="font-size:11px;padding:1px 7px;border-radius:99px;background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+        </div></div>`;
+    }).join(''):'<div style="font-size:12px;color:#aaa;padding:.5rem 0;">Vazio</div>';
+    return`<div class="pipe-col">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${etapa.cor};flex-shrink:0;"></div>
+        <div style="font-size:12px;font-weight:500;flex:1;">${etapa.nome}</div>
+        <div style="font-size:11px;color:#888;">${ps.length}${totalLinhas?' · '+totalLinhas+'ln':''}</div>
+      </div>${cards}</div>`;
+  };
+  document.getElementById('pipe-col1').innerHTML=ETAPAS.slice(0,4).map(colHTML).join('');
+  document.getElementById('pipe-col2').innerHTML=ETAPAS.slice(4).map(colHTML).join('');
+}
+
+function renderLista(){
+  let lista=getPropostas();
+  const fe=document.getElementById('filtro-etapa').value;
+  const fc=document.getElementById('filtro-consultor').value;
+  if(fe!=='')lista=lista.filter(p=>String(p.etapa)===fe);
+  if(fc)lista=lista.filter(p=>p.consultor===fc);
+  lista=lista.slice().sort((a,b)=>(a.retorno||'')>(b.retorno||'')?1:-1);
+  const c=document.getElementById('lista-propostas');
+  if(!lista.length){c.innerHTML='<div class="empty">Nenhuma proposta encontrada.</div>';return;}
+  c.innerHTML=lista.map(p=>{
+    const e=p.etapa==='perdida'?{nome:'Perdida',bg:'#F1EFE8',tc:'#444'}:ETAPAS[p.etapa];
+    const u=USERS[p.consultor]||USERS.karla;
+    const cls=p.etapa==='perdida'?'proposta-card perdida':'proposta-card e'+p.etapa;
+    return`<div class="${cls}">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div class="avatar" style="background:${u.bg};color:${u.c};">${initials(USERS[p.consultor].nome)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
+            <span style="font-size:15px;font-weight:500;">${p.razao}</span>
+            <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
+            ${currentUser==='master'?`<span class="badge" style="background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+          </div>
+          <div style="font-size:13px;color:#666;">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
+          ${telLinks(p.telefone||'')}
+          <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">
+            ${p.linhas?`<span style="font-size:12px;color:#666;"><i class="ti ti-sim-card" style="font-size:12px;vertical-align:-1px;"></i> ${p.linhas} linhas</span>`:''}
+            ${p.receita?`<span style="font-size:12px;color:#666;"><i class="ti ti-currency-dollar" style="font-size:12px;vertical-align:-1px;"></i> ${fmtMoeda(p.receita)}/mês</span>`:''}
+            ${p.retorno?`<span style="font-size:12px;color:#666;"><i class="ti ti-calendar" style="font-size:12px;vertical-align:-1px;"></i> ${new Date(p.retorno+'T12:00').toLocaleDateString('pt-BR')}</span>`:''}
+          </div>
+          ${p.obs?`<div style="font-size:12px;color:#666;margin-top:6px;background:#f8f8f6;padding:6px 8px;border-radius:6px;">${p.obs}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
+        ${p.etapa!=='perdida'&&p.etapa<6?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar</button>`:''}
+        <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
+        ${p.etapa!=='perdida'?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
+        ${p.etapa==='perdida'?`<button class="btn-sm btn-azul" onclick="reativar('${p._docId}')"><i class="ti ti-arrow-back"></i> Reativar</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMetricas(){
+  const lista=getPropostas();
+  const fechadas=lista.filter(p=>p.etapa===6);
+  const totalReceita=fechadas.reduce((s,p)=>s+(+p.receita||0),0);
+  const totalLinhas=fechadas.reduce((s,p)=>s+(+p.linhas||0),0);
+  const ticketMedio=fechadas.length?totalReceita/fechadas.length:0;
+  const taxaConv=lista.length?Math.round(fechadas.length/lista.length*100):0;
+  document.getElementById('met-stats').innerHTML=
+    `<div class="stat"><div class="lbl">Total</div><div class="num">${lista.length}</div></div>`
+    +`<div class="stat"><div class="lbl">Fechadas</div><div class="num">${fechadas.length}</div></div>`
+    +`<div class="stat"><div class="lbl">Receita</div><div class="num" style="font-size:14px;">${fmtMoeda(totalReceita)}</div><div class="sub">/mês</div></div>`
+    +`<div class="stat"><div class="lbl">Ticket médio</div><div class="num" style="font-size:14px;">${fmtMoeda(ticketMedio)}</div></div>`
+    +`<div class="stat"><div class="lbl">Conversão</div><div class="num">${taxaConv}%</div></div>`;
+
+  document.getElementById('met-funil').innerHTML=ETAPAS.map(e=>{
+    const cnt=lista.filter(p=>p.etapa==e.id).length;
+    const pct=lista.length>0?Math.round(cnt/lista.length*100):0;
+    return`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:3px;"><span>${e.nome}</span><span style="font-weight:500;color:#1a1a18;">${cnt}</span></div><div class="funil-bar"><div class="funil-fill" style="width:${pct}%;background:${e.cor};"></div></div></div>`;
+  }).join('');
+
+  const consDiv=document.getElementById('met-consultores');
+  if(currentUser==='master'){
+    consDiv.innerHTML=['karla','lucas'].map(c=>{
+      const u=USERS[c];
+      const cl=lista.filter(p=>p.consultor===c);
+      const cf=cl.filter(p=>p.etapa===6);
+      const cr=cf.reduce((s,p)=>s+(+p.receita||0),0);
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e8e8e0;">
+        <div class="avatar" style="background:${u.bg};color:${u.c};width:34px;height:34px;font-size:11px;">${initials(u.nome)}</div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${u.nome}</div><div style="font-size:12px;color:#666;">${cl.length} propostas · ${cf.length} fechadas</div></div>
+        <div style="font-size:13px;font-weight:500;">${fmtMoeda(cr)}</div>
+      </div>`;
+    }).join('');
+  }else{
+    const mr=fechadas.reduce((s,p)=>s+(+p.receita||0),0);
+    consDiv.innerHTML=`<div style="text-align:center;padding:1.5rem 0;"><div style="font-size:26px;font-weight:500;">${fmtMoeda(mr)}</div><div style="font-size:13px;color:#666;margin-top:4px;">Sua receita fechada/mês</div><div style="font-size:13px;color:#666;">${fechadas.length} contratos · ${totalLinhas} linhas</div></div>`;
+  }
+
+  if(_chart){_chart.destroy();_chart=null;}
+  const data=ETAPAS.map(e=>lista.filter(p=>p.etapa==e.id).reduce((s,p)=>s+(+p.receita||0),0));
+  _chart=new Chart(document.getElementById('chart-receita'),{
+    type:'bar',
+    data:{labels:ETAPAS.map(e=>e.nome.length>14?e.nome.substring(0,13)+'…':e.nome),datasets:[{label:'Receita (R$)',data,backgroundColor:ETAPAS.map(e=>e.cor+'BB'),borderColor:ETAPAS.map(e=>e.cor),borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'R$'+Number(v).toLocaleString('pt-BR')}}}}
+  });
+}
+
+function abrirModalNova(){
+  document.getElementById('modal-titulo').innerHTML='<i class="ti ti-file-plus"></i> Nova proposta';
+  document.getElementById('p-id').value='';
+  ['p-razao','p-cnpj','p-responsavel','p-telefone','p-obs'].forEach(id=>document.getElementById(id).value='');
+  ['p-linhas','p-receita'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-retorno').value='';
+  document.getElementById('p-etapa').value='0';
+  document.getElementById('p-consultor').value=currentUser!=='master'?currentUser:'karla';
+  document.getElementById('modal-proposta').classList.add('open');
+}
+window.abrirModalNova=abrirModalNova;
+
+function editarProposta(docId){
+  const p=propostas.find(x=>x._docId===docId);if(!p)return;
+  document.getElementById('modal-titulo').innerHTML='<i class="ti ti-edit"></i> Editar proposta';
+  document.getElementById('p-id').value=docId;
+  document.getElementById('p-razao').value=p.razao||'';
+  document.getElementById('p-cnpj').value=p.cnpj||'';
+  document.getElementById('p-responsavel').value=p.responsavel||'';
+  document.getElementById('p-telefone').value=p.telefone||'';
+  document.getElementById('p-linhas').value=p.linhas||'';
+  document.getElementById('p-receita').value=p.receita||'';
+  document.getElementById('p-retorno').value=p.retorno||'';
+  document.getElementById('p-etapa').value=p.etapa;
+  document.getElementById('p-consultor').value=p.consultor||'karla';
+  document.getElementById('p-obs').value=p.obs||'';
+  document.getElementById('modal-proposta').classList.add('open');
+}
+window.editarProposta=editarProposta;
+
+async function salvarProposta(){
+  const razao=document.getElementById('p-razao').value.trim();
+  if(!razao){showNotif('Preencha a razão social.',true);return;}
+  const docId=document.getElementById('p-id').value;
+  const etapaVal=document.getElementById('p-etapa').value;
+  const etapa=etapaVal==='perdida'?'perdida':parseInt(etapaVal);
+  const consultor=currentUser==='master'?document.getElementById('p-consultor').value:currentUser;
+  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),telefone:document.getElementById('p-telefone').value.trim(),linhas:document.getElementById('p-linhas').value.trim(),receita:document.getElementById('p-receita').value.trim(),retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
+  try{
+    setSyncStatus('carregando');
+    if(docId){await updateDoc(doc(db,'propostas',docId),dados);}
+    else{dados.criadoEm=Date.now();await addDoc(collection(db,'propostas'),dados);}
+    fecharModal('modal-proposta');showNotif(docId?'Proposta atualizada!':'Proposta adicionada!');
+  }catch(e){showNotif('Erro ao salvar. Verifique a conexão.',true);setSyncStatus('erro');}
+}
+window.salvarProposta=salvarProposta;
+
+async function avancarEtapa(docId,etapaAtual){
+  if(etapaAtual==='perdida'||etapaAtual>=6)return;
+  const novaEtapa=etapaAtual+1;
+  try{await updateDoc(doc(db,'propostas',docId),{etapa:novaEtapa,atualizadoEm:Date.now()});showNotif('Avançou para: '+ETAPAS[novaEtapa].nome);}
+  catch(e){showNotif('Erro ao atualizar.',true);}
+}
+window.avancarEtapa=avancarEtapa;
+
+async function marcarPerdida(docId){
+  if(!confirm('Marcar como perdida?'))return;
+  try{await updateDoc(doc(db,'propostas',docId),{etapa:'perdida',atualizadoEm:Date.now()});showNotif('Marcada como perdida.');}
+  catch(e){showNotif('Erro ao atualizar.',true);}
+}
+window.marcarPerdida=marcarPerdida;
+
+async function reativar(docId){
+  try{await updateDoc(doc(db,'propostas',docId),{etapa:0,atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
+  catch(e){showNotif('Erro ao atualizar.',true);}
+}
+window.reativar=reativar;
+
+function verDetalhe(docId){
+  const p=propostas.find(x=>x._docId===docId);if(!p)return;
+  const e=p.etapa==='perdida'?{nome:'Perdida',bg:'#F1EFE8',tc:'#444'}:ETAPAS[p.etapa];
+  const u=USERS[p.consultor]||USERS.karla;
+  document.getElementById('det-titulo').textContent=p.razao;
+  document.getElementById('det-conteudo').innerHTML=
+    `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+      <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
+      <span class="badge" style="background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:10px;">
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">CNPJ</div><div>${p.cnpj||'—'}</div></div>
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Responsável</div><div>${p.responsavel||'—'}</div></div>
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Telefone</div><div>${p.telefone?`<a href="tel:+55${cleanTel(p.telefone)}" style="color:#185FA5;text-decoration:none;">${fmtTel(p.telefone)}</a> · <a href="https://wa.me/55${cleanTel(p.telefone)}" target="_blank" style="color:#085041;text-decoration:none;">WhatsApp</a>`:'—'}</div></div>
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Retorno</div><div>${p.retorno?new Date(p.retorno+'T12:00').toLocaleDateString('pt-BR'):'—'}</div></div>
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Qtd. linhas</div><div>${p.linhas||'—'}</div></div>
+      <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Receita mensal</div><div>${p.receita?fmtMoeda(p.receita):'—'}</div></div>
+    </div>
+    ${p.obs?`<div style="font-size:13px;background:#f8f8f6;padding:8px 10px;border-radius:6px;color:#555;">${p.obs}</div>`:''}`;
+  document.getElementById('det-acoes').innerHTML=
+    (p.etapa!=='perdida'&&p.etapa<6?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
+    +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
+    +`<button class="btn" onclick="fecharModal('modal-detalhe')">Fechar</button>`;
+  document.getElementById('modal-detalhe').classList.add('open');
+}
+window.verDetalhe=verDetalhe;
+
+function fecharModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='modal-senha'){['s-atual','s-nova','s-confirmar'].forEach(x=>document.getElementById(x).value='');document.getElementById('senha-err').style.display='none';}
+}
+window.fecharModal=fecharModal;
+
+document.getElementById('p-cnpj').addEventListener('input',function(){this.value=fmtCNPJ(this.value);});
+document.getElementById('btn-login').addEventListener('click',fazerLogin);
+document.getElementById('login-senha').addEventListener('keydown',e=>{if(e.key==='Enter')fazerLogin();});
+</script>
+</body>
+</html>
