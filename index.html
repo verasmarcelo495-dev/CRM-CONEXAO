@@ -455,8 +455,8 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyAjYj29nbZg3ZStiz-2PHkErcemTs8OJyc",authDomain:"crm-conex-4ceaf.firebaseapp.com",projectId:"crm-conex-4ceaf",storageBucket:"crm-conex-4ceaf.firebasestorage.app",messagingSenderId:"171558044670",appId:"1:171558044670:web:d4917e39b46b62e7be76af"};
 firebase.initializeApp(firebaseConfig);
@@ -505,7 +505,7 @@ function telLinks(tel){if(!tel)return'';const d=cleanTel(tel);return`<div style=
 function iniciarSync(){
   if(_unsub)_unsub();setSyncStatus('carregando');
   try{
-    _unsub=db.db.collection('propostas').orderBy('criadoEm','desc').onSnapshot(function(snap){
+    _unsub=db.collection('propostas').orderBy('criadoEm','desc').onSnapshot(function(snap){
       propostas=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
       setSyncStatus('ok');
       if(currentTab==='pipeline')renderPipeline();
