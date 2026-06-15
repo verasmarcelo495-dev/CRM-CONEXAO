@@ -547,7 +547,7 @@ function login(user){
   document.getElementById('login-senha').value='';
   document.getElementById('p-etapa').innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
-  iniciarSync();setTab('pipeline');
+  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();setTab('pipeline');
 }
 function logout(){if(_unsub){_unsub();_unsub=null;}currentUser=null;document.getElementById('view-login').style.display='flex';document.getElementById('view-painel').style.display='none';}
 window.logout=logout;
@@ -1256,26 +1256,46 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
 window.copiarChecklist=copiarChecklist;
 
 // ========= GERENCIAR USUÁRIOS =========
-function getUsers(){
+async function loadUsersFirebase(){
   try{
-    const SK_USERS='crm_users_v1';
-    const d=localStorage.getItem(SK_USERS);
-    if(d){
-      const saved=JSON.parse(d);
-      // Mescla com USERS base para não perder master
-      Object.keys(saved).forEach(k=>{if(k!=='master')USERS[k]=saved[k];});
+    const snap=await db.collection('config').doc('usuarios').get();
+    if(snap.exists){
+      const data=snap.data();
+      Object.keys(data).forEach(function(k){if(k!=='master')USERS[k]=data[k];});
+      // Salvar no localStorage como cache
+      localStorage.setItem('crm_users_v1',JSON.stringify(data));
+    }else{
+      // Tentar carregar do localStorage como fallback
+      const d=localStorage.getItem('crm_users_v1');
+      if(d){const saved=JSON.parse(d);Object.keys(saved).forEach(function(k){if(k!=='master')USERS[k]=saved[k];});}
     }
-  }catch(e){}
+  }catch(e){
+    // Fallback localStorage
+    try{const d=localStorage.getItem('crm_users_v1');if(d){const saved=JSON.parse(d);Object.keys(saved).forEach(function(k){if(k!=='master')USERS[k]=saved[k];});}}catch(e2){}
+  }
+}
+
+function getUsers(){
+  // Retornar USERS atual (já carregado do Firebase no login)
   return USERS;
 }
 
-function saveUsers(){
+async function saveUsers(){
   try{
-    const SK_USERS='crm_users_v1';
     const toSave={};
-    Object.keys(USERS).forEach(k=>{if(k!=='master')toSave[k]=USERS[k];});
-    localStorage.setItem(SK_USERS,JSON.stringify(toSave));
-  }catch(e){}
+    Object.keys(USERS).forEach(function(k){if(k!=='master')toSave[k]=USERS[k];});
+    // Salvar no Firebase
+    await db.collection('config').doc('usuarios').set(toSave);
+    // Cache local
+    localStorage.setItem('crm_users_v1',JSON.stringify(toSave));
+  }catch(e){
+    // Fallback localStorage
+    try{
+      const toSave={};
+      Object.keys(USERS).forEach(function(k){if(k!=='master')toSave[k]=USERS[k];});
+      localStorage.setItem('crm_users_v1',JSON.stringify(toSave));
+    }catch(e2){}
+  }
 }
 
 function renderUsuarios(){
@@ -1355,7 +1375,7 @@ function removerUsuario(key){
   if(!confirm(`Remover o consultor ${USERS[key].nome}? Isso não remove as propostas dele.`))return;
   delete USERS[key];
   const senhas=getSenhas();delete senhas[key];setSenhas(senhas);
-  saveUsers();renderUsuarios();showNotif('Consultor removido.');
+  saveUsers().then(function(){renderUsuarios();showNotif('Consultor removido.');});
 }
 window.removerUsuario=removerUsuario;
 
@@ -1386,7 +1406,7 @@ function salvarUsuario(){
     USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idx].bg,c:AVATAR_COLORS[idx].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp};
     const senhas=getSenhas();senhas[keyInput]=senha;setSenhas(senhas);saveSenhaFirebase(keyInput,senha);
   }
-  saveUsers();fecharModal('modal-usuario');renderUsuarios();showNotif(keyOriginal?'Consultor atualizado!':'Consultor adicionado!');
+  saveUsers().then(function(){fecharModal('modal-usuario');renderUsuarios();showNotif(keyOriginal?'Consultor atualizado!':'Consultor adicionado!');});
 }
 window.salvarUsuario=salvarUsuario;
 
