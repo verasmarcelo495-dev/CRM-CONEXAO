@@ -178,12 +178,8 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Usuário</label>
-      <select id="login-usuario">
-        <option value="master">Marcelo (Gestor)</option>
-        <option value="karla">Karla (Consultora)</option>
-        <option value="lucas">Lucas (Consultor)</option>
-      </select>
+      <label class="form-label">E-mail</label>
+      <input type="text" id="login-email" placeholder="seu@email.com"/>
     </div>
     <div class="form-group">
       <label class="form-label">Senha</label>
@@ -192,9 +188,8 @@ header h1{font-size:15px;font-weight:500;flex:1;}
         <button onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:0;" id="btn-eye"><i class="ti ti-eye"></i></button>
       </div>
     </div>
-    <div class="login-err" id="login-err"><i class="ti ti-alert-circle"></i> Senha incorreta.</div>
+    <div class="login-err" id="login-err"><i class="ti ti-alert-circle"></i> <span id="login-err-msg">E-mail ou senha incorretos.</span></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;" id="btn-login"><i class="ti ti-login"></i> Entrar</button>
-    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e8e8e0;font-size:12px;color:#aaa;text-align:center;">Senhas: <strong>marcelo123</strong> / <strong>karla123</strong> / <strong>lucas123</strong></div>
   </div>
 </div>
 
@@ -371,8 +366,9 @@ header h1{font-size:15px;font-weight:500;flex:1;}
     <h3 id="modal-user-titulo"><i class="ti ti-user-plus"></i> Novo consultor</h3>
     <input type="hidden" id="u-key"/>
     <div class="form-group"><label class="form-label">Nome do consultor</label><input type="text" id="u-nome" placeholder="Ex: João"/></div>
-    <div class="form-group"><label class="form-label">Chave de acesso (sem espaços, minúsculo)</label><input type="text" id="u-key-input" placeholder="Ex: joao" style="text-transform:lowercase;"/></div>
-    <div class="form-group"><label class="form-label">Senha</label><input type="password" id="u-senha" placeholder="Mínimo 4 caracteres"/></div>
+    <div class="form-group"><label class="form-label">Chave de acesso (identificador interno)</label><input type="text" id="u-key-input" placeholder="Ex: joao" style="text-transform:lowercase;"/></div>
+    <div class="form-group"><label class="form-label">E-mail de login</label><input type="text" id="u-email-login" placeholder="Ex: joao@email.com"/></div>
+    <div class="form-group"><label class="form-label">Senha de acesso</label><input type="password" id="u-senha" placeholder="Mínimo 6 caracteres"/></div>
     <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
       <div style="font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Dados para proposta comercial</div>
       <div class="form-group"><label class="form-label">Nome completo (aparece na proposta)</label><input type="text" id="u-nome-completo" placeholder="Ex: João da Silva"/></div>
@@ -527,10 +523,12 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyAjYj29nbZg3ZStiz-2PHkErcemTs8OJyc",authDomain:"crm-conex-4ceaf.firebaseapp.com",projectId:"crm-conex-4ceaf",storageBucket:"crm-conex-4ceaf.firebasestorage.app",messagingSenderId:"171558044670",appId:"1:171558044670:web:d4917e39b46b62e7be76af"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
+const auth=firebase.auth();
 
 const ETAPAS=[
   {id:0,nome:'Proposta enviada',cor:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'},
@@ -596,37 +594,53 @@ function iniciarSync(){
 }
 
 async function fazerLogin(){
-  const user=document.getElementById('login-usuario').value;
+  const email=document.getElementById('login-email').value.trim();
   const senha=document.getElementById('login-senha').value;
   const errEl=document.getElementById('login-err');
+  const msgEl=document.getElementById('login-err-msg');
   const btnLoginEl=document.getElementById('btn-login');
-  if(!senha){errEl.style.display='flex';return;}
   
-  // Tentar buscar senha direto do Firebase para garantir dado atualizado
-  if(btnLoginEl){btnLoginEl.disabled=true;btnLoginEl.innerHTML='<i class="ti ti-loader"></i> Verificando...';}
-  let senhaCorreta=null;
-  try{
-    const snap=await db.collection('config').doc('senhas').get();
-    if(snap.exists){
-      const data=snap.data();
-      senhaCorreta=data[user];
-      localStorage.setItem('crm_senhas_v2',JSON.stringify(data));
-    }
-  }catch(e){}
-  if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
-  
-  // Fallback: localStorage ou senha padrão
-  if(!senhaCorreta){
-    const senhas=getSenhas();
-    senhaCorreta=senhas[user];
+  if(!email||!senha){
+    msgEl.textContent='Preencha e-mail e senha.';
+    errEl.style.display='flex';
+    return;
   }
-  const senhasPadrao={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
   
-  if(senha!==senhaCorreta && senha!==senhasPadrao[user]){
-    errEl.style.display='flex';return;
-  }
   errEl.style.display='none';
-  login(user);
+  if(btnLoginEl){btnLoginEl.disabled=true;btnLoginEl.innerHTML='<i class="ti ti-loader"></i> Entrando...';}
+  
+  try{
+    const cred=await auth.signInWithEmailAndPassword(email,senha);
+    const uid=cred.user.uid;
+    
+    // Buscar qual "chave" de usuário (master/karla/lucas/etc) corresponde a esse UID
+    const snap=await db.collection('config').doc('uid_map').get();
+    let userKey=null;
+    if(snap.exists){
+      const map=snap.data();
+      userKey=Object.keys(map).find(function(k){return map[k]===uid;});
+    }
+    
+    if(!userKey){
+      msgEl.textContent='Usu\u00e1rio n\u00e3o vinculado a nenhum perfil. Fale com o gestor.';
+      errEl.style.display='flex';
+      if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
+      return;
+    }
+    
+    if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
+    login(userKey);
+  }catch(e){
+    if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
+    if(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'||e.code==='auth/invalid-email'){
+      msgEl.textContent='E-mail ou senha incorretos.';
+    }else if(e.code==='auth/too-many-requests'){
+      msgEl.textContent='Muitas tentativas. Aguarde um momento.';
+    }else{
+      msgEl.textContent='Erro ao entrar. Verifique sua conex\u00e3o.';
+    }
+    errEl.style.display='flex';
+  }
 }
 window.fazerLogin=fazerLogin;
 
@@ -646,7 +660,15 @@ function login(user){
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();setTab('dashboard');
 }
-function logout(){if(_unsub){_unsub();_unsub=null;}currentUser=null;document.getElementById('view-login').style.display='flex';document.getElementById('view-painel').style.display='none';}
+function logout(){
+  if(_unsub){_unsub();_unsub=null;}
+  currentUser=null;
+  auth.signOut().catch(function(e){});
+  document.getElementById('view-login').style.display='flex';
+  document.getElementById('view-painel').style.display='none';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-senha').value='';
+}
 window.logout=logout;
 
 async function salvarSenha(){
@@ -654,27 +676,27 @@ async function salvarSenha(){
   const errEl=document.getElementById('senha-err'),msgEl=document.getElementById('senha-err-msg');
   errEl.style.display='none';
   
-  // Buscar senha atual direto do Firebase para validar
-  let senhaAtualReal=null;
+  if(nova.length<6){msgEl.textContent='A nova senha deve ter pelo menos 6 caracteres.';errEl.style.display='flex';return;}
+  if(nova!==conf){msgEl.textContent='As senhas n\u00e3o coincidem.';errEl.style.display='flex';return;}
+  
+  const user=auth.currentUser;
+  if(!user){msgEl.textContent='Sess\u00e3o expirada. Fa\u00e7a login novamente.';errEl.style.display='flex';return;}
+  
   try{
-    const snap=await db.collection('config').doc('senhas').get();
-    if(snap.exists)senhaAtualReal=snap.data()[currentUser];
-  }catch(e){}
-  if(!senhaAtualReal){const senhas=getSenhas();senhaAtualReal=senhas[currentUser];}
-  
-  const senhasPadrao={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
-  const valida=(atual===senhaAtualReal)||(atual===senhasPadrao[currentUser]);
-  
-  if(!valida){msgEl.textContent='Senha atual incorreta.';errEl.style.display='flex';return;}
-  if(nova.length<4){msgEl.textContent='Mínimo 4 caracteres.';errEl.style.display='flex';return;}
-  if(nova!==conf){msgEl.textContent='As senhas não coincidem.';errEl.style.display='flex';return;}
-  
-  const senhas=getSenhas();
-  senhas[currentUser]=nova;
-  setSenhas(senhas);
-  await saveSenhaFirebase(currentUser,nova);
-  fecharModal('modal-senha');
-  showNotif('Senha alterada com sucesso!');
+    // Reautenticar com a senha atual antes de trocar (exigência de segurança do Firebase)
+    const cred=firebase.auth.EmailAuthProvider.credential(user.email,atual);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(nova);
+    fecharModal('modal-senha');
+    showNotif('Senha alterada com sucesso!');
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
+      msgEl.textContent='Senha atual incorreta.';
+    }else{
+      msgEl.textContent='Erro ao alterar senha. Tente novamente.';
+    }
+    errEl.style.display='flex';
+  }
 }
 window.salvarSenha=salvarSenha;
 
@@ -1849,16 +1871,22 @@ function abrirModalUsuario(key){
     document.getElementById('u-nome').value=u.nome;
     document.getElementById('u-key-input').value=key;
     document.getElementById('u-key-input').disabled=true;
+    document.getElementById('u-email-login').value=u.email||'';
+    document.getElementById('u-email-login').disabled=true;
     document.getElementById('u-senha').value='';
-    document.getElementById('u-senha').placeholder='Deixe em branco para não alterar';
+    document.getElementById('u-senha').disabled=true;
+    document.getElementById('u-senha').placeholder='Para trocar a senha, use o painel do Firebase';
   }else{
     document.getElementById('modal-user-titulo').innerHTML='<i class="ti ti-user-plus"></i> Novo consultor';
     document.getElementById('u-key').value='';
     document.getElementById('u-nome').value='';
     document.getElementById('u-key-input').value='';
     document.getElementById('u-key-input').disabled=false;
+    document.getElementById('u-email-login').value='';
+    document.getElementById('u-email-login').disabled=false;
     document.getElementById('u-senha').value='';
-    document.getElementById('u-senha').placeholder='Mínimo 4 caracteres';
+    document.getElementById('u-senha').disabled=false;
+    document.getElementById('u-senha').placeholder='M\u00ednimo 6 caracteres';
     document.getElementById('u-nome-completo').value='';
     document.getElementById('u-telefone-prop').value='';
     document.getElementById('u-email-prop').value='';
@@ -1888,36 +1916,74 @@ function removerUsuario(key){
 }
 window.removerUsuario=removerUsuario;
 
-function salvarUsuario(){
+async function salvarUsuario(){
   const nome=document.getElementById('u-nome').value.trim();
   const keyInput=document.getElementById('u-key-input').value.trim().toLowerCase().replace(/\s+/g,'');
+  const emailLogin=document.getElementById('u-email-login').value.trim();
   const senha=document.getElementById('u-senha').value;
   const keyOriginal=document.getElementById('u-key').value;
   const errEl=document.getElementById('u-err');
   const msgEl=document.getElementById('u-err-msg');
   errEl.style.display='none';
+  
   if(!nome){msgEl.textContent='Preencha o nome.';errEl.style.display='flex';return;}
   if(!keyInput){msgEl.textContent='Preencha a chave de acesso.';errEl.style.display='flex';return;}
-  if(!keyOriginal&&USERS[keyInput]){msgEl.textContent='Essa chave já existe. Escolha outra.';errEl.style.display='flex';return;}
-  if(!keyOriginal&&senha.length<4){msgEl.textContent='Senha deve ter pelo menos 4 caracteres.';errEl.style.display='flex';return;}
+  if(!keyOriginal&&USERS[keyInput]){msgEl.textContent='Essa chave j\u00e1 existe. Escolha outra.';errEl.style.display='flex';return;}
+  if(!emailLogin){msgEl.textContent='Preencha o e-mail de login.';errEl.style.display='flex';return;}
+  if(!keyOriginal&&senha.length<6){msgEl.textContent='Senha deve ter pelo menos 6 caracteres.';errEl.style.display='flex';return;}
+  
   const AVATAR_COLORS=[{bg:'#E6F1FB',c:'#0C447C'},{bg:'#EEEDFE',c:'#3C3489'},{bg:'#E1F5EE',c:'#085041'},{bg:'#FAEEDA',c:'#633806'},{bg:'#FAECE7',c:'#712B13'}];
-  const idx=Object.keys(USERS).length%AVATAR_COLORS.length;
+  const idxColor=Object.keys(USERS).length%AVATAR_COLORS.length;
   const nomeCompleto=document.getElementById('u-nome-completo').value.trim();
   const telProp=document.getElementById('u-telefone-prop').value.trim();
   const emailProp=document.getElementById('u-email-prop').value.trim();
   const meta=parseFloat(document.getElementById('u-meta').value)||0;
-  if(keyOriginal){
-    USERS[keyOriginal].nome=nome;USERS[keyOriginal].role='Consultor';
-    USERS[keyOriginal].nomeCompleto=nomeCompleto||nome;
-    USERS[keyOriginal].telProp=telProp;
-    USERS[keyOriginal].emailProp=emailProp;
-    USERS[keyOriginal].meta=meta;
-    if(senha.length>=4){const senhas=getSenhas();senhas[keyOriginal]=senha;setSenhas(senhas);saveSenhaFirebase(keyOriginal,senha);}
-  }else{
-    USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idx].bg,c:AVATAR_COLORS[idx].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta};
-    const senhas=getSenhas();senhas[keyInput]=senha;setSenhas(senhas);saveSenhaFirebase(keyInput,senha);
+  
+  const btnSalvar=document.querySelector('#modal-usuario .btn-primary');
+  if(btnSalvar){btnSalvar.disabled=true;btnSalvar.innerHTML='<i class="ti ti-loader"></i> Salvando...';}
+  
+  try{
+    if(keyOriginal){
+      // Editar consultor existente
+      USERS[keyOriginal].nome=nome;USERS[keyOriginal].role='Consultor';
+      USERS[keyOriginal].nomeCompleto=nomeCompleto||nome;
+      USERS[keyOriginal].telProp=telProp;
+      USERS[keyOriginal].emailProp=emailProp;
+      USERS[keyOriginal].meta=meta;
+      USERS[keyOriginal].email=emailLogin;
+      await saveUsers();
+      fecharModal('modal-usuario');renderUsuarios();
+      showNotif('Consultor atualizado! Para trocar a senha dele, use o painel do Firebase Authentication.');
+    }else{
+      // Criar novo consultor: precisa de uma instância secundária do Firebase para não deslogar o master
+      const secondaryApp=firebase.initializeApp(firebaseConfig,'secondary-'+Date.now());
+      const secondaryAuth=secondaryApp.auth();
+      const cred=await secondaryAuth.createUserWithEmailAndPassword(emailLogin,senha);
+      const novoUid=cred.user.uid;
+      await secondaryAuth.signOut();
+      await secondaryApp.delete();
+      
+      // Salvar o mapeamento UID -> chave
+      const mapSnap=await db.collection('config').doc('uid_map').get();
+      const map=mapSnap.exists?mapSnap.data():{};
+      map[keyInput]=novoUid;
+      await db.collection('config').doc('uid_map').set(map);
+      
+      USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idxColor].bg,c:AVATAR_COLORS[idxColor].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta,email:emailLogin};
+      await saveUsers();
+      fecharModal('modal-usuario');renderUsuarios();
+      showNotif('Consultor adicionado! Ele j\u00e1 pode entrar com o e-mail e senha cadastrados.');
+    }
+  }catch(e){
+    let msg='Erro ao salvar consultor.';
+    if(e.code==='auth/email-already-in-use')msg='Esse e-mail j\u00e1 est\u00e1 cadastrado em outra conta.';
+    else if(e.code==='auth/invalid-email')msg='E-mail inv\u00e1lido.';
+    else if(e.code==='auth/weak-password')msg='Senha muito fraca (m\u00ednimo 6 caracteres).';
+    msgEl.textContent=msg;
+    errEl.style.display='flex';
+  }finally{
+    if(btnSalvar){btnSalvar.disabled=false;btnSalvar.innerHTML='<i class="ti ti-check"></i> Salvar';}
   }
-  saveUsers().then(function(){fecharModal('modal-usuario');renderUsuarios();showNotif(keyOriginal?'Consultor atualizado!':'Consultor adicionado!');});
 }
 window.salvarUsuario=salvarUsuario;
 
@@ -1965,6 +2031,10 @@ if(btnLogin){
 const inputSenha=document.getElementById('login-senha');
 if(inputSenha){
   inputSenha.addEventListener('keydown',function(e){if(e.key==='Enter')fazerLogin();});
+}
+const inputEmail=document.getElementById('login-email');
+if(inputEmail){
+  inputEmail.addEventListener('keydown',function(e){if(e.key==='Enter')fazerLogin();});
 }
 
 // Expor funções necessárias globalmente para onclicks no HTML
