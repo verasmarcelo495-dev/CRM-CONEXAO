@@ -505,6 +505,18 @@ header h1{font-size:15px;font-weight:500;flex:1;}
   </div>
 </div>
 
+<!-- MODAL COR -->
+<div class="modal-bg" id="modal-cor">
+  <div class="modal" style="max-width:360px;">
+    <h3><i class="ti ti-palette"></i> Escolher cor</h3>
+    <input type="hidden" id="cor-user-key"/>
+    <div id="cor-opcoes" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-cor')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL SENHA -->
 <div class="modal-bg" id="modal-senha">
   <div class="modal" style="max-width:380px;">
@@ -1850,17 +1862,52 @@ function renderUsuarios(){
   atualizarSelectsConsultor();
 }
 
+const CORES_DISPONIVEIS=[
+  {bg:'#E6F1FB',c:'#0C447C',nome:'Azul'},
+  {bg:'#EEEDFE',c:'#3C3489',nome:'Lilás'},
+  {bg:'#E1F5EE',c:'#085041',nome:'Verde'},
+  {bg:'#FAEEDA',c:'#633806',nome:'Amarelo'},
+  {bg:'#FAECE7',c:'#712B13',nome:'Laranja'},
+  {bg:'#EAF3DE',c:'#27500A',nome:'Verde-claro'},
+  {bg:'#FCEBEB',c:'#791F1F',nome:'Vermelho'},
+  {bg:'#F1EFE8',c:'#3C3C3C',nome:'Cinza'},
+  {bg:'#E0F7FA',c:'#00525B',nome:'Ciano'},
+  {bg:'#FDE7F3',c:'#8A1657',nome:'Rosa'},
+  {bg:'#F3E8FF',c:'#5B1A8B',nome:'Roxo'},
+  {bg:'#FFF3E0',c:'#8A4B00',nome:'Pêssego'}
+];
+
 function trocarCorUsuario(key){
   const u=USERS[key];
   if(!u)return;
-  const cores=[{bg:'#E6F1FB',c:'#0C447C'},{bg:'#EEEDFE',c:'#3C3489'},{bg:'#E1F5EE',c:'#085041'},{bg:'#FAEEDA',c:'#633806'},{bg:'#FAECE7',c:'#712B13'},{bg:'#EAF3DE',c:'#27500A'},{bg:'#FCEBEB',c:'#791F1F'},{bg:'#F1EFE8',c:'#3C3C3C'}];
-  const idxAtual=cores.findIndex(function(c){return c.bg===u.bg;});
-  const proximaCor=cores[(idxAtual+1)%cores.length];
-  u.bg=proximaCor.bg;
-  u.c=proximaCor.c;
-  saveUsers().then(function(){renderUsuarios();showNotif('Cor alterada!');});
+  document.getElementById('cor-user-key').value=key;
+  const container=document.getElementById('cor-opcoes');
+  container.innerHTML=CORES_DISPONIVEIS.map(function(cor){
+    const selecionada=cor.bg===u.bg;
+    return'<div onclick="selecionarCor(\''+cor.bg+'\',\''+cor.c+'\')" style="cursor:pointer;text-align:center;">'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:'+cor.bg+';border:3px solid '+(selecionada?cor.c:'transparent')+';margin:0 auto 4px;display:flex;align-items:center;justify-content:center;">'
+      +(selecionada?'<i class="ti ti-check" style="color:'+cor.c+';font-size:18px;"></i>':'')
+      +'</div>'
+      +'<div style="font-size:10px;color:#888;">'+cor.nome+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('modal-cor').classList.add('open');
 }
 window.trocarCorUsuario=trocarCorUsuario;
+
+function selecionarCor(bg,c){
+  const key=document.getElementById('cor-user-key').value;
+  const u=USERS[key];
+  if(!u)return;
+  u.bg=bg;
+  u.c=c;
+  saveUsers().then(function(){
+    fecharModal('modal-cor');
+    renderUsuarios();
+    showNotif('Cor alterada!');
+  });
+}
+window.selecionarCor=selecionarCor;
 
 function atualizarSelectsConsultor(){
   const consultores=Object.keys(USERS).filter(k=>k!=='master');
