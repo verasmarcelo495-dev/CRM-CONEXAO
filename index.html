@@ -1840,6 +1840,7 @@ function renderUsuarios(){
         <div class="user-card-role">${u.role}${isMaster?' · Acesso total':' · Chave: '+k}</div>
       </div>
       <div style="display:flex;gap:6px;">
+        ${!isMaster?`<button class="btn-sm" onclick="trocarCorUsuario('${k}')" title="Trocar cor"><i class="ti ti-palette"></i></button>`:''}
         <button class="btn-sm btn-purple" onclick="editarUsuario('${k}')"><i class="ti ti-edit"></i> Editar</button>
         ${!isMaster?`<button class="btn-sm btn-del" onclick="removerUsuario('${k}')"><i class="ti ti-trash"></i></button>`:''}
       </div>
@@ -1848,6 +1849,18 @@ function renderUsuarios(){
   // Atualizar selects de consultor
   atualizarSelectsConsultor();
 }
+
+function trocarCorUsuario(key){
+  const u=USERS[key];
+  if(!u)return;
+  const cores=[{bg:'#E6F1FB',c:'#0C447C'},{bg:'#EEEDFE',c:'#3C3489'},{bg:'#E1F5EE',c:'#085041'},{bg:'#FAEEDA',c:'#633806'},{bg:'#FAECE7',c:'#712B13'},{bg:'#EAF3DE',c:'#27500A'},{bg:'#FCEBEB',c:'#791F1F'},{bg:'#F1EFE8',c:'#3C3C3C'}];
+  const idxAtual=cores.findIndex(function(c){return c.bg===u.bg;});
+  const proximaCor=cores[(idxAtual+1)%cores.length];
+  u.bg=proximaCor.bg;
+  u.c=proximaCor.c;
+  saveUsers().then(function(){renderUsuarios();showNotif('Cor alterada!');});
+}
+window.trocarCorUsuario=trocarCorUsuario;
 
 function atualizarSelectsConsultor(){
   const consultores=Object.keys(USERS).filter(k=>k!=='master');
@@ -1932,8 +1945,9 @@ async function salvarUsuario(){
   if(!emailLogin){msgEl.textContent='Preencha o e-mail de login.';errEl.style.display='flex';return;}
   if(!keyOriginal&&senha.length<6){msgEl.textContent='Senha deve ter pelo menos 6 caracteres.';errEl.style.display='flex';return;}
   
-  const AVATAR_COLORS=[{bg:'#E6F1FB',c:'#0C447C'},{bg:'#EEEDFE',c:'#3C3489'},{bg:'#E1F5EE',c:'#085041'},{bg:'#FAEEDA',c:'#633806'},{bg:'#FAECE7',c:'#712B13'}];
-  const idxColor=Object.keys(USERS).length%AVATAR_COLORS.length;
+  const AVATAR_COLORS=[{bg:'#E6F1FB',c:'#0C447C'},{bg:'#EEEDFE',c:'#3C3489'},{bg:'#E1F5EE',c:'#085041'},{bg:'#FAEEDA',c:'#633806'},{bg:'#FAECE7',c:'#712B13'},{bg:'#EAF3DE',c:'#27500A'},{bg:'#FCEBEB',c:'#791F1F'},{bg:'#F1EFE8',c:'#3C3C3C'}];
+  function hashKey(str){let h=0;for(let i=0;i<str.length;i++){h=((h<<5)-h+str.charCodeAt(i))|0;}return Math.abs(h);}
+  const idxColor=hashKey(keyInput)%AVATAR_COLORS.length;
   const nomeCompleto=document.getElementById('u-nome-completo').value.trim();
   const telProp=document.getElementById('u-telefone-prop').value.trim();
   const emailProp=document.getElementById('u-email-prop').value.trim();
