@@ -55,6 +55,8 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 .sync-badge{font-size:11px;padding:3px 8px;border-radius:99px;background:#EAF3DE;color:#27500A;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .sync-badge.erro{background:#FCEBEB;color:#791F1F;}
 .sync-badge.carregando{background:#FAEEDA;color:#633806;}
+@keyframes pulse-alert{0%,100%{opacity:1;}50%{opacity:.5;}}
+.alerta-pulse{background:#FCEBEB;color:#791F1F;font-size:11px;padding:3px 10px;border-radius:99px;display:flex;align-items:center;gap:4px;animation:pulse-alert 1.5s infinite;font-weight:600;}
 
 /* KANBAN DRAG & DROP */
 .kanban-wrapper{display:grid;gap:10px;margin-bottom:10px;}
@@ -114,6 +116,12 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 .cal-detalhe{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
 .cal-detalhe-titulo{font-size:13px;font-weight:500;color:#555;margin-bottom:8px;}
 .cal-evento-card{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f8f8f6;border-radius:var(--radius);margin-bottom:6px;}
+
+/* HISTÓRICO */
+.hist-item{padding:8px 10px;background:#f8f8f6;border-radius:var(--radius);margin-bottom:6px;font-size:12px;}
+.hist-item .hist-data{color:#888;font-size:11px;margin-bottom:2px;}
+.hist-nova{display:flex;gap:6px;margin-top:8px;}
+.hist-nova textarea{flex:1;height:56px;}
 
 /* LISTA */
 .proposta-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px;}
@@ -196,6 +204,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
     <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;" id="hd-av"></div>
     <h1 id="hd-nome"></h1>
     <div id="sync-status" class="sync-badge carregando"><i class="ti ti-loader"></i> Conectando...</div>
+    <div id="alerta-followup" style="display:none;cursor:pointer;" onclick="setTab('followup')"></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-verde" onclick="abrirModalNova()"><i class="ti ti-plus"></i> Nova proposta</button>
       <button class="btn" onclick="logout()"><i class="ti ti-logout"></i> Sair</button>
@@ -205,15 +214,37 @@ header h1{font-size:15px;font-weight:500;flex:1;}
   <div class="container">
     <div id="notif-area"></div>
     <div class="tabs">
-      <button class="tab ativo" id="tab-pipeline" onclick="setTab('pipeline')"><i class="ti ti-layout-kanban"></i> Pipeline</button>
+      <button class="tab ativo" id="tab-dashboard" onclick="setTab('dashboard')"><i class="ti ti-home"></i> Início</button>
+      <button class="tab" id="tab-pipeline" onclick="setTab('pipeline')"><i class="ti ti-layout-kanban"></i> Pipeline</button>
       <button class="tab" id="tab-followup" onclick="setTab('followup')"><i class="ti ti-bell"></i> Follow-up</button>
       <button class="tab" id="tab-lista" onclick="setTab('lista')"><i class="ti ti-list"></i> Lista</button>
       <button class="tab" id="tab-metricas" onclick="setTab('metricas')"><i class="ti ti-chart-bar"></i> Métricas</button>
       <button class="tab" id="tab-usuarios" onclick="setTab('usuarios')" style="display:none;"><i class="ti ti-users"></i> Usuários</button>
     </div>
 
+    <!-- DASHBOARD -->
+    <div id="view-dashboard">
+      <div id="dash-saudacao" style="margin-bottom:1.5rem;"></div>
+      <div class="fu-stats" id="dash-stats" style="margin-bottom:1.5rem;"></div>
+      <div id="dash-alertas" style="margin-bottom:1.5rem;"></div>
+      <div class="grid-2">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:1rem;"><i class="ti ti-clock"></i> Próximos retornos</div>
+          <div id="dash-proximos"></div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:1rem;"><i class="ti ti-trophy"></i> Fechamentos recentes</div>
+          <div id="dash-fechamentos"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- PIPELINE KANBAN -->
-    <div id="view-pipeline">
+    <div id="view-pipeline" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+        <input type="text" id="pipe-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:280px;"/>
+        <select id="pipe-filtro-consultor" style="max-width:180px;display:none;"><option value="">Todos os consultores</option></select>
+      </div>
       <div class="kanban-wrapper" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
       <div class="kanban-wrapper" style="grid-template-columns:repeat(3,1fr);" id="kanban-row2"></div>
     </div>
@@ -253,23 +284,36 @@ header h1{font-size:15px;font-weight:500;flex:1;}
     <!-- LISTA -->
     <div id="view-lista" style="display:none;">
       <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
-        <select id="filtro-etapa" onchange="renderLista()" style="max-width:220px;"></select>
-        <select id="filtro-tipo" onchange="renderLista()" style="max-width:160px;"><option value="">Todos os tipos</option><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
-        <select id="filtro-consultor" onchange="renderLista()" style="max-width:160px;display:none;"><option value="">Todos</option><option value="karla">Karla</option><option value="lucas">Lucas</option></select>
+        <input type="text" id="lista-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:280px;"/>
+        <select id="filtro-etapa" onchange="renderLista()" style="max-width:200px;"></select>
+        <select id="filtro-tipo" onchange="renderLista()" style="max-width:150px;"><option value="">Todos os tipos</option><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
+        <select id="filtro-consultor" onchange="renderLista()" style="max-width:160px;display:none;"><option value="">Todos</option></select>
+        <select id="lista-ordenar" onchange="renderLista()" style="max-width:190px;">
+          <option value="urgencia">Mais urgente primeiro</option>
+          <option value="recente">Mais recente primeiro</option>
+          <option value="razao">Ordem alfabética</option>
+        </select>
       </div>
       <div id="lista-propostas"></div>
     </div>
 
     <!-- MÉTRICAS -->
     <div id="view-metricas" style="display:none;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+        <button class="btn btn-azul" onclick="exportarRelatorioExcel()"><i class="ti ti-file-spreadsheet"></i> Exportar Excel</button>
+      </div>
       <div class="grid-5" style="margin-bottom:1.5rem;" id="met-stats"></div>
       <div class="grid-2" style="margin-bottom:1.5rem;">
         <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;"><div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Funil de conversão</div><div id="met-funil"></div></div>
         <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;"><div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Por consultor</div><div id="met-consultores"></div></div>
       </div>
-      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;">
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem;">
         <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Receita por etapa (R$/mês)</div>
         <div style="height:240px;position:relative;"><canvas id="chart-receita" role="img" aria-label="Receita por etapa"></canvas></div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;" id="card-motivos-perda">
+        <div style="font-size:13px;font-weight:500;margin-bottom:1rem;">Motivos de perda</div>
+        <div id="met-motivos-perda"></div>
       </div>
     </div>
   </div>
@@ -300,7 +344,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       <div class="form-group"><label class="form-label">Etapa</label><select id="p-etapa"></select></div>
       <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor</label><select id="p-consultor"><option value="karla">Karla</option><option value="lucas">Lucas</option></select></div>
     </div>
-    <div class="form-group"><label class="form-label">Observações</label><textarea id="p-obs" placeholder="Informações relevantes..."></textarea></div>
+    <div class="form-group"><label class="form-label">Observação inicial (opcional)</label><textarea id="p-obs" placeholder="Informações relevantes..."></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="fecharModal('modal-proposta')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarProposta()"><i class="ti ti-check"></i> Salvar</button>
@@ -316,6 +360,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       <button class="btn-sm" onclick="fecharModal('modal-detalhe')"><i class="ti ti-x"></i></button>
     </div>
     <div id="det-conteudo"></div>
+    <div id="det-historico" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);"></div>
     <div class="modal-footer" id="det-acoes"></div>
   </div>
 </div>
@@ -335,6 +380,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
         <div class="form-group"><label class="form-label">Telefone</label><input type="tel" id="u-telefone-prop" placeholder="Ex: (61) 9 9999-0000"/></div>
         <div class="form-group"><label class="form-label">E-mail</label><input type="text" id="u-email-prop" placeholder="Ex: joao@conexaoco.com.br"/></div>
       </div>
+      <div class="form-group"><label class="form-label">Meta mensal de receita (R$)</label><input type="number" id="u-meta" placeholder="Ex: 5000" min="0"/></div>
     </div>
     <div class="login-err" id="u-err"><i class="ti ti-alert-circle"></i> <span id="u-err-msg"></span></div>
     <div class="modal-footer">
@@ -387,6 +433,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       <button class="btn-sm" onclick="fecharModal('modal-checklist')"><i class="ti ti-x"></i></button>
     </div>
 
+    <input type="hidden" id="ck-doc-id"/>
     <div class="checklist-box">
       <div class="checklist-section">Dados do Consultor</div>
       <div class="grid-2">
@@ -439,6 +486,29 @@ header h1{font-size:15px;font-weight:500;flex:1;}
   </div>
 </div>
 
+<!-- MODAL MOTIVO PERDA -->
+<div class="modal-bg" id="modal-motivo-perda">
+  <div class="modal" style="max-width:420px;">
+    <h3><i class="ti ti-x"></i> Motivo da perda</h3>
+    <input type="hidden" id="mp-doc-id"/>
+    <div class="form-group">
+      <label class="form-label">Por que essa proposta foi perdida?</label>
+      <select id="mp-motivo">
+        <option value="Preço alto">Preço alto</option>
+        <option value="Concorrência">Concorrência</option>
+        <option value="Desistiu">Desistiu</option>
+        <option value="Sem retorno">Sem retorno</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Detalhes (opcional)</label><textarea id="mp-detalhes" placeholder="Mais informações sobre a perda..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-motivo-perda')">Cancelar</button>
+      <button class="btn btn-del" onclick="confirmarPerda()"><i class="ti ti-check"></i> Confirmar perda</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL SENHA -->
 <div class="modal-bg" id="modal-senha">
   <div class="modal" style="max-width:380px;">
@@ -487,7 +557,13 @@ const TODAY_STR=dateStr(TODAY);
 const TMRW=new Date(TODAY);TMRW.setDate(TMRW.getDate()+1);
 const TMRW_STR=dateStr(TMRW);
 
-function getSenhas(){try{const d=localStorage.getItem(SK_SENHAS);return d?JSON.parse(d):SENHAS_PADRAO;}catch(e){return SENHAS_PADRAO;}}
+function getSenhas(){
+  try{
+    const d=localStorage.getItem(SK_SENHAS);
+    const local=d?JSON.parse(d):{};
+    return Object.assign({},SENHAS_PADRAO,local);
+  }catch(e){return SENHAS_PADRAO;}
+}
 function setSenhas(s){try{localStorage.setItem(SK_SENHAS,JSON.stringify(s));}catch(e){}}
 function toggleSenha(){const i=document.getElementById('login-senha');const ico=document.getElementById('btn-eye').querySelector('i');i.type=i.type==='password'?'text':'password';ico.className=i.type==='password'?'ti ti-eye':'ti ti-eye-off';}
 window.toggleSenha=toggleSenha;
@@ -508,23 +584,44 @@ function iniciarSync(){
     _unsub=db.collection('propostas').orderBy('criadoEm','desc').onSnapshot(function(snap){
       propostas=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
       setSyncStatus('ok');
-      if(currentTab==='pipeline')renderPipeline();
+      atualizarAlertaHeader();
+      if(currentTab==='dashboard')renderDashboard();
+      else if(currentTab==='pipeline')renderPipeline();
       else if(currentTab==='followup')renderFollowup();
       else if(currentTab==='lista')renderLista();
-      else renderMetricas();
+      else if(currentTab==='metricas')renderMetricas();
+      else if(currentTab==='usuarios')renderUsuarios();
     },function(err){console.error(err);setSyncStatus('erro');});
   }catch(e){setSyncStatus('erro');}
 }
 
-function fazerLogin(){
+async function fazerLogin(){
   const user=document.getElementById('login-usuario').value;
   const senha=document.getElementById('login-senha').value;
   const errEl=document.getElementById('login-err');
-  if(!senha){errEl.style.display='flex';document.getElementById('login-err').querySelector('span')||errEl;return;}
-  const senhas=getSenhas();
-  const senhaCorreta=senhas[user];
-  // Se Firebase não carregou ainda, aceitar senha padrão também
+  const btnLoginEl=document.getElementById('btn-login');
+  if(!senha){errEl.style.display='flex';return;}
+  
+  // Tentar buscar senha direto do Firebase para garantir dado atualizado
+  if(btnLoginEl){btnLoginEl.disabled=true;btnLoginEl.innerHTML='<i class="ti ti-loader"></i> Verificando...';}
+  let senhaCorreta=null;
+  try{
+    const snap=await db.collection('config').doc('senhas').get();
+    if(snap.exists){
+      const data=snap.data();
+      senhaCorreta=data[user];
+      localStorage.setItem('crm_senhas_v2',JSON.stringify(data));
+    }
+  }catch(e){}
+  if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
+  
+  // Fallback: localStorage ou senha padrão
+  if(!senhaCorreta){
+    const senhas=getSenhas();
+    senhaCorreta=senhas[user];
+  }
   const senhasPadrao={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
+  
   if(senha!==senhaCorreta && senha!==senhasPadrao[user]){
     errEl.style.display='flex';return;
   }
@@ -547,29 +644,48 @@ function login(user){
   document.getElementById('login-senha').value='';
   document.getElementById('p-etapa').innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
-  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();setTab('pipeline');
+  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();setTab('dashboard');
 }
 function logout(){if(_unsub){_unsub();_unsub=null;}currentUser=null;document.getElementById('view-login').style.display='flex';document.getElementById('view-painel').style.display='none';}
 window.logout=logout;
 
-function salvarSenha(){
+async function salvarSenha(){
   const atual=document.getElementById('s-atual').value,nova=document.getElementById('s-nova').value,conf=document.getElementById('s-confirmar').value;
-  const errEl=document.getElementById('senha-err'),msgEl=document.getElementById('senha-err-msg'),senhas=getSenhas();
+  const errEl=document.getElementById('senha-err'),msgEl=document.getElementById('senha-err-msg');
   errEl.style.display='none';
-  if(atual!==senhas[currentUser]){msgEl.textContent='Senha atual incorreta.';errEl.style.display='flex';return;}
+  
+  // Buscar senha atual direto do Firebase para validar
+  let senhaAtualReal=null;
+  try{
+    const snap=await db.collection('config').doc('senhas').get();
+    if(snap.exists)senhaAtualReal=snap.data()[currentUser];
+  }catch(e){}
+  if(!senhaAtualReal){const senhas=getSenhas();senhaAtualReal=senhas[currentUser];}
+  
+  const senhasPadrao={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
+  const valida=(atual===senhaAtualReal)||(atual===senhasPadrao[currentUser]);
+  
+  if(!valida){msgEl.textContent='Senha atual incorreta.';errEl.style.display='flex';return;}
   if(nova.length<4){msgEl.textContent='Mínimo 4 caracteres.';errEl.style.display='flex';return;}
   if(nova!==conf){msgEl.textContent='As senhas não coincidem.';errEl.style.display='flex';return;}
-  senhas[currentUser]=nova;setSenhas(senhas);saveSenhaFirebase(currentUser,nova);fecharModal('modal-senha');showNotif('Senha alterada!');
+  
+  const senhas=getSenhas();
+  senhas[currentUser]=nova;
+  setSenhas(senhas);
+  await saveSenhaFirebase(currentUser,nova);
+  fecharModal('modal-senha');
+  showNotif('Senha alterada com sucesso!');
 }
 window.salvarSenha=salvarSenha;
 
 function setTab(tab){
   currentTab=tab;
-  ['pipeline','followup','lista','metricas','usuarios'].forEach(t=>{
+  ['dashboard','pipeline','followup','lista','metricas','usuarios'].forEach(function(t){
     document.getElementById('view-'+t).style.display=t===tab?'block':'none';
     document.getElementById('tab-'+t).classList.toggle('ativo',t===tab);
   });
-  if(tab==='pipeline')renderPipeline();
+  if(tab==='dashboard')renderDashboard();
+  else if(tab==='pipeline')renderPipeline();
   else if(tab==='followup')renderFollowup();
   else if(tab==='lista')renderLista();
   else if(tab==='metricas')renderMetricas();
@@ -579,21 +695,44 @@ window.setTab=setTab;
 
 // ========= KANBAN COM DRAG & DROP =========
 function renderPipeline(){
-  const lista=getPropostas();
+  let lista=getPropostas();
+  
+  // Aplicar busca
+  const buscaEl=document.getElementById('pipe-busca');
+  const busca=buscaEl?buscaEl.value.trim().toLowerCase():'';
+  if(busca){
+    lista=lista.filter(function(p){
+      const cnpjLimpo=(p.cnpj||'').replace(/\D/g,'');
+      const buscaLimpa=busca.replace(/\D/g,'');
+      return (p.razao||'').toLowerCase().includes(busca)
+        || (buscaLimpa&&cnpjLimpo.includes(buscaLimpa))
+        || (p.cnpj||'').toLowerCase().includes(busca);
+    });
+  }
+  
+  // Aplicar filtro consultor
+  const filtroEl=document.getElementById('pipe-filtro-consultor');
+  const filtroConsultor=filtroEl?filtroEl.value:'';
+  if(filtroConsultor){
+    lista=lista.filter(function(p){return p.consultor===filtroConsultor;});
+  }
+  
   function buildCol(etapa){
     const ps=lista.filter(p=>p.etapa==etapa.id);
     const totalLn=ps.reduce((s,p)=>s+(+p.linhas||0),0);
     const cards=ps.map(p=>{
-      const u=USERS[p.consultor]||USERS.karla;
+      const u=USERS[p.consultor]||USERS.karla||{bg:'#fff',c:'#333',nome:'?'};
       const t=TIPOS[p.tipo]||TIPOS.novo;
-      return`<div class="kanban-card" draggable="true" data-id="${p._docId}" ondragstart="onDragStart(event,'${p._docId}')" onclick="verDetalhe('${p._docId}')">
-        <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${p.razao}</div>
+      const corFundo=u.bg||'#fff';
+      const nomeConsultor=(USERS[p.consultor]&&(USERS[p.consultor]||{nome:'?'}).nome)?(USERS[p.consultor]||{nome:'?'}).nome:'?';
+      return`<div class="kanban-card" draggable="true" data-id="${p._docId}" ondragstart="onDragStart(event,'${p._docId}')" onclick="verDetalhe('${p._docId}')" style="background:${corFundo};">
+        <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${p.razao||''}</div>
         <div style="font-size:12px;color:#666;">${p.responsavel||''}</div>
         <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;">
           <span class="badge ${t.cls}" style="font-size:10px;">${t.label}</span>
-          ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EEEDFE;color:#3C3489;">${p.linhas}ln</span>`:''}
-          ${p.receita?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EAF3DE;color:#27500A;">R$${Number(p.receita).toLocaleString('pt-BR')}</span>`:''}
-          ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+          ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.6);color:#3C3489;">${p.linhas}ln</span>`:''}
+          ${p.receita?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.6);color:#27500A;">R$${Number(p.receita).toLocaleString('pt-BR')}</span>`:''}
+          ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.8);color:${u.c};font-weight:600;">${nomeConsultor}</span>`:''}
         </div>
       </div>`;
     }).join('')||'<div style="font-size:12px;color:#aaa;padding:.5rem 0;">Vazio</div>';
@@ -606,6 +745,17 @@ function renderPipeline(){
   }
   document.getElementById('kanban-row1').innerHTML=ETAPAS.slice(0,4).map(buildCol).join('');
   document.getElementById('kanban-row2').innerHTML=ETAPAS.slice(4).map(buildCol).join('');
+  
+  // Popular filtro de consultor (só master)
+  if(currentUser==='master'&&filtroEl){
+    const valorAtual=filtroEl.value;
+    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+    filtroEl.innerHTML='<option value="">Todos os consultores</option>'+consultores.map(function(k){
+      return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+    }).join('');
+    filtroEl.value=valorAtual;
+    filtroEl.style.display='';
+  }
 }
 
 function onDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
@@ -621,6 +771,169 @@ async function onDrop(e,etapaId){
   dragId=null;
 }
 window.onDragStart=onDragStart;window.onDragOver=onDragOver;window.onDragLeave=onDragLeave;window.onDrop=onDrop;
+
+// ========= EXPORTAR RELATÓRIO EXCEL =========
+function carregarSheetJS(cb){
+  if(window.XLSX){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=cb;
+  s.onerror=function(){showNotif('Erro ao carregar biblioteca Excel.',true);};
+  document.head.appendChild(s);
+}
+
+function exportarRelatorioExcel(){
+  carregarSheetJS(function(){
+    const lista=getPropostas();
+    const linhas=lista.map(function(p){
+      const e=p.etapa==='perdida'?'Perdida':(ETAPAS[p.etapa]?ETAPAS[p.etapa].nome:'-');
+      const t=TIPOS[p.tipo]?TIPOS[p.tipo].label:'Novo';
+      const u=USERS[p.consultor]?(USERS[p.consultor]||{nome:'?'}).nome:p.consultor;
+      return{
+        'Raz\u00e3o Social':p.razao||'',
+        'CNPJ':p.cnpj||'',
+        'Respons\u00e1vel':p.responsavel||'',
+        'Telefone':p.telefone||'',
+        'Tipo':t,
+        'Etapa':e,
+        'Consultor':u,
+        'Qtd. Linhas':p.linhas||0,
+        'Receita Mensal':parseFloat(p.receita)||0,
+        'Data Retorno':p.retorno||'',
+        'Motivo Perda':p.motivoPerda||'',
+        'Observa\u00e7\u00f5es':p.obs||''
+      };
+    });
+
+    const ws=XLSX.utils.json_to_sheet(linhas);
+    ws['!cols']=[{wch:30},{wch:18},{wch:20},{wch:16},{wch:12},{wch:18},{wch:14},{wch:10},{wch:14},{wch:12},{wch:16},{wch:30}];
+
+    // Aba resumo
+    const fechadas=lista.filter(function(p){return p.etapa===6;});
+    const totalReceita=fechadas.reduce(function(s,p){return s+(parseFloat(p.receita)||0);},0);
+    const resumo=[
+      {Indicador:'Total de propostas',Valor:lista.length},
+      {Indicador:'Propostas fechadas',Valor:fechadas.length},
+      {Indicador:'Receita total fechada (R$)',Valor:totalReceita},
+      {Indicador:'Taxa de convers\u00e3o',Valor:(lista.length?Math.round(fechadas.length/lista.length*100):0)+'%'},
+      {Indicador:'Data do relat\u00f3rio',Valor:new Date().toLocaleDateString('pt-BR')}
+    ];
+    const wsResumo=XLSX.utils.json_to_sheet(resumo);
+    wsResumo['!cols']=[{wch:30},{wch:20}];
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,wsResumo,'Resumo');
+    XLSX.utils.book_append_sheet(wb,ws,'Propostas');
+
+    const nomeArq='Relatorio_TIM_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb,nomeArq);
+    showNotif('Relat\u00f3rio exportado com sucesso!');
+  });
+}
+window.exportarRelatorioExcel=exportarRelatorioExcel;
+
+// ========= ALERTA HEADER =========
+function atualizarAlertaHeader(){
+  const el=document.getElementById('alerta-followup');
+  if(!el)return;
+  const lista=getPropostas().filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6&&p.retorno;});
+  const atrasados=lista.filter(function(p){return diffDays(p.retorno)<0;});
+  const hoje=lista.filter(function(p){return p.retorno===TODAY_STR;});
+  const total=atrasados.length+hoje.length;
+  if(total>0){
+    el.style.display='flex';
+    el.className='alerta-pulse';
+    el.innerHTML='<i class="ti ti-alert-triangle"></i> '+total+' retorno'+(total>1?'s':'')+' pendente'+(total>1?'s':'')+' hoje';
+  }else{
+    el.style.display='none';
+  }
+}
+
+// ========= DASHBOARD =========
+function renderDashboard(){
+  const lista=getPropostas();
+  const u=USERS[currentUser]||USERS.karla;
+  const nomeExibir=u.nomeCompleto?u.nomeCompleto.split(' ')[0]:u.nome;
+  
+  // Saudação por horário
+  const hora=new Date().getHours();
+  let saudacao='Boa noite';
+  if(hora>=5&&hora<12)saudacao='Bom dia';
+  else if(hora>=12&&hora<18)saudacao='Boa tarde';
+  
+  const ativos=lista.filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6;});
+  const comRetorno=ativos.filter(function(p){return p.retorno;});
+  const atrasados=comRetorno.filter(function(p){return diffDays(p.retorno)<0;});
+  const hojeArr=comRetorno.filter(function(p){return p.retorno===TODAY_STR;});
+  const amanhaArr=comRetorno.filter(function(p){return p.retorno===TMRW_STR;});
+  
+  const hojeMes=new Date();
+  const mesAtual=hojeMes.getMonth();
+  const anoAtual=hojeMes.getFullYear();
+  const fechadasMes=lista.filter(function(p){
+    if(p.etapa!==6)return false;
+    const d=new Date(p.atualizadoEm||p.criadoEm||0);
+    return d.getMonth()===mesAtual&&d.getFullYear()===anoAtual;
+  });
+  const receitaMes=fechadasMes.reduce(function(s,p){return s+(parseFloat(p.receita)||0);},0);
+  
+  document.getElementById('dash-saudacao').innerHTML=
+    '<div style="font-size:20px;font-weight:500;">'+saudacao+', '+nomeExibir+'!</div>'
+    +'<div style="font-size:13px;color:#888;margin-top:2px;">'+new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+'</div>';
+  
+  document.getElementById('dash-stats').innerHTML=
+    '<div class="fu-stat"><div class="num" style="color:#E24B4A;">'+atrasados.length+'</div><div class="lbl">Atrasados</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#BA7517;">'+hojeArr.length+'</div><div class="lbl">Hoje</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#378ADD;">'+amanhaArr.length+'</div><div class="lbl">Amanh\u00e3</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#27500A;font-size:18px;">'+fmtMoeda(receitaMes)+'</div><div class="lbl">Fechado este m\u00eas</div></div>';
+  
+  let alertaHtml='';
+  if(atrasados.length>0){
+    alertaHtml='<div class="fu-alerta atrasado"><h3><i class="ti ti-alert-circle"></i> Aten\u00e7\u00e3o: '+atrasados.length+' retorno'+(atrasados.length>1?'s':'')+' atrasado'+(atrasados.length>1?'s':'')+'</h3>'
+      +'<p style="font-size:13px;color:#791F1F;">Esses clientes est\u00e3o esperando contato. <a href="#" onclick="setTab(\'followup\');return false;" style="color:#791F1F;text-decoration:underline;font-weight:600;">Ver na aba Follow-up</a></p></div>';
+  }else if(hojeArr.length>0){
+    alertaHtml='<div class="fu-alerta hoje"><h3><i class="ti ti-bell-ringing"></i> '+hojeArr.length+' retorno'+(hojeArr.length>1?'s':'')+' para hoje</h3>'
+      +'<p style="font-size:13px;color:#633806;"><a href="#" onclick="setTab(\'followup\');return false;" style="color:#633806;text-decoration:underline;font-weight:600;">Ver na aba Follow-up</a></p></div>';
+  }else{
+    alertaHtml='<div style="background:#EAF3DE;border:1px solid #97C459;border-radius:12px;padding:1rem 1.25rem;color:#27500A;font-size:13px;"><i class="ti ti-check"></i> Nenhum retorno urgente. Bom trabalho!</div>';
+  }
+  document.getElementById('dash-alertas').innerHTML=alertaHtml;
+  
+  // Próximos retornos (5 mais próximos)
+  const proximos=comRetorno.slice().sort(function(a,b){return a.retorno>b.retorno?1:-1;}).slice(0,5);
+  const proxDiv=document.getElementById('dash-proximos');
+  if(proximos.length===0){
+    proxDiv.innerHTML='<div class="empty">Nenhum retorno agendado.</div>';
+  }else{
+    proxDiv.innerHTML=proximos.map(function(p){
+      const uc=USERS[p.consultor]||USERS.karla;
+      const diff=diffDays(p.retorno);
+      let quando=diff<0?Math.abs(diff)+'d atrasado':diff===0?'Hoje':diff===1?'Amanh\u00e3':'em '+diff+'d';
+      let cor=diff<0?'#791F1F':diff<=1?'#633806':'#888';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0ec;cursor:pointer;" onclick="verDetalhe(\''+p._docId+'\')">'
+        +'<div class="avatar" style="background:'+uc.bg+';color:'+uc.c+';width:28px;height:28px;font-size:10px;">'+initials(uc.nome)+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">'+p.razao+'</div></div>'
+        +'<div style="font-size:11px;font-weight:600;color:'+cor+';">'+quando+'</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Fechamentos recentes (5 últimos)
+  const fechadas=lista.filter(function(p){return p.etapa===6;}).slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);}).slice(0,5);
+  const fechDiv=document.getElementById('dash-fechamentos');
+  if(fechadas.length===0){
+    fechDiv.innerHTML='<div class="empty">Nenhum contrato fechado ainda.</div>';
+  }else{
+    fechDiv.innerHTML=fechadas.map(function(p){
+      const uc=USERS[p.consultor]||USERS.karla;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0ec;cursor:pointer;" onclick="verDetalhe(\''+p._docId+'\')">'
+        +'<div class="avatar" style="background:'+uc.bg+';color:'+uc.c+';width:28px;height:28px;font-size:10px;">'+initials(uc.nome)+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">'+p.razao+'</div></div>'
+        +'<div style="font-size:12px;font-weight:600;color:#27500A;">'+fmtMoeda(p.receita||0)+'</div>'
+        +'</div>';
+    }).join('');
+  }
+}
 
 // ========= CALENDÁRIO FOLLOW-UP =========
 let calYear=TODAY.getFullYear(),calMonth=TODAY.getMonth(),calSelected=null;
@@ -654,6 +967,7 @@ function renderCal(){
 
 function selectCalDay(ds){calSelected=ds;renderCal();showCalDetalhe(ds);}
 window.selectCalDay=selectCalDay;
+window.renderDashboard=renderDashboard;
 
 function showCalDetalhe(ds){
   const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.retorno===ds);
@@ -668,14 +982,14 @@ function showCalDetalhe(ds){
       const t=TIPOS[p.tipo]||TIPOS.novo;
       const telNum=p.telefone?cleanTel(p.telefone):'';
       return`<div class="cal-evento-card">
-        <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials(USERS[p.consultor].nome)}</div>
+        <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:500;">${p.razao}</div>
           <div style="font-size:12px;color:#666;">${p.responsavel||''}</div>
           <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;">
             <span class="badge ${t.cls}" style="font-size:10px;">${t.label}</span>
             ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EEEDFE;color:#3C3489;">${p.linhas} linhas</span>`:''}
-            ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+            ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
           </div>
         </div>
         ${p.telefone?`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;">
@@ -710,14 +1024,14 @@ function renderFollowup(){
     const t=TIPOS[p.tipo]||TIPOS.novo;
     const telNum=p.telefone?cleanTel(p.telefone):'';
     return`<div class="fu-item">
-      <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials(USERS[p.consultor].nome)}</div>
+      <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:500;">${p.razao}</div>
         <div style="font-size:12px;color:#666;">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
         <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">
           <span class="badge ${t.cls}" style="font-size:10px;">${t.label}</span>
           ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EEEDFE;color:#3C3489;">${p.linhas} linhas</span>`:''}
-          ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+          ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
         </div>
       </div>
       ${p.telefone?`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;"><a href="tel:+55${telNum}" style="font-size:11px;color:#185FA5;text-decoration:none;"><i class="ti ti-phone" style="font-size:11px;"></i> ${fmtTel(p.telefone)}</a><a href="https://wa.me/55${telNum}" target="_blank" style="font-size:11px;color:#085041;text-decoration:none;"><i class="ti ti-brand-whatsapp" style="font-size:11px;"></i> WhatsApp</a></div>`:''}
@@ -742,7 +1056,7 @@ function renderFollowup(){
     const e=ETAPAS[p.etapa]||ETAPAS[0];
     return`<div class="fu-list-card ${cls}">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div class="avatar" style="background:${u.bg};color:${u.c};">${initials(USERS[p.consultor].nome)}</div>
+        <div class="avatar" style="background:${u.bg};color:${u.c};">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-size:15px;font-weight:500;">${p.razao}</span>
@@ -765,13 +1079,54 @@ function renderFollowup(){
 
 function renderLista(){
   let lista=getPropostas();
+  
+  // Popular filtro consultor dinamicamente (só master)
+  const fcEl=document.getElementById('filtro-consultor');
+  if(currentUser==='master'&&fcEl&&fcEl.options.length<=1){
+    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+    const valorAtual=fcEl.value;
+    fcEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){
+      return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+    }).join('');
+    fcEl.value=valorAtual;
+  }
+  
   const fe=document.getElementById('filtro-etapa').value;
   const ft=document.getElementById('filtro-tipo').value;
   const fc=document.getElementById('filtro-consultor').value;
+  const buscaEl=document.getElementById('lista-busca');
+  const busca=buscaEl?buscaEl.value.trim().toLowerCase():'';
+  const ordenarEl=document.getElementById('lista-ordenar');
+  const ordenar=ordenarEl?ordenarEl.value:'urgencia';
+  
   if(fe!=='')lista=lista.filter(p=>String(p.etapa)===fe);
   if(ft)lista=lista.filter(p=>p.tipo===ft);
   if(fc)lista=lista.filter(p=>p.consultor===fc);
-  lista=lista.slice().sort((a,b)=>(a.retorno||'')>(b.retorno||'')?1:-1);
+  
+  if(busca){
+    lista=lista.filter(function(p){
+      const cnpjLimpo=(p.cnpj||'').replace(/\D/g,'');
+      const buscaLimpa=busca.replace(/\D/g,'');
+      return (p.razao||'').toLowerCase().includes(busca)
+        || (buscaLimpa&&cnpjLimpo.includes(buscaLimpa))
+        || (p.cnpj||'').toLowerCase().includes(busca);
+    });
+  }
+  
+  lista=lista.slice();
+  if(ordenar==='urgencia'){
+    lista.sort(function(a,b){
+      // Sem retorno vai pro final; quem tem retorno mais próximo (ou mais atrasado) vem primeiro
+      if(!a.retorno&&!b.retorno)return 0;
+      if(!a.retorno)return 1;
+      if(!b.retorno)return -1;
+      return a.retorno>b.retorno?1:-1;
+    });
+  }else if(ordenar==='recente'){
+    lista.sort(function(a,b){return (b.criadoEm||0)-(a.criadoEm||0);});
+  }else if(ordenar==='razao'){
+    lista.sort(function(a,b){return (a.razao||'').localeCompare(b.razao||'');});
+  }
   const c=document.getElementById('lista-propostas');
   if(!lista.length){c.innerHTML='<div class="empty">Nenhuma proposta encontrada.</div>';return;}
   c.innerHTML=lista.map(p=>{
@@ -779,15 +1134,23 @@ function renderLista(){
     const u=USERS[p.consultor]||USERS.karla;
     const t=TIPOS[p.tipo]||TIPOS.novo;
     const cls=p.etapa==='perdida'?'proposta-card perdida':'proposta-card e'+p.etapa;
+    let urgenciaBadge='';
+    if(p.retorno&&p.etapa!=='perdida'&&p.etapa!==6){
+      const diff=diffDays(p.retorno);
+      if(diff<0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FCEBEB;color:#791F1F;font-weight:600;">'+Math.abs(diff)+'d atrasado</span>';
+      else if(diff===0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FAEEDA;color:#633806;font-weight:600;">Hoje</span>';
+      else if(diff===1)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C;">Amanh\u00e3</span>';
+    }
     return`<div class="${cls}">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div class="avatar" style="background:${u.bg};color:${u.c};">${initials(USERS[p.consultor].nome)}</div>
+        <div class="avatar" style="background:${u.bg};color:${u.c};">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-size:15px;font-weight:500;">${p.razao}</span>
             <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
             <span class="badge ${t.cls}">${t.label}</span>
-            ${currentUser==='master'?`<span class="badge" style="background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>`:''}
+            ${urgenciaBadge}
+            ${currentUser==='master'?`<span class="badge" style="background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
           </div>
           <div style="font-size:13px;color:#666;">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
           ${telLinks(p.telefone||'')}
@@ -804,6 +1167,7 @@ function renderLista(){
         ${p.etapa===6?`<button class="btn-sm btn-verde" onclick="abrirChecklist('${p._docId}')"><i class="ti ti-clipboard-check"></i> Checklist</button>`:''}
         <button class="btn-sm btn-azul" onclick="abrirModalProposta('${p._docId}')"><i class="ti ti-presentation"></i> Proposta</button>
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
+        <button class="btn-sm" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>
         ${p.etapa!=='perdida'?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
         ${p.etapa==='perdida'?`<button class="btn-sm btn-azul" onclick="reativar('${p._docId}')"><i class="ti ti-arrow-back"></i> Reativar</button>`:''}
       </div>
@@ -832,18 +1196,53 @@ function renderMetricas(){
   }).join('');
 
   const consDiv=document.getElementById('met-consultores');
+  const todosConsultores=Object.keys(USERS).filter(function(k){return k!=='master';});
   if(currentUser==='master'){
-    consDiv.innerHTML=['karla','lucas'].map(c=>{
-      const u=USERS[c];const cl=lista.filter(p=>p.consultor===c);const cf=cl.filter(p=>p.etapa===6);const cr=cf.reduce((s,p)=>s+(+p.receita||0),0);
-      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e8e8e0;">
-        <div class="avatar" style="background:${u.bg};color:${u.c};width:34px;height:34px;font-size:11px;">${initials(u.nome)}</div>
-        <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${u.nome}</div><div style="font-size:12px;color:#666;">${cl.length} propostas · ${cf.length} fechadas</div></div>
-        <div style="font-size:13px;font-weight:500;">${fmtMoeda(cr)}</div>
-      </div>`;
+    consDiv.innerHTML=todosConsultores.map(function(c){
+      const u=USERS[c];const cl=lista.filter(function(p){return p.consultor===c;});const cf=cl.filter(function(p){return p.etapa===6;});const cr=cf.reduce(function(s,p){return s+(+p.receita||0);},0);
+      const meta=u.meta||0;
+      const pctMeta=meta>0?Math.min(100,Math.round(cr/meta*100)):0;
+      return'<div style="padding:10px 0;border-bottom:1px solid #e8e8e0;">'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:'+(meta>0?'6px':'0')+';">'
+        +'<div class="avatar" style="background:'+u.bg+';color:'+u.c+';width:34px;height:34px;font-size:11px;">'+initials(u.nome)+'</div>'
+        +'<div style="flex:1;"><div style="font-size:13px;font-weight:500;">'+u.nome+'</div><div style="font-size:12px;color:#666;">'+cl.length+' propostas · '+cf.length+' fechadas</div></div>'
+        +'<div style="font-size:13px;font-weight:500;">'+fmtMoeda(cr)+'</div>'
+        +'</div>'
+        +(meta>0?'<div style="padding-left:44px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:2px;"><span>Meta: '+fmtMoeda(meta)+'</span><span style="font-weight:600;color:'+(pctMeta>=100?'#27500A':'#1a1a18')+';">'+pctMeta+'%</span></div><div class="funil-bar"><div class="funil-fill" style="width:'+pctMeta+'%;background:'+(pctMeta>=100?'#639922':'#378ADD')+';"></div></div></div>':'')
+        +'</div>';
     }).join('');
   }else{
-    const mr=fechadas.reduce((s,p)=>s+(+p.receita||0),0);
-    consDiv.innerHTML=`<div style="text-align:center;padding:1.5rem 0;"><div style="font-size:26px;font-weight:500;">${fmtMoeda(mr)}</div><div style="font-size:13px;color:#666;margin-top:4px;">Sua receita fechada/mês</div><div style="font-size:13px;color:#666;">${fechadas.length} contratos · ${totalLinhas} linhas</div></div>`;
+    const mr=fechadas.reduce(function(s,p){return s+(+p.receita||0);},0);
+    const uAtual=USERS[currentUser]||{};
+    const metaAtual=uAtual.meta||0;
+    const pctMetaAtual=metaAtual>0?Math.min(100,Math.round(mr/metaAtual*100)):0;
+    consDiv.innerHTML='<div style="text-align:center;padding:1rem 0;">'
+      +'<div style="font-size:26px;font-weight:500;">'+fmtMoeda(mr)+'</div>'
+      +'<div style="font-size:13px;color:#666;margin-top:4px;">Sua receita fechada/mês</div>'
+      +'<div style="font-size:13px;color:#666;">'+fechadas.length+' contratos · '+totalLinhas+' linhas</div>'
+      +(metaAtual>0?'<div style="margin-top:16px;padding:0 20px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:4px;"><span>Meta: '+fmtMoeda(metaAtual)+'</span><span style="font-weight:600;color:'+(pctMetaAtual>=100?'#27500A':'#1a1a18')+';">'+pctMetaAtual+'%</span></div><div class="funil-bar" style="height:10px;"><div class="funil-fill" style="width:'+pctMetaAtual+'%;background:'+(pctMetaAtual>=100?'#639922':'#378ADD')+';"></div></div></div>':'')
+      +'</div>';
+  }
+
+  // Motivos de perda
+  const perdidas=lista.filter(function(p){return p.etapa==='perdida';});
+  const motivosCount={};
+  perdidas.forEach(function(p){
+    const motivo=(p.motivoPerda||'Outro').split(' – ')[0];
+    motivosCount[motivo]=(motivosCount[motivo]||0)+1;
+  });
+  const motivosDiv=document.getElementById('met-motivos-perda');
+  if(motivosDiv){
+    if(perdidas.length===0){
+      motivosDiv.innerHTML='<div class="empty">Nenhuma proposta perdida registrada.</div>';
+    }else{
+      const motivosOrdenados=Object.keys(motivosCount).sort(function(a,b){return motivosCount[b]-motivosCount[a];});
+      motivosDiv.innerHTML=motivosOrdenados.map(function(m){
+        const cnt=motivosCount[m];
+        const pct=Math.round(cnt/perdidas.length*100);
+        return'<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:3px;"><span>'+m+'</span><span style="font-weight:500;color:#1a1a18;">'+cnt+' ('+pct+'%)</span></div><div class="funil-bar"><div class="funil-fill" style="width:'+pct+'%;background:#E24B4A;"></div></div></div>';
+      }).join('');
+    }
   }
 
   if(_chart){_chart.destroy();_chart=null;}
@@ -908,12 +1307,47 @@ async function avancarEtapa(docId,etapaAtual){
 }
 window.avancarEtapa=avancarEtapa;
 
-async function marcarPerdida(docId){
-  if(!confirm('Marcar como perdida?'))return;
-  try{await db.collection('propostas').doc(docId).update({etapa:'perdida',atualizadoEm:Date.now()});showNotif('Marcada como perdida.');}
-  catch(e){showNotif('Erro.',true);}
+function marcarPerdida(docId){
+  document.getElementById('mp-doc-id').value=docId;
+  document.getElementById('mp-motivo').value='Pre\u00e7o alto';
+  document.getElementById('mp-detalhes').value='';
+  document.getElementById('modal-motivo-perda').classList.add('open');
 }
 window.marcarPerdida=marcarPerdida;
+
+async function confirmarPerda(){
+  const docId=document.getElementById('mp-doc-id').value;
+  const motivo=document.getElementById('mp-motivo').value;
+  const detalhes=document.getElementById('mp-detalhes').value.trim();
+  const motivoCompleto=motivo+(detalhes?' \u2013 '+detalhes:'');
+  try{
+    await db.collection('propostas').doc(docId).update({etapa:'perdida',motivoPerda:motivoCompleto,atualizadoEm:Date.now()});
+    showNotif('Marcada como perdida.');
+    fecharModal('modal-motivo-perda');
+  }catch(e){showNotif('Erro.',true);}
+}
+window.confirmarPerda=confirmarPerda;
+
+async function duplicarProposta(docId){
+  const p=propostas.find(function(x){return x._docId===docId;});
+  if(!p)return;
+  if(!confirm('Duplicar a proposta de "'+p.razao+'"? Ser\u00e1 criada uma c\u00f3pia na etapa "Proposta enviada".'))return;
+  const novosDados=Object.assign({},p);
+  delete novosDados._docId;
+  novosDados.razao=p.razao+' (c\u00f3pia)';
+  novosDados.etapa=0;
+  novosDados.historico=[];
+  novosDados.criadoEm=Date.now();
+  novosDados.atualizadoEm=Date.now();
+  try{
+    await db.collection('propostas').add(novosDados);
+    showNotif('Proposta duplicada com sucesso!');
+    fecharModal('modal-detalhe');
+  }catch(e){
+    showNotif('Erro ao duplicar proposta.',true);
+  }
+}
+window.duplicarProposta=duplicarProposta;
 
 async function reativar(docId){
   try{await db.collection('propostas').doc(docId).update({etapa:0,atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
@@ -931,7 +1365,7 @@ function verDetalhe(docId){
     `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
       <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
       <span class="badge ${t.cls}">${t.label}</span>
-      <span class="badge" style="background:${u.bg};color:${u.c};">${USERS[p.consultor].nome}</span>
+      <span class="badge" style="background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:10px;">
       <div><div style="color:#888;font-size:11px;margin-bottom:2px;">CNPJ</div><div>${p.cnpj||'—'}</div></div>
@@ -942,11 +1376,13 @@ function verDetalhe(docId){
       <div><div style="color:#888;font-size:11px;margin-bottom:2px;">Receita mensal</div><div>${p.receita?fmtMoeda(p.receita):'—'}</div></div>
     </div>
     ${p.obs?`<div style="font-size:13px;background:#f8f8f6;padding:8px 10px;border-radius:6px;color:#555;">${p.obs}</div>`:''}`;
+  renderHistorico(p);
   document.getElementById('det-acoes').innerHTML=
     (p.etapa!=='perdida'&&p.etapa<6?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
     +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
     +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');abrirChecklist('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
     +`<button class="btn btn-azul" onclick="fecharModal('modal-detalhe');abrirModalProposta('${p._docId}');"><i class="ti ti-presentation"></i> Proposta</button>`
+    +`<button class="btn" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>`
     +`<button class="btn" onclick="fecharModal('modal-detalhe')">Fechar</button>`;
   document.getElementById('modal-detalhe').classList.add('open');
 }
@@ -1184,19 +1620,30 @@ async function consultarCNPJ(cnpj, campoRazao, statusEl){
 function fmtCPF(v){v=v.replace(/\D/g,'').slice(0,11);if(v.length>9)v=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);else if(v.length>6)v=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else if(v.length>3)v=v.slice(0,3)+'.'+v.slice(3);return v;}
 
 function abrirChecklist(docId){
-  const p=propostas.find(x=>x._docId===docId);
+  const p=propostas.find(function(x){return x._docId===docId;});
   if(!p)return;
+  document.getElementById('ck-doc-id').value=docId;
   const u=USERS[currentUser]||USERS.karla;
-  document.getElementById('ck-consultor').value=u.nome;
-  document.getElementById('ck-razao').value=p.razao||'';
-  document.getElementById('ck-cnpj').value=p.cnpj||'';
-  document.getElementById('ck-linhas').value=p.linhas||'';
-  document.getElementById('ck-valor').value=p.receita||'';
-  document.getElementById('ck-tipo').value=p.tipo==='portado'?'PORTABILIDADE':p.tipo==='renovacao'?'RENOVAÇÃO':'NOVO';
-  document.getElementById('ck-gestor').value=p.responsavel||'';
-  document.getElementById('ck-gestor-cel').value=p.telefone||'';
-  ['ck-gestor-cpf','ck-gestor-fixo','ck-rep','ck-rep-cpf','ck-rep-cel','ck-rep-fixo','ck-email','ck-plano'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ck-operadora').value='';
+  const salvo=p.checklist||{};
+  
+  document.getElementById('ck-consultor').value=salvo.consultor||u.nome;
+  document.getElementById('ck-razao').value=salvo.razao||p.razao||'';
+  document.getElementById('ck-cnpj').value=salvo.cnpj||p.cnpj||'';
+  document.getElementById('ck-linhas').value=salvo.linhas||p.linhas||'';
+  document.getElementById('ck-valor').value=salvo.valor||p.receita||'';
+  document.getElementById('ck-tipo').value=salvo.tipo||(p.tipo==='portado'?'PORTABILIDADE':p.tipo==='renovacao'?'RENOVAÇÃO':'NOVO');
+  document.getElementById('ck-gestor').value=salvo.gestor||p.responsavel||'';
+  document.getElementById('ck-gestor-cpf').value=salvo.gestorCpf||'';
+  document.getElementById('ck-gestor-cel').value=salvo.gestorCel||p.telefone||'';
+  document.getElementById('ck-gestor-fixo').value=salvo.gestorFixo||'';
+  document.getElementById('ck-rep').value=salvo.rep||'';
+  document.getElementById('ck-rep-cpf').value=salvo.repCpf||'';
+  document.getElementById('ck-rep-cel').value=salvo.repCel||'';
+  document.getElementById('ck-rep-fixo').value=salvo.repFixo||'';
+  document.getElementById('ck-email').value=salvo.email||'';
+  document.getElementById('ck-operadora').value=salvo.operadora||'';
+  document.getElementById('ck-plano').value=salvo.plano||'';
+  
   document.getElementById('modal-checklist').classList.add('open');
 }
 window.abrirChecklist=abrirChecklist;
@@ -1204,56 +1651,116 @@ window.abrirChecklist=abrirChecklist;
 function fmtTelChecklist(t){if(!t)return'—';const d=t.replace(/\D/g,'');if(d.length===11)return'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);if(d.length===10)return'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);return t;}
 
 function copiarChecklist(){
+  const docId=document.getElementById('ck-doc-id').value;
   const tipo=document.getElementById('ck-tipo').value;
   const operadora=document.getElementById('ck-operadora').value;
   const plano=document.getElementById('ck-plano').value;
   const valor=document.getElementById('ck-valor').value;
+  const consultor=document.getElementById('ck-consultor').value;
+  const razao=document.getElementById('ck-razao').value;
+  const cnpj=document.getElementById('ck-cnpj').value;
+  const linhasQtd=document.getElementById('ck-linhas').value;
+  const gestor=document.getElementById('ck-gestor').value;
+  const gestorCpf=document.getElementById('ck-gestor-cpf').value;
+  const gestorCel=document.getElementById('ck-gestor-cel').value;
+  const gestorFixo=document.getElementById('ck-gestor-fixo').value;
+  const rep=document.getElementById('ck-rep').value;
+  const repCpf=document.getElementById('ck-rep-cpf').value;
+  const repCel=document.getElementById('ck-rep-cel').value;
+  const repFixo=document.getElementById('ck-rep-fixo').value;
+  const email=document.getElementById('ck-email').value;
 
   const linhas=`
 📋 *CHECKLIST DE FECHAMENTO*
 ━━━━━━━━━━━━━━━━━━━━━
 
-👤 *CONSULTOR:* ${document.getElementById('ck-consultor').value||'—'}
+👤 *CONSULTOR:* ${consultor||'—'}
 
 🏢 *DADOS DA EMPRESA*
-• Razão social: ${document.getElementById('ck-razao').value||'—'}
-• CNPJ: ${document.getElementById('ck-cnpj').value||'—'}
+• Razão social: ${razao||'—'}
+• CNPJ: ${cnpj||'—'}
 
 👔 *GESTOR DE CONTA*
-• Nome: ${document.getElementById('ck-gestor').value||'—'}
-• CPF: ${document.getElementById('ck-gestor-cpf').value||'—'}
-• Celular: ${fmtTelChecklist(document.getElementById('ck-gestor-cel').value)}
-• Fixo: ${fmtTelChecklist(document.getElementById('ck-gestor-fixo').value)}
+• Nome: ${gestor||'—'}
+• CPF: ${gestorCpf||'—'}
+• Celular: ${fmtTelChecklist(gestorCel)}
+• Fixo: ${fmtTelChecklist(gestorFixo)}
 
 ⚖️ *REPRESENTANTE LEGAL*
-• Nome: ${document.getElementById('ck-rep').value||'—'}
-• CPF: ${document.getElementById('ck-rep-cpf').value||'—'}
-• Celular: ${fmtTelChecklist(document.getElementById('ck-rep-cel').value)}
-• Fixo: ${fmtTelChecklist(document.getElementById('ck-rep-fixo').value)}
-• E-mail: ${document.getElementById('ck-email').value||'—'}
+• Nome: ${rep||'—'}
+• CPF: ${repCpf||'—'}
+• Celular: ${fmtTelChecklist(repCel)}
+• Fixo: ${fmtTelChecklist(repFixo)}
+• E-mail: ${email||'—'}
 
 📦 *PEDIDO*
 • Tipo: ${tipo}
 ${operadora?'• Operadora doadora: '+operadora:''}
-• Qtd. de linhas: ${document.getElementById('ck-linhas').value||'—'}
+• Qtd. de linhas: ${linhasQtd||'—'}
 ${plano?'• Plano/linhas portabilidade: '+plano:''}
 • Valor mensal: R$ ${valor?Number(valor).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}
 
 ━━━━━━━━━━━━━━━━━━━━━`;
 
-  navigator.clipboard.writeText(linhas.trim()).then(()=>{
-    showNotif('Checklist copiado! Cole no WhatsApp.');
+  // Salvar dados do checklist no Firebase para preencher automaticamente na próxima vez
+  if(docId){
+    const checklistData={
+      consultor:consultor,razao:razao,cnpj:cnpj,linhas:linhasQtd,valor:valor,tipo:tipo,
+      gestor:gestor,gestorCpf:gestorCpf,gestorCel:gestorCel,gestorFixo:gestorFixo,
+      rep:rep,repCpf:repCpf,repCel:repCel,repFixo:repFixo,email:email,
+      operadora:operadora,plano:plano
+    };
+    db.collection('propostas').doc(docId).update({checklist:checklistData}).catch(function(e){});
+  }
+
+  navigator.clipboard.writeText(linhas.trim()).then(function(){
+    showNotif('Checklist copiado e salvo! Cole no WhatsApp.');
     fecharModal('modal-checklist');
-  }).catch(()=>{
-    // fallback
+  }).catch(function(){
     const ta=document.createElement('textarea');
     ta.value=linhas.trim();
     document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    showNotif('Checklist copiado! Cole no WhatsApp.');
+    showNotif('Checklist copiado e salvo! Cole no WhatsApp.');
     fecharModal('modal-checklist');
   });
 }
 window.copiarChecklist=copiarChecklist;
+
+// ========= HISTÓRICO DE INTERAÇÕES =========
+function renderHistorico(p){
+  const container=document.getElementById('det-historico');
+  if(!container)return;
+  const hist=p.historico||[];
+  let html='<div style="font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Histórico de interações</div>';
+  if(hist.length===0){
+    html+='<div style="font-size:12px;color:#aaa;margin-bottom:8px;">Nenhuma anotação ainda.</div>';
+  }else{
+    const histOrdenado=hist.slice().reverse();
+    html+=histOrdenado.map(function(h){
+      const data=new Date(h.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const autor=USERS[h.autor]?USERS[h.autor].nome:h.autor;
+      return '<div class="hist-item"><div class="hist-data">'+data+' – '+autor+'</div>'+h.texto+'</div>';
+    }).join('');
+  }
+  html+='<div class="hist-nova"><textarea id="hist-nova-texto" placeholder="Adicionar nova anotação..."></textarea><button class="btn-sm btn-verde" onclick="adicionarHistorico(\''+p._docId+'\')" style="align-self:flex-end;"><i class="ti ti-plus"></i> Adicionar</button></div>';
+  container.innerHTML=html;
+}
+
+async function adicionarHistorico(docId){
+  const texto=document.getElementById('hist-nova-texto').value.trim();
+  if(!texto)return;
+  const p=propostas.find(function(x){return x._docId===docId;});
+  if(!p)return;
+  const hist=p.historico||[];
+  hist.push({data:Date.now(),autor:currentUser,texto:texto});
+  try{
+    await db.collection('propostas').doc(docId).update({historico:hist,atualizadoEm:Date.now()});
+    showNotif('Anotação adicionada!');
+  }catch(e){
+    showNotif('Erro ao salvar anotação.',true);
+  }
+}
+window.adicionarHistorico=adicionarHistorico;
 
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
@@ -1355,6 +1862,7 @@ function abrirModalUsuario(key){
     document.getElementById('u-nome-completo').value='';
     document.getElementById('u-telefone-prop').value='';
     document.getElementById('u-email-prop').value='';
+    document.getElementById('u-meta').value='';
   }
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -1367,6 +1875,7 @@ function editarUsuario(key){
     document.getElementById('u-nome-completo').value=u.nomeCompleto||u.nome||'';
     document.getElementById('u-telefone-prop').value=u.telProp||'';
     document.getElementById('u-email-prop').value=u.emailProp||'';
+    document.getElementById('u-meta').value=u.meta||'';
   }
 }
 window.editarUsuario=editarUsuario;
@@ -1396,14 +1905,16 @@ function salvarUsuario(){
   const nomeCompleto=document.getElementById('u-nome-completo').value.trim();
   const telProp=document.getElementById('u-telefone-prop').value.trim();
   const emailProp=document.getElementById('u-email-prop').value.trim();
+  const meta=parseFloat(document.getElementById('u-meta').value)||0;
   if(keyOriginal){
     USERS[keyOriginal].nome=nome;USERS[keyOriginal].role='Consultor';
     USERS[keyOriginal].nomeCompleto=nomeCompleto||nome;
     USERS[keyOriginal].telProp=telProp;
     USERS[keyOriginal].emailProp=emailProp;
+    USERS[keyOriginal].meta=meta;
     if(senha.length>=4){const senhas=getSenhas();senhas[keyOriginal]=senha;setSenhas(senhas);saveSenhaFirebase(keyOriginal,senha);}
   }else{
-    USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idx].bg,c:AVATAR_COLORS[idx].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp};
+    USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idx].bg,c:AVATAR_COLORS[idx].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta};
     const senhas=getSenhas();senhas[keyInput]=senha;setSenhas(senhas);saveSenhaFirebase(keyInput,senha);
   }
   saveUsers().then(function(){fecharModal('modal-usuario');renderUsuarios();showNotif(keyOriginal?'Consultor atualizado!':'Consultor adicionado!');});
@@ -1435,6 +1946,14 @@ document.getElementById('p-cnpj').addEventListener('input',function(){
 document.getElementById('ck-cnpj').addEventListener('input',function(){
   this.value=fmtCNPJ(this.value);
 });
+// Listeners pipeline: busca e filtro
+const pipeBusca=document.getElementById('pipe-busca');
+if(pipeBusca)pipeBusca.addEventListener('input',function(){renderPipeline();});
+const listaBusca=document.getElementById('lista-busca');
+if(listaBusca)listaBusca.addEventListener('input',function(){renderLista();});
+const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
+if(pipeFiltroConsultor)pipeFiltroConsultor.addEventListener('change',function(){renderPipeline();});
+
 document.getElementById('cal-prev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCal();});
 document.getElementById('cal-next').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCal();});
 loadSenhasFirebase();
@@ -1475,6 +1994,7 @@ window.renderLista=renderLista;
 window.toggleSenha=toggleSenha;
 window.salvarSenha=salvarSenha;
 window.selectCalDay=selectCalDay;
+window.renderDashboard=renderDashboard;
 window.onDragStart=onDragStart;
 window.onDragOver=onDragOver;
 window.onDragLeave=onDragLeave;
