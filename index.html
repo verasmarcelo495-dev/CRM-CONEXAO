@@ -140,6 +140,19 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 .prop-section{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .5rem;padding-top:1rem;border-top:1px solid var(--border);}
 .prop-section:first-child{margin-top:0;padding-top:0;border-top:none;}
 
+/* RENOVAÇÕES */
+.ren-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px;}
+.ren-card.elegivel{border-left:3px solid #1D9E75;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.ren-card.aguardando{border-left:3px solid #EF9F27;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.ren-card.renovado{border-left:3px solid #27500A;border-radius:0 var(--radius-lg) var(--radius-lg) 0;background:#F6FBF0;}
+.ren-card.perdido{border-left:3px solid #888;border-radius:0 var(--radius-lg) var(--radius-lg) 0;opacity:.7;}
+.badge-fidelidade-com{background:#EAF3DE;color:#27500A;}
+.badge-fidelidade-sem{background:#E6F1FB;color:#0C447C;}
+.badge-status-nao_atribuido{background:#F1EFE8;color:#444;}
+.badge-status-negociacao{background:#FAEEDA;color:#633806;}
+.badge-status-renovado{background:#EAF3DE;color:#27500A;}
+.badge-status-perdido{background:#FCEBEB;color:#791F1F;}
+
 /* CHECKLIST */
 .checklist-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1rem;}
 .checklist-section{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .5rem;padding-top:1rem;border-top:1px solid var(--border);}
@@ -214,6 +227,7 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       <button class="tab" id="tab-followup" onclick="setTab('followup')"><i class="ti ti-bell"></i> Follow-up</button>
       <button class="tab" id="tab-lista" onclick="setTab('lista')"><i class="ti ti-list"></i> Lista</button>
       <button class="tab" id="tab-metricas" onclick="setTab('metricas')"><i class="ti ti-chart-bar"></i> Métricas</button>
+      <button class="tab" id="tab-renovacoes" onclick="setTab('renovacoes')"><i class="ti ti-refresh"></i> Renovações</button>
       <button class="tab" id="tab-usuarios" onclick="setTab('usuarios')" style="display:none;"><i class="ti ti-users"></i> Usuários</button>
     </div>
 
@@ -262,6 +276,38 @@ header h1{font-size:15px;font-weight:500;flex:1;}
       </div>
       <div style="font-size:13px;font-weight:500;color:#555;margin:0 0 .75rem;"><i class="ti ti-list"></i> Todos os retornos agendados</div>
       <div id="fu-lista"></div>
+    </div>
+
+    <!-- RENOVAÇÕES -->
+    <div id="view-renovacoes" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="ren-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:260px;"/>
+          <select id="ren-filtro-status" style="max-width:170px;">
+            <option value="">Todos os status</option>
+            <option value="nao_atribuido">Não atribuído</option>
+            <option value="negociacao">Em negociação</option>
+            <option value="renovado">Renovado</option>
+            <option value="perdido">Perdido</option>
+          </select>
+          <select id="ren-filtro-fidelidade" style="max-width:170px;">
+            <option value="">Fidelidade: todas</option>
+            <option value="com">Com fidelidade</option>
+            <option value="sem">Sem fidelidade</option>
+          </select>
+          <select id="ren-filtro-consultor" style="max-width:160px;display:none;"><option value="">Todos</option></select>
+        </div>
+        <button class="btn btn-verde" onclick="abrirModalRenovacao()"><i class="ti ti-plus"></i> Novo cliente</button>
+      </div>
+      <div class="fu-stats" id="ren-stats" style="margin-bottom:1.5rem;"></div>
+      <div class="checklist-box" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;cursor:pointer;" onclick="toggleCalendarioRen()">
+          <div style="font-size:13px;font-weight:500;"><i class="ti ti-calendar-stats"></i> Calendário de elegibilidade (quando cada linha completa 18 meses)</div>
+          <i class="ti ti-chevron-down" id="ren-cal-toggle-icon"></i>
+        </div>
+        <div id="ren-calendario-meses" style="display:none;"></div>
+      </div>
+      <div id="ren-lista"></div>
     </div>
 
     <!-- USUÁRIOS (só master) -->
@@ -417,6 +463,54 @@ header h1{font-size:15px;font-weight:500;flex:1;}
     <div class="modal-footer">
       <button class="btn" onclick="fecharModal('modal-proposta-gerar')">Cancelar</button>
       <button class="btn btn-primary" onclick="gerarPropostaPDF()" id="btn-gerar-pdf"><i class="ti ti-file-download"></i> Gerar Proposta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RENOVAÇÃO -->
+<div class="modal-bg" id="modal-renovacao">
+  <div class="modal" style="max-width:560px;">
+    <h3 id="ren-modal-titulo"><i class="ti ti-refresh"></i> Novo cliente de renovação</h3>
+    <input type="hidden" id="ren-id"/>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">CNPJ</label><input type="text" id="ren-cnpj" placeholder="00.000.000/0000-00" maxlength="18"/></div>
+      <div class="form-group"><label class="form-label">Razão social *</label><input type="text" id="ren-razao" placeholder="Preenchido automaticamente"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Responsável</label><input type="text" id="ren-responsavel" placeholder="Nome do contato"/></div>
+      <div class="form-group"><label class="form-label">CPF</label><input type="text" id="ren-cpf" placeholder="000.000.000-00" maxlength="14"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Telefone / WhatsApp</label>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <span style="font-size:13px;color:#888;flex-shrink:0;">+55</span>
+          <input type="tel" id="ren-telefone" placeholder="61999990000" style="flex:1;"/>
+          <a id="ren-telefone-wpp" href="#" target="_blank" style="flex-shrink:0;color:#085041;display:none;"><i class="ti ti-brand-whatsapp" style="font-size:20px;"></i></a>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">E-mail</label><input type="text" id="ren-email" placeholder="Ex: contato@empresa.com"/></div>
+    </div>
+    <div class="prop-section">Linhas do contrato</div>
+    <div id="ren-linhas-lista"></div>
+    <button class="btn-sm btn-verde" onclick="adicionarLinhaRenovacao()" style="margin-bottom:1rem;"><i class="ti ti-plus"></i> Adicionar linha</button>
+    <div class="form-group"><label class="form-label">Valor atual pago (R$/mês)</label><input type="number" id="ren-valor-total" min="0" step="0.01" placeholder="Ex: 779.82"/></div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Status</label>
+        <select id="ren-status">
+          <option value="nao_atribuido">Não atribuído</option>
+          <option value="negociacao">Em negociação</option>
+          <option value="renovado">Renovado</option>
+          <option value="perdido">Perdido</option>
+        </select>
+      </div>
+      <div class="form-group" id="ren-wrap-consultor"><label class="form-label">Consultor responsável</label>
+        <select id="ren-consultor"><option value="">Não atribuído</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Observações</label><textarea id="ren-obs" placeholder="Informações relevantes..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-renovacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarRenovacao()"><i class="ti ti-check"></i> Salvar</button>
     </div>
   </div>
 </div>
@@ -670,7 +764,7 @@ function login(user){
   document.getElementById('login-senha').value='';
   document.getElementById('p-etapa').innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
-  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();setTab('dashboard');
+  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();iniciarSyncRenovacoes();setTab('dashboard');
 }
 function logout(){
   if(_unsub){_unsub();_unsub=null;}
@@ -714,7 +808,7 @@ window.salvarSenha=salvarSenha;
 
 function setTab(tab){
   currentTab=tab;
-  ['dashboard','pipeline','followup','lista','metricas','usuarios'].forEach(function(t){
+  ['dashboard','pipeline','followup','lista','metricas','renovacoes','usuarios'].forEach(function(t){
     document.getElementById('view-'+t).style.display=t===tab?'block':'none';
     document.getElementById('tab-'+t).classList.toggle('ativo',t===tab);
   });
@@ -723,6 +817,7 @@ function setTab(tab){
   else if(tab==='followup')renderFollowup();
   else if(tab==='lista')renderLista();
   else if(tab==='metricas')renderMetricas();
+  else if(tab==='renovacoes')renderRenovacoes();
   else if(tab==='usuarios')renderUsuarios();
 }
 window.setTab=setTab;
@@ -882,6 +977,447 @@ function atualizarAlertaHeader(){
     el.style.display='none';
   }
 }
+
+// ========= RENOVAÇÕES =========
+let renovacoes=[];
+let _unsubRen=null;
+
+function calcularFidelidade(dataInicio,semFidelidadeManual){
+  if(semFidelidadeManual){
+    return{meses:null,elegivel:true,comFidelidade:false,semFidelidade:true,manual:true};
+  }
+  if(!dataInicio)return null;
+  const inicio=new Date(dataInicio+'T12:00');
+  const hoje=new Date();
+  const mesesDecorridos=(hoje.getFullYear()-inicio.getFullYear())*12+(hoje.getMonth()-inicio.getMonth());
+  return{
+    meses:mesesDecorridos,
+    elegivel:mesesDecorridos>=18,
+    comFidelidade:mesesDecorridos<24,
+    semFidelidade:mesesDecorridos>=24
+  };
+}
+
+// Linhas dinâmicas da renovação
+let _linhasRenovacao=[];
+
+function adicionarLinhaRenovacao(telefone,plano,dataInicio,semFidelidade){
+  telefone=telefone||'';plano=plano||'';dataInicio=dataInicio||'';semFidelidade=semFidelidade||false;
+  const id=Date.now()+Math.random();
+  _linhasRenovacao.push({id:id,telefone:telefone,plano:plano,dataInicio:dataInicio,semFidelidade:semFidelidade});
+  renderLinhasRenovacao();
+}
+window.adicionarLinhaRenovacao=adicionarLinhaRenovacao;
+
+function removerLinhaRenovacao(id){
+  if(_linhasRenovacao.length<=1)return;
+  _linhasRenovacao=_linhasRenovacao.filter(function(l){return l.id!==id;});
+  renderLinhasRenovacao();
+}
+window.removerLinhaRenovacao=removerLinhaRenovacao;
+
+function updateLinhaRenovacao(id,campo,valor){
+  const l=_linhasRenovacao.find(function(x){return x.id===id;});
+  if(l)l[campo]=valor;
+  renderLinhasRenovacao();
+}
+window.updateLinhaRenovacao=updateLinhaRenovacao;
+
+function renderLinhasRenovacao(){
+  const container=document.getElementById('ren-linhas-lista');
+  if(!container)return;
+  let html='';
+  for(let i=0;i<_linhasRenovacao.length;i++){
+    const l=_linhasRenovacao[i];
+    const dis=_linhasRenovacao.length===1?'disabled':'';
+    const semFid=l.semFidelidade===true;
+    const fid=semFid?calcularFidelidade(null,true):(l.dataInicio?calcularFidelidade(l.dataInicio):null);
+    let fidBadge='';
+    if(semFid){
+      fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:#E6F1FB;color:#0C447C;white-space:nowrap;">Sem fidelidade</span>';
+    }else if(fid){
+      if(!fid.elegivel)fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:#FCEBEB;color:#791F1F;white-space:nowrap;">Não elegível ('+fid.meses+'m)</span>';
+      else if(fid.comFidelidade)fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:#EAF3DE;color:#27500A;white-space:nowrap;">Com fidelidade ('+fid.meses+'m)</span>';
+      else fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:#E6F1FB;color:#0C447C;white-space:nowrap;">Sem fidelidade ('+fid.meses+'m)</span>';
+    }
+    const telNum=l.telefone?cleanTel(l.telefone):'';
+    html+='<div style="border:1px solid #e8e8e0;border-radius:8px;padding:10px;margin-bottom:8px;">';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 30px;gap:6px;align-items:end;margin-bottom:6px;">';
+    html+='<div>'+(i===0?'<label class="form-label">Número da linha</label>':'')+'<div style="display:flex;gap:4px;align-items:center;">';
+    html+='<span style="font-size:13px;color:#888;flex-shrink:0;">+55</span>';
+    html+='<input type="tel" value="'+l.telefone+'" placeholder="61999990000" data-id="'+l.id+'" data-campo="telefone" class="ren-linha-input" style="flex:1;"/>';
+    if(telNum)html+='<a href="https://wa.me/55'+telNum+'" target="_blank" style="flex-shrink:0;color:#085041;"><i class="ti ti-brand-whatsapp" style="font-size:18px;"></i></a>';
+    html+='</div></div>';
+    html+='<div>'+(i===0?'<label class="form-label">Plano</label>':'')+'<input type="text" value="'+l.plano+'" placeholder="Ex: TIM Black 20GB" data-id="'+l.id+'" data-campo="plano" class="ren-linha-input"/></div>';
+    html+='<div style="padding-bottom:1px;"><button class="btn-sm btn-del" '+dis+' style="width:30px;padding:0;justify-content:center;" data-remove-linha="'+l.id+'"><i class="ti ti-minus"></i></button></div>';
+    html+='</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;">';
+    html+='<div>'+(semFid?'<input type="date" value="" disabled placeholder="Início do contrato" data-id="'+l.id+'" data-campo="dataInicio" class="ren-linha-input" style="background:#f0f0f0;"/>':'<input type="date" value="'+l.dataInicio+'" data-id="'+l.id+'" data-campo="dataInicio" class="ren-linha-input"/>')+'</div>';
+    html+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;cursor:pointer;">';
+    html+='<input type="checkbox" '+(semFid?'checked':'')+' data-id="'+l.id+'" data-campo-checkbox="semFidelidade" style="width:auto;height:auto;"/> Linha já está sem fidelidade';
+    html+='</label>';
+    html+='</div>';
+    if(fidBadge)html+='<div style="margin-top:6px;">'+fidBadge+'</div>';
+    html+='</div>';
+  }
+  container.innerHTML=html;
+  container.querySelectorAll('.ren-linha-input').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      updateLinhaRenovacao(parseFloat(this.dataset.id),this.dataset.campo,this.value);
+    });
+    inp.addEventListener('change',function(){
+      updateLinhaRenovacao(parseFloat(this.dataset.id),this.dataset.campo,this.value);
+    });
+  });
+  container.querySelectorAll('[data-campo-checkbox]').forEach(function(chk){
+    chk.addEventListener('change',function(){
+      updateLinhaRenovacao(parseFloat(this.dataset.id),'semFidelidade',this.checked);
+    });
+  });
+  container.querySelectorAll('[data-remove-linha]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      removerLinhaRenovacao(parseFloat(this.dataset.removeLinha));
+    });
+  });
+}
+
+function iniciarSyncRenovacoes(){
+  if(_unsubRen)_unsubRen();
+  try{
+    _unsubRen=db.collection('renovacoes').orderBy('criadoEm','desc').onSnapshot(function(snap){
+      renovacoes=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
+      if(currentTab==='renovacoes')renderRenovacoes();
+    },function(err){console.error(err);});
+  }catch(e){}
+}
+
+function getRenovacoes(){
+  return currentUser==='master'?renovacoes:renovacoes.filter(function(r){return r.consultor===currentUser;});
+}
+
+function abrirModalRenovacao(docId){
+  const wrapConsultor=document.getElementById('ren-wrap-consultor');
+  wrapConsultor.style.display=currentUser==='master'?'':'none';
+  
+  const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+  const selConsultor=document.getElementById('ren-consultor');
+  selConsultor.innerHTML='<option value="">Não atribuído</option>'+consultores.map(function(k){
+    return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+  }).join('');
+  
+  _linhasRenovacao=[];
+  if(docId){
+    const r=renovacoes.find(function(x){return x._docId===docId;});
+    if(!r)return;
+    document.getElementById('ren-modal-titulo').innerHTML='<i class="ti ti-edit"></i> Editar cliente de renovação';
+    document.getElementById('ren-id').value=docId;
+    document.getElementById('ren-razao').value=r.razao||'';
+    document.getElementById('ren-cnpj').value=r.cnpj||'';
+    document.getElementById('ren-responsavel').value=r.responsavel||'';
+    document.getElementById('ren-cpf').value=r.cpf||'';
+    document.getElementById('ren-telefone').value=r.telefone||'';
+    document.getElementById('ren-email').value=r.email||'';
+    const wppLinkEdit=document.getElementById('ren-telefone-wpp');
+    const telNumEdit=cleanTel(r.telefone||'');
+    if(telNumEdit.length>=10){wppLinkEdit.href='https://wa.me/55'+telNumEdit;wppLinkEdit.style.display='block';}
+    else{wppLinkEdit.style.display='none';}
+    document.getElementById('ren-status').value=r.status||'nao_atribuido';
+    document.getElementById('ren-consultor').value=r.consultor||(currentUser!=='master'?currentUser:'');
+    document.getElementById('ren-obs').value=r.obs||'';
+    document.getElementById('ren-valor-total').value=r.valor||'';
+    if(r.linhasDetalhe&&r.linhasDetalhe.length){
+      r.linhasDetalhe.forEach(function(l){adicionarLinhaRenovacao(l.telefone||'',l.plano||'',l.dataInicio||'',l.semFidelidade||false);});
+    }else{
+      adicionarLinhaRenovacao('',r.plano||'',r.dataInicio||'',false);
+    }
+  }else{
+    document.getElementById('ren-modal-titulo').innerHTML='<i class="ti ti-plus"></i> Novo cliente de renovação';
+    document.getElementById('ren-id').value='';
+    ['ren-razao','ren-cnpj','ren-responsavel','ren-cpf','ren-telefone','ren-email','ren-obs','ren-valor-total'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('ren-telefone-wpp').style.display='none';
+    document.getElementById('ren-status').value='nao_atribuido';
+    document.getElementById('ren-consultor').value=currentUser!=='master'?currentUser:'';
+    adicionarLinhaRenovacao();
+  }
+  document.getElementById('modal-renovacao').classList.add('open');
+}
+window.abrirModalRenovacao=abrirModalRenovacao;
+
+async function salvarRenovacao(){
+  const razao=document.getElementById('ren-razao').value.trim();
+  if(!razao){showNotif('Preencha a razão social.',true);return;}
+  if(!_linhasRenovacao.length||!_linhasRenovacao[0].plano){showNotif('Adicione pelo menos uma linha com plano preenchido.',true);return;}
+  const docId=document.getElementById('ren-id').value;
+  const consultor=currentUser==='master'?document.getElementById('ren-consultor').value:currentUser;
+  const valorTotal=document.getElementById('ren-valor-total').value.trim();
+  const linhasDetalhe=_linhasRenovacao.map(function(l){return{telefone:l.telefone,plano:l.plano,dataInicio:l.dataInicio,semFidelidade:l.semFidelidade||false};});
+  const dados={
+    razao:razao,
+    cnpj:document.getElementById('ren-cnpj').value.trim(),
+    responsavel:document.getElementById('ren-responsavel').value.trim(),
+    cpf:document.getElementById('ren-cpf').value.trim(),
+    telefone:document.getElementById('ren-telefone').value.trim(),
+    email:document.getElementById('ren-email').value.trim(),
+    linhas:String(_linhasRenovacao.length),
+    valor:valorTotal,
+    linhasDetalhe:linhasDetalhe,
+    plano:_linhasRenovacao[0].plano,
+    dataInicio:_linhasRenovacao[0].dataInicio,
+    status:document.getElementById('ren-status').value,
+    consultor:consultor,
+    obs:document.getElementById('ren-obs').value.trim(),
+    atualizadoEm:Date.now()
+  };
+  try{
+    if(docId){
+      await db.collection('renovacoes').doc(docId).update(dados);
+    }else{
+      dados.criadoEm=Date.now();
+      await db.collection('renovacoes').add(dados);
+    }
+    fecharModal('modal-renovacao');
+    showNotif(docId?'Cliente atualizado!':'Cliente adicionado!');
+  }catch(e){
+    showNotif('Erro ao salvar.',true);
+  }
+}
+window.salvarRenovacao=salvarRenovacao;
+
+async function removerRenovacao(docId){
+  if(!confirm('Remover este cliente da lista de renovação?'))return;
+  try{
+    await db.collection('renovacoes').doc(docId).delete();
+    showNotif('Cliente removido.');
+  }catch(e){
+    showNotif('Erro ao remover.',true);
+  }
+}
+window.removerRenovacao=removerRenovacao;
+
+// ========= CALENDÁRIO DE ELEGIBILIDADE =========
+let _calRenAberto=false;
+
+function toggleCalendarioRen(){
+  _calRenAberto=!_calRenAberto;
+  document.getElementById('ren-calendario-meses').style.display=_calRenAberto?'block':'none';
+  document.getElementById('ren-cal-toggle-icon').className=_calRenAberto?'ti ti-chevron-up':'ti ti-chevron-down';
+  if(_calRenAberto)renderCalendarioElegibilidade();
+}
+window.toggleCalendarioRen=toggleCalendarioRen;
+
+function dataElegibilidade18m(dataInicio){
+  // Retorna a data em que a linha completa 18 meses
+  const inicio=new Date(dataInicio+'T12:00');
+  const d=new Date(inicio);
+  d.setMonth(d.getMonth()+18);
+  return d;
+}
+
+function renderCalendarioElegibilidade(){
+  const container=document.getElementById('ren-calendario-meses');
+  if(!container)return;
+  
+  const todasLinhas=[];
+  getRenovacoes().forEach(function(r){
+    const linhasDet=(r.linhasDetalhe&&r.linhasDetalhe.length)?r.linhasDetalhe:[{plano:r.plano,dataInicio:r.dataInicio,semFidelidade:false,telefone:r.telefone}];
+    linhasDet.forEach(function(l){
+      if(l.semFidelidade)return; // já elegível, não entra no calendário de "vai ficar elegível"
+      if(!l.dataInicio)return;
+      todasLinhas.push({
+        razao:r.razao,
+        plano:l.plano,
+        telefone:l.telefone,
+        consultor:r.consultor,
+        dataElegivel:dataElegibilidade18m(l.dataInicio),
+        docId:r._docId
+      });
+    });
+  });
+  
+  if(todasLinhas.length===0){
+    container.innerHTML='<div class="empty">Nenhuma linha com data de início cadastrada ainda.</div>';
+    return;
+  }
+  
+  // Agrupar por ano-mês
+  const grupos={};
+  todasLinhas.forEach(function(item){
+    const d=item.dataElegivel;
+    const chave=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!grupos[chave])grupos[chave]=[];
+    grupos[chave].push(item);
+  });
+  
+  const chavesOrdenadas=Object.keys(grupos).sort();
+  const MESES_NOMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const hoje=new Date();
+  const hojeChave=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
+  chavesOrdenadas.forEach(function(chave){
+    const partes=chave.split('-');
+    const ano=partes[0];
+    const mesIdx=parseInt(partes[1])-1;
+    const itens=grupos[chave];
+    const jaPas=chave<hojeChave;
+    const ehAtual=chave===hojeChave;
+    let corFundo='#f8f8f6',corTexto='#666',corBorda='#e8e8e0';
+    if(jaPas){corFundo='#EAF3DE';corTexto='#27500A';corBorda='#97C459';}
+    else if(ehAtual){corFundo='#FAEEDA';corTexto='#633806';corBorda='#EF9F27';}
+    
+    html+='<div style="background:'+corFundo+';border:1.5px solid '+corBorda+';border-radius:10px;padding:12px;">';
+    html+='<div style="font-size:13px;font-weight:600;color:'+corTexto+';margin-bottom:8px;">'+MESES_NOMES[mesIdx]+'/'+ano+(jaPas?' ✓':ehAtual?' (este mês)':'')+' — '+itens.length+' linha'+(itens.length>1?'s':'')+'</div>';
+    itens.forEach(function(item){
+      const u=item.consultor?(USERS[item.consultor]||{nome:'?'}):null;
+      html+='<div style="font-size:11px;color:#555;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer;" onclick="abrirModalRenovacao(\''+item.docId+'\')">';
+      html+='<span style="font-weight:500;">'+item.razao+'</span>';
+      if(item.plano)html+=' · '+item.plano;
+      if(u)html+=' · '+u.nome;
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  
+  container.innerHTML=html;
+}
+window.renderCalendarioElegibilidade=renderCalendarioElegibilidade;
+
+function renderRenovacoes(){
+  let lista=getRenovacoes();
+  
+  const buscaEl=document.getElementById('ren-busca');
+  const busca=buscaEl?buscaEl.value.trim().toLowerCase():'';
+  const statusEl=document.getElementById('ren-filtro-status');
+  const filtroStatus=statusEl?statusEl.value:'';
+  const fidEl=document.getElementById('ren-filtro-fidelidade');
+  const filtroFid=fidEl?fidEl.value:'';
+  const consEl=document.getElementById('ren-filtro-consultor');
+  
+  if(currentUser==='master'&&consEl){
+    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+    if(consEl.options.length<=1){
+      consEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){return '<option value="'+k+'">'+USERS[k].nome+'</option>';}).join('');
+    }
+    consEl.style.display='';
+  }
+  const filtroConsultor=consEl?consEl.value:'';
+  
+  if(busca){
+    lista=lista.filter(function(r){
+      const cnpjLimpo=(r.cnpj||'').replace(/\D/g,'');
+      const buscaLimpa=busca.replace(/\D/g,'');
+      return (r.razao||'').toLowerCase().includes(busca)||(buscaLimpa&&cnpjLimpo.includes(buscaLimpa))||(r.cnpj||'').toLowerCase().includes(busca);
+    });
+  }
+  if(filtroStatus)lista=lista.filter(function(r){return r.status===filtroStatus;});
+  if(filtroConsultor)lista=lista.filter(function(r){return r.consultor===filtroConsultor;});
+  if(filtroFid){
+    lista=lista.filter(function(r){
+      const fid=calcularFidelidade(r.dataInicio);
+      if(!fid)return false;
+      return filtroFid==='com'?fid.comFidelidade&&fid.elegivel:fid.semFidelidade;
+    });
+  }
+  
+  // Stats
+  const todasLista=getRenovacoes();
+  const naoAtribuidos=todasLista.filter(function(r){return r.status==='nao_atribuido';}).length;
+  const emNegociacao=todasLista.filter(function(r){return r.status==='negociacao';}).length;
+  const renovados=todasLista.filter(function(r){return r.status==='renovado';}).length;
+  const elegiveis=todasLista.filter(function(r){const f=calcularFidelidade(r.dataInicio);return f&&f.elegivel;}).length;
+  document.getElementById('ren-stats').innerHTML=
+    '<div class="fu-stat"><div class="num" style="color:#888;">'+naoAtribuidos+'</div><div class="lbl">Não atribuídos</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#BA7517;">'+emNegociacao+'</div><div class="lbl">Em negociação</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#27500A;">'+renovados+'</div><div class="lbl">Renovados</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#1D9E75;">'+elegiveis+'</div><div class="lbl">Elegíveis</div></div>';
+  
+  lista=lista.slice().sort(function(a,b){return (b.criadoEm||0)-(a.criadoEm||0);});
+  
+  const container=document.getElementById('ren-lista');
+  if(!lista.length){container.innerHTML='<div class="empty">Nenhum cliente de renovação cadastrado.</div>';return;}
+  
+  container.innerHTML=lista.map(function(r){
+    const linhasDet=(r.linhasDetalhe&&r.linhasDetalhe.length)?r.linhasDetalhe:[{plano:r.plano,dataInicio:r.dataInicio,semFidelidade:false}];
+    const fidsCalculadas=linhasDet.map(function(l){return l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);}).filter(function(f){return f;});
+    const todasElegiveis=fidsCalculadas.length>0&&fidsCalculadas.every(function(f){return f.elegivel;});
+    const algumaElegivel=fidsCalculadas.some(function(f){return f.elegivel;});
+    const qtdComFid=fidsCalculadas.filter(function(f){return f.elegivel&&f.comFidelidade;}).length;
+    const qtdSemFid=fidsCalculadas.filter(function(f){return f.elegivel&&f.semFidelidade;}).length;
+    const qtdNaoEleg=fidsCalculadas.filter(function(f){return !f.elegivel;}).length;
+    
+    const u=r.consultor?(USERS[r.consultor]||{nome:'?',bg:'#fff',c:'#333'}):null;
+    let cls='ren-card';
+    if(r.status==='renovado')cls+=' renovado';
+    else if(r.status==='perdido')cls+=' perdido';
+    else if(r.status==='negociacao')cls+=' aguardando';
+    else if(algumaElegivel)cls+=' elegivel';
+    
+    let fidBadges='';
+    if(linhasDet.length===1&&fidsCalculadas.length===1){
+      const f=fidsCalculadas[0];
+      if(!f.elegivel)fidBadges='<span class="badge" style="background:#FCEBEB;color:#791F1F;">Não elegível ('+f.meses+'m)</span>';
+      else if(f.comFidelidade)fidBadges='<span class="badge badge-fidelidade-com">Com fidelidade ('+f.meses+'m)</span>';
+      else fidBadges='<span class="badge badge-fidelidade-sem">Sem fidelidade ('+f.meses+'m)</span>';
+    }else if(fidsCalculadas.length>0){
+      if(qtdSemFid>0)fidBadges+='<span class="badge badge-fidelidade-sem">'+qtdSemFid+' sem fidelidade</span>';
+      if(qtdComFid>0)fidBadges+='<span class="badge badge-fidelidade-com">'+qtdComFid+' com fidelidade</span>';
+      if(qtdNaoEleg>0)fidBadges+='<span class="badge" style="background:#FCEBEB;color:#791F1F;">'+qtdNaoEleg+' não elegível</span>';
+    }
+    
+    const statusLabels={nao_atribuido:'Não atribuído',negociacao:'Em negociação',renovado:'Renovado',perdido:'Perdido'};
+    const statusBadge='<span class="badge badge-status-'+r.status+'">'+(statusLabels[r.status]||'Não atribuído')+'</span>';
+    
+    const linhasResumo=linhasDet.map(function(l,idx){
+      const f=l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);
+      let cor='#888';
+      let fidTexto='';
+      if(f){
+        if(f.manual){cor='#0C447C';fidTexto='sem fidelidade';}
+        else if(!f.elegivel){cor='#791F1F';fidTexto=f.meses+'m';}
+        else if(f.comFidelidade){cor='#27500A';fidTexto=f.meses+'m';}
+        else{cor='#0C447C';fidTexto=f.meses+'m';}
+      }
+      const telNum=l.telefone?cleanTel(l.telefone):'';
+      return '<div style="font-size:11px;color:#666;padding:3px 0;border-bottom:1px solid #f0f0ec;display:flex;justify-content:space-between;align-items:center;">'
+        +'<span><span style="font-weight:500;">'+(l.plano||'Linha '+(idx+1))+'</span>'
+        +(l.telefone?' · '+fmtTel(l.telefone):'')
+        +(f?' · <span style="color:'+cor+';font-weight:600;">'+fidTexto+'</span>':'')
+        +'</span>'
+        +(telNum?'<a href="https://wa.me/55'+telNum+'" target="_blank" style="color:#085041;flex-shrink:0;margin-left:6px;"><i class="ti ti-brand-whatsapp" style="font-size:14px;"></i></a>':'')
+        +'</div>';
+    }).join('');
+    
+    return '<div class="'+cls+'">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +(u?'<div class="avatar" style="background:'+u.bg+';color:'+u.c+';">'+initials(u.nome)+'</div>':'<div class="avatar" style="background:#f0f0ec;color:#888;"><i class="ti ti-user-question" style="font-size:16px;"></i></div>')
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
+      +'<span style="font-size:15px;font-weight:500;">'+(r.razao||'')+'</span>'
+      +statusBadge
+      +fidBadges
+      +(u?'<span class="badge" style="background:'+u.bg+';color:'+u.c+';">'+u.nome+'</span>':'')
+      +'</div>'
+      +'<div style="font-size:13px;color:#666;">'+(r.responsavel||'')+(r.cnpj?' · '+r.cnpj:'')+(r.cpf?' · CPF '+r.cpf:'')+'</div>'
+      +(r.email?'<div style="font-size:12px;color:#888;"><i class="ti ti-mail" style="font-size:12px;"></i> '+r.email+'</div>':'')
+      +telLinks(r.telefone||'')
+      +'<div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:12px;color:#666;"><i class="ti ti-sim-card" style="font-size:12px;"></i> '+linhasDet.length+' linha'+(linhasDet.length>1?'s':'')+'</span>'
+      +(r.valor?'<span style="font-size:12px;color:#666;"><i class="ti ti-currency-dollar" style="font-size:12px;"></i> '+fmtMoeda(r.valor)+'/mês total</span>':'')
+      +'</div>'
+      +(linhasDet.length>1?'<div style="margin-top:6px;background:#f8f8f6;border-radius:6px;padding:4px 8px;">'+linhasResumo+'</div>':'')
+      +(r.obs?'<div style="font-size:12px;color:#666;margin-top:6px;background:#f8f8f6;padding:6px 8px;border-radius:6px;">'+r.obs+'</div>':'')
+      +'</div></div>'
+      +'<div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">'
+      +'<button class="btn-sm btn-purple" onclick="abrirModalRenovacao(\''+r._docId+'\')"><i class="ti ti-edit"></i> Editar</button>'
+      +(currentUser==='master'?'<button class="btn-sm btn-del" onclick="removerRenovacao(\''+r._docId+'\')"><i class="ti ti-trash"></i> Remover</button>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+  
+  if(_calRenAberto)renderCalendarioElegibilidade();
+}
+window.renderRenovacoes=renderRenovacoes;
 
 // ========= DASHBOARD =========
 function renderDashboard(){
@@ -2078,6 +2614,40 @@ const pipeBusca=document.getElementById('pipe-busca');
 if(pipeBusca)pipeBusca.addEventListener('input',function(){renderPipeline();});
 const listaBusca=document.getElementById('lista-busca');
 if(listaBusca)listaBusca.addEventListener('input',function(){renderLista();});
+
+// Listeners renovações
+const renBusca=document.getElementById('ren-busca');
+if(renBusca)renBusca.addEventListener('input',function(){renderRenovacoes();});
+const renFiltroStatus=document.getElementById('ren-filtro-status');
+if(renFiltroStatus)renFiltroStatus.addEventListener('change',function(){renderRenovacoes();});
+const renFiltroFid=document.getElementById('ren-filtro-fidelidade');
+if(renFiltroFid)renFiltroFid.addEventListener('change',function(){renderRenovacoes();});
+const renFiltroConsultor=document.getElementById('ren-filtro-consultor');
+if(renFiltroConsultor)renFiltroConsultor.addEventListener('change',function(){renderRenovacoes();});
+const renCpf=document.getElementById('ren-cpf');
+if(renCpf)renCpf.addEventListener('input',function(){this.value=fmtCPF(this.value);});
+
+const renTelefone=document.getElementById('ren-telefone');
+if(renTelefone)renTelefone.addEventListener('input',function(){
+  const wppLink=document.getElementById('ren-telefone-wpp');
+  const telNum=cleanTel(this.value);
+  if(telNum.length>=10){
+    wppLink.href='https://wa.me/55'+telNum;
+    wppLink.style.display='block';
+  }else{
+    wppLink.style.display='none';
+  }
+});
+
+const renCnpj=document.getElementById('ren-cnpj');
+if(renCnpj)renCnpj.addEventListener('input',function(){
+  this.value=fmtCNPJ(this.value);
+  const raw=this.value.replace(/\D/g,'');
+  if(raw.length===14){
+    const razaoEl=document.getElementById('ren-razao');
+    if(!razaoEl.value){consultarCNPJ(this.value,'ren-razao',null);}
+  }
+});
 const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
 if(pipeFiltroConsultor)pipeFiltroConsultor.addEventListener('change',function(){renderPipeline();});
 
