@@ -250,12 +250,14 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 
     <!-- PIPELINE KANBAN -->
     <div id="view-pipeline" style="display:none;">
-      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
-        <input type="text" id="pipe-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:280px;"/>
-        <select id="pipe-filtro-consultor" style="max-width:180px;display:none;"><option value="">Todos os consultores</option></select>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="pipe-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:260px;"/>
+        <select id="pipe-filtro-consultor" style="max-width:170px;display:none;"><option value="">Todos os consultores</option></select>
+        <select id="pipe-filtro-mes" style="max-width:200px;"><option value="">Todos os meses</option></select>
       </div>
       <div class="kanban-wrapper" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
       <div class="kanban-wrapper" style="grid-template-columns:repeat(3,1fr);" id="kanban-row2"></div>
+      <div id="kanban-row3"></div>
     </div>
 
     <!-- FOLLOW-UP -->
@@ -294,6 +296,11 @@ header h1{font-size:15px;font-weight:500;flex:1;}
             <option value="">Fidelidade: todas</option>
             <option value="com">Com fidelidade</option>
             <option value="sem">Sem fidelidade</option>
+          </select>
+          <select id="ren-filtro-mes-contrato" style="max-width:160px;">
+            <option value="">Todos os meses</option>
+            <option value="apto">Aptos (18+ meses)</option>
+            <option value="sem_fid">Sem fidelidade (24+)</option>
           </select>
           <select id="ren-filtro-consultor" style="max-width:160px;display:none;"><option value="">Todos</option></select>
         </div>
@@ -576,6 +583,26 @@ header h1{font-size:15px;font-weight:500;flex:1;}
   </div>
 </div>
 
+<!-- MODAL ATIVAÇÃO -->
+<div class="modal-bg" id="modal-ativacao">
+  <div class="modal" style="max-width:420px;">
+    <h3><i class="ti ti-circle-check"></i> Mover para Ativo</h3>
+    <input type="hidden" id="at-doc-id"/>
+    <div style="background:#E6F1FB;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:1rem;">
+      <i class="ti ti-info-circle"></i> Informe a data em que o contrato foi ativado. Essa data será usada para calcular os 24 meses de fidelidade e aparecerá automaticamente na aba de Renovações.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data de ativação do contrato</label>
+      <input type="date" id="at-data"/>
+    </div>
+    <div id="at-info" style="display:none;margin-top:8px;padding:8px 12px;border-radius:var(--radius);font-size:13px;"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-ativacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAtivacao()"><i class="ti ti-check"></i> Confirmar ativação</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL MOTIVO PERDA -->
 <div class="modal-bg" id="modal-motivo-perda">
   <div class="modal" style="max-width:420px;">
@@ -644,6 +671,7 @@ const ETAPAS=[
   {id:4,nome:'Gerar contrato',cor:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
   {id:5,nome:'Aguard. assinatura',cor:'#639922',bg:'#EAF3DE',tc:'#27500A'},
   {id:6,nome:'Assinado',cor:'#27500A',bg:'#EAF3DE',tc:'#27500A'},
+  {id:7,nome:'Ativo',cor:'#0C447C',bg:'#C8DCF5',tc:'#0C447C'},
 ];
 const TIPOS={novo:{label:'Novo',cls:'tipo-novo'},portado:{label:'Portado',cls:'tipo-portado'},renovacao:{label:'Renovação',cls:'tipo-renovacao'}};
 const USERS={master:{nome:'Marcelo',role:'Gestor master',bg:'#FCEBEB',c:'#791F1F'},karla:{nome:'Karla',role:'Consultora',bg:'#EEEDFE',c:'#3C3489'},lucas:{nome:'Lucas',role:'Consultor',bg:'#E1F5EE',c:'#085041'}};
@@ -826,6 +854,39 @@ window.setTab=setTab;
 function renderPipeline(){
   let lista=getPropostas();
   
+  // Popular filtro de mês com os meses que têm propostas
+  const mesEl=document.getElementById('pipe-filtro-mes');
+  if(mesEl){
+    const mesAtual=mesEl.value;
+    const mesesExistentes={};
+    getPropostas().forEach(function(p){
+      const ts=p.criadoEm||p.atualizadoEm||0;
+      if(!ts)return;
+      const d=new Date(ts);
+      const chave=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const label=MESES[d.getMonth()]+'/'+d.getFullYear();
+      mesesExistentes[chave]=label;
+    });
+    const chavesOrdenadas=Object.keys(mesesExistentes).sort().reverse();
+    mesEl.innerHTML='<option value="">Todos os meses</option>'+chavesOrdenadas.map(function(c){
+      return '<option value="'+c+'">'+mesesExistentes[c]+'</option>';
+    }).join('');
+    mesEl.value=mesAtual;
+  }
+  
+  // Aplicar filtro de mês
+  const filtroMes=mesEl?mesEl.value:'';
+  if(filtroMes){
+    lista=lista.filter(function(p){
+      const ts=p.criadoEm||p.atualizadoEm||0;
+      if(!ts)return false;
+      const d=new Date(ts);
+      const chave=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      return chave===filtroMes;
+    });
+  }
+  
   // Aplicar busca
   const buscaEl=document.getElementById('pipe-busca');
   const busca=buscaEl?buscaEl.value.trim().toLowerCase():'';
@@ -873,7 +934,72 @@ function renderPipeline(){
       </div>${cards}</div>`;
   }
   document.getElementById('kanban-row1').innerHTML=ETAPAS.slice(0,4).map(buildCol).join('');
-  document.getElementById('kanban-row2').innerHTML=ETAPAS.slice(4).map(buildCol).join('');
+  document.getElementById('kanban-row2').innerHTML=ETAPAS.slice(4,7).map(buildCol).join('');
+  
+  // Coluna ATIVO separada — filtra por mês selecionado
+  const MESES_NOMES_AT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const etapaAtivo=ETAPAS[7];
+  const todosAtivos=getPropostas().filter(function(p){return p.etapa===7;});
+  
+  // Agrupar ativos por mês de assinatura
+  const ativosPorMes={};
+  todosAtivos.forEach(function(p){
+    const ts=p.dataAssinatura||p.atualizadoEm||p.criadoEm||0;
+    const d=new Date(ts);
+    const chave=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!ativosPorMes[chave])ativosPorMes[chave]=[];
+    ativosPorMes[chave].push(p);
+  });
+  
+  const chavesAtivos=Object.keys(ativosPorMes).sort().reverse();
+  
+  let row3HTML='<div style="margin-top:10px;">';
+  row3HTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  row3HTML+='<div style="width:8px;height:8px;border-radius:50%;background:#0C447C;flex-shrink:0;"></div>';
+  row3HTML+='<div style="font-size:12px;font-weight:500;">Ativos</div>';
+  row3HTML+='<div style="font-size:11px;color:#888;">'+todosAtivos.length+' clientes</div>';
+  row3HTML+='</div>';
+  
+  if(todosAtivos.length===0){
+    row3HTML+='<div style="font-size:12px;color:#aaa;padding:.5rem 0;">Nenhum cliente ativo ainda.</div>';
+  }else{
+    row3HTML+='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+    chavesAtivos.forEach(function(chave){
+      const partes=chave.split('-');
+      const mesLabel=MESES_NOMES_AT[parseInt(partes[1])-1]+'/'+partes[0];
+      const ativos=ativosPorMes[chave];
+      const totalLinhas=ativos.reduce(function(s,p){return s+(+p.linhas||0);},0);
+      const totalReceita=ativos.reduce(function(s,p){return s+(parseFloat(p.receita)||0);},0);
+      const hoje=new Date();
+      const anoChave=parseInt(partes[0]);
+      const mesChave=parseInt(partes[1])-1;
+      const mesesAtivo=(hoje.getFullYear()-anoChave)*12+(hoje.getMonth()-mesChave);
+      let corMes='#E6F1FB',corTexto='#0C447C',corBorda='#378ADD';
+      if(mesesAtivo>=24){corMes='#EAF3DE';corTexto='#27500A';corBorda='#639922';}
+      else if(mesesAtivo>=18){corMes='#FAEEDA';corTexto='#633806';corBorda='#EF9F27';}
+      
+      row3HTML+='<div style="background:'+corMes+';border:1.5px solid '+corBorda+';border-radius:var(--radius-lg);padding:.75rem;min-width:200px;flex:1;">';
+      row3HTML+='<div style="font-size:12px;font-weight:600;color:'+corTexto+';margin-bottom:6px;">'+mesLabel+' · Mês '+mesesAtivo+'</div>';
+      if(mesesAtivo>=18)row3HTML+='<div style="font-size:10px;font-weight:600;color:'+corTexto+';margin-bottom:6px;">'+(mesesAtivo>=24?'✓ Sem fidelidade':'⚠ Apto a renovar')+'</div>';
+      row3HTML+='<div style="font-size:11px;color:#666;margin-bottom:6px;">'+ativos.length+' cliente'+(ativos.length>1?'s':'')+' · '+totalLinhas+'ln · '+fmtMoeda(totalReceita)+'/mês</div>';
+      ativos.forEach(function(p){
+        const u=USERS[p.consultor]||{bg:'#fff',c:'#333',nome:'?'};
+        const nomeConsultor=(USERS[p.consultor]&&USERS[p.consultor].nome)?USERS[p.consultor].nome:'?';
+        row3HTML+='<div class="kanban-card" onclick="verDetalhe(\''+p._docId+'\')" style="background:#fff;margin-bottom:4px;">';
+        row3HTML+='<div style="font-size:12px;font-weight:500;">'+p.razao+'</div>';
+        row3HTML+='<div style="font-size:11px;color:#666;">'+p.responsavel+'</div>';
+        row3HTML+='<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">';
+        if(p.linhas)row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EEEDFE;color:#3C3489;">'+p.linhas+'ln</span>';
+        if(p.receita)row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EAF3DE;color:#27500A;">R$'+Number(p.receita).toLocaleString('pt-BR')+'</span>';
+        if(currentUser==='master')row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:'+u.bg+';color:'+u.c+';">'+nomeConsultor+'</span>';
+        row3HTML+='</div></div>';
+      });
+      row3HTML+='</div>';
+    });
+    row3HTML+='</div>';
+  }
+  row3HTML+='</div>';
+  document.getElementById('kanban-row3').innerHTML=row3HTML;
   
   // Popular filtro de consultor (só master)
   if(currentUser==='master'&&filtroEl){
@@ -1294,6 +1420,23 @@ function renderRenovacoes(){
   const filtroFid=fidEl?fidEl.value:'';
   const consEl=document.getElementById('ren-filtro-consultor');
   
+  // Popular select de mês de contrato dinamicamente (Mês 1 a 24+)
+  const mesContratoEl=document.getElementById('ren-filtro-mes-contrato');
+  if(mesContratoEl&&mesContratoEl.options.length<=3){
+    let optsExtra='';
+    for(let m=1;m<=24;m++){
+      let label='Mês '+m;
+      if(m===18)label='Mês 18 (apto)';
+      else if(m===24)label='Mês 24 (sem fidelidade)';
+      optsExtra+='<option value="'+m+'">'+label+'</option>';
+    }
+    optsExtra+='<option value="25">Mês 25+ (sem fidelidade)</option>';
+    mesContratoEl.innerHTML='<option value="">Todos os meses</option>'
+      +'<option value="apto">Aptos a renovar (18+)</option>'
+      +'<option value="sem_fid">Sem fidelidade (24+)</option>'
+      +optsExtra;
+  }
+  
   if(currentUser==='master'&&consEl){
     const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
     if(consEl.options.length<=1){
@@ -1314,9 +1457,39 @@ function renderRenovacoes(){
   if(filtroConsultor)lista=lista.filter(function(r){return r.consultor===filtroConsultor;});
   if(filtroFid){
     lista=lista.filter(function(r){
-      const fid=calcularFidelidade(r.dataInicio);
-      if(!fid)return false;
-      return filtroFid==='com'?fid.comFidelidade&&fid.elegivel:fid.semFidelidade;
+      const linhasDet=(r.linhasDetalhe&&r.linhasDetalhe.length)?r.linhasDetalhe:[{dataInicio:r.dataInicio,semFidelidade:false}];
+      if(filtroFid==='com') return linhasDet.some(function(l){const f=l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);return f&&f.elegivel&&f.comFidelidade;});
+      if(filtroFid==='sem') return linhasDet.some(function(l){const f=l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);return f&&f.semFidelidade;});
+      return true;
+    });
+  }
+  
+  // Filtro por mês de contrato (Mês 1 a 24+)
+  const filtroMesContratoEl=document.getElementById('ren-filtro-mes-contrato');
+  const filtroMesContrato=filtroMesContratoEl?filtroMesContratoEl.value:'';
+  if(filtroMesContrato){
+    lista=lista.filter(function(r){
+      // Usar dataInicio principal do registro (data de ativação do contrato)
+      const fidPrincipal=r.dataInicio?calcularFidelidade(r.dataInicio):null;
+      const linhasDet=(r.linhasDetalhe&&r.linhasDetalhe.length)?r.linhasDetalhe:[];
+      
+      // Verificar pelo dataInicio principal primeiro
+      if(fidPrincipal){
+        const num=parseInt(filtroMesContrato);
+        if(filtroMesContrato==='apto'&&fidPrincipal.elegivel)return true;
+        if(filtroMesContrato==='sem_fid'&&fidPrincipal.semFidelidade)return true;
+        if(!isNaN(num)&&fidPrincipal.meses!=null&&fidPrincipal.meses===num)return true;
+      }
+      // Verificar pelas linhas individuais
+      return linhasDet.some(function(l){
+        const f=l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);
+        if(!f)return false;
+        if(filtroMesContrato==='apto')return f.elegivel;
+        if(filtroMesContrato==='sem_fid')return f.semFidelidade;
+        const num=parseInt(filtroMesContrato);
+        if(!isNaN(num)&&f.meses!=null)return f.meses===num;
+        return false;
+      });
     });
   }
   
@@ -1325,12 +1498,20 @@ function renderRenovacoes(){
   const naoAtribuidos=todasLista.filter(function(r){return r.status==='nao_atribuido';}).length;
   const emNegociacao=todasLista.filter(function(r){return r.status==='negociacao';}).length;
   const renovados=todasLista.filter(function(r){return r.status==='renovado';}).length;
-  const elegiveis=todasLista.filter(function(r){const f=calcularFidelidade(r.dataInicio);return f&&f.elegivel;}).length;
+  const elegiveis=todasLista.filter(function(r){
+    const f=r.dataInicio?calcularFidelidade(r.dataInicio):null;
+    return f&&f.elegivel;
+  }).length;
+  const semFid=todasLista.filter(function(r){
+    const f=r.dataInicio?calcularFidelidade(r.dataInicio):null;
+    return f&&f.semFidelidade;
+  }).length;
   document.getElementById('ren-stats').innerHTML=
     '<div class="fu-stat"><div class="num" style="color:#888;">'+naoAtribuidos+'</div><div class="lbl">Não atribuídos</div></div>'
     +'<div class="fu-stat"><div class="num" style="color:#BA7517;">'+emNegociacao+'</div><div class="lbl">Em negociação</div></div>'
-    +'<div class="fu-stat"><div class="num" style="color:#27500A;">'+renovados+'</div><div class="lbl">Renovados</div></div>'
-    +'<div class="fu-stat"><div class="num" style="color:#1D9E75;">'+elegiveis+'</div><div class="lbl">Elegíveis</div></div>';
+    +'<div class="fu-stat"><div class="num" style="color:#633806;">'+elegiveis+'</div><div class="lbl">Aptos (18+)</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#0C447C;">'+semFid+'</div><div class="lbl">Sem fidelidade (24+)</div></div>'
+    +'<div class="fu-stat"><div class="num" style="color:#27500A;">'+renovados+'</div><div class="lbl">Renovados</div></div>';
   
   lista=lista.slice().sort(function(a,b){return (b.criadoEm||0)-(a.criadoEm||0);});
   
@@ -1368,6 +1549,18 @@ function renderRenovacoes(){
     const statusLabels={nao_atribuido:'Não atribuído',negociacao:'Em negociação',renovado:'Renovado',perdido:'Perdido'};
     const statusBadge='<span class="badge badge-status-'+r.status+'">'+(statusLabels[r.status]||'Não atribuído')+'</span>';
     
+    // Badge de mês do contrato (baseado em dataInicio principal)
+    let mesBadge='';
+    if(r.dataInicio){
+      const fidP=calcularFidelidade(r.dataInicio);
+      if(fidP&&fidP.meses!=null){
+        let mesCor='#666',mesBg='#f0f0ec';
+        if(fidP.meses>=24){mesCor='#0C447C';mesBg='#E6F1FB';}
+        else if(fidP.meses>=18){mesCor='#633806';mesBg='#FAEEDA';}
+        mesBadge='<span class="badge" style="background:'+mesBg+';color:'+mesCor+';">Mês '+fidP.meses+'</span>';
+      }
+    }
+    
     const linhasResumo=linhasDet.map(function(l,idx){
       const f=l.semFidelidade?calcularFidelidade(null,true):calcularFidelidade(l.dataInicio);
       let cor='#888';
@@ -1395,6 +1588,7 @@ function renderRenovacoes(){
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
       +'<span style="font-size:15px;font-weight:500;">'+(r.razao||'')+'</span>'
       +statusBadge
+      +mesBadge
       +fidBadges
       +(u?'<span class="badge" style="background:'+u.bg+';color:'+u.c+';">'+u.nome+'</span>':'')
       +'</div>'
@@ -1733,8 +1927,8 @@ function renderLista(){
         </div>
       </div>
       <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-        ${p.etapa!=='perdida'&&p.etapa<6?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar</button>`:''}
-        ${p.etapa===6?`<button class="btn-sm btn-verde" onclick="abrirChecklist('${p._docId}')"><i class="ti ti-clipboard-check"></i> Checklist</button>`:''}
+        ${p.etapa!=='perdida'&&p.etapa<7?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar</button>`:''}
+        ${(p.etapa===6||p.etapa===7)?`<button class="btn-sm btn-verde" onclick="abrirChecklist('${p._docId}')"><i class="ti ti-clipboard-check"></i> Checklist</button>`:''}
         <button class="btn-sm btn-azul" onclick="abrirModalProposta('${p._docId}')"><i class="ti ti-presentation"></i> Proposta</button>
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
         <button class="btn-sm" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>
@@ -1870,12 +2064,74 @@ async function salvarProposta(){
 window.salvarProposta=salvarProposta;
 
 async function avancarEtapa(docId,etapaAtual){
-  if(etapaAtual==='perdida'||etapaAtual>=6)return;
+  if(etapaAtual==='perdida'||etapaAtual>=7)return;
   const nova=etapaAtual+1;
-  try{await db.collection('propostas').doc(docId).update({etapa:nova,atualizadoEm:Date.now()});showNotif('Avançou para: '+ETAPAS[nova].nome);if(currentTab==='followup')renderFollowup();}
-  catch(e){showNotif('Erro ao atualizar.',true);}
+  // Ao virar Ativo (7), abrir modal para informar data de ativação
+  if(nova===7){
+    document.getElementById('at-doc-id').value=docId;
+    // Sugerir data de hoje
+    document.getElementById('at-data').value=dateStr(new Date());
+    document.getElementById('at-info').style.display='none';
+    document.getElementById('modal-ativacao').classList.add('open');
+    fecharModal('modal-detalhe');
+    return;
+  }
+  try{
+    await db.collection('propostas').doc(docId).update({etapa:nova,atualizadoEm:Date.now()});
+    showNotif('Avançou para: '+ETAPAS[nova].nome);
+    if(currentTab==='followup')renderFollowup();
+  }catch(e){showNotif('Erro ao atualizar.',true);}
 }
 window.avancarEtapa=avancarEtapa;
+
+async function confirmarAtivacao(){
+  const docId=document.getElementById('at-doc-id').value;
+  const dataAtivacao=document.getElementById('at-data').value;
+  if(!dataAtivacao){showNotif('Informe a data de ativação.',true);return;}
+  
+  const p=propostas.find(function(x){return x._docId===docId;});
+  if(!p){showNotif('Proposta não encontrada.',true);return;}
+  
+  const tsAtivacao=new Date(dataAtivacao+'T12:00').getTime();
+  
+  try{
+    // 1. Mover proposta para etapa Ativo
+    await db.collection('propostas').doc(docId).update({
+      etapa:7,
+      dataAssinatura:tsAtivacao,
+      atualizadoEm:Date.now()
+    });
+    
+    // 2. Criar registro automático na aba Renovações
+    const jaExiste=renovacoes.find(function(r){return r.origemPropostaId===docId;});
+    if(!jaExiste){
+      await db.collection('renovacoes').add({
+        razao:p.razao||'',
+        cnpj:p.cnpj||'',
+        responsavel:p.responsavel||'',
+        telefone:p.telefone||'',
+        linhas:p.linhas||'',
+        valor:p.receita||'',
+        plano:'',
+        dataInicio:dataAtivacao,
+        linhasDetalhe:[],
+        status:'nao_atribuido',
+        consultor:p.consultor||'',
+        obs:'Criado automaticamente ao ativar contrato em '+new Date(tsAtivacao).toLocaleDateString('pt-BR'),
+        origemPropostaId:docId,
+        criadoEm:Date.now(),
+        atualizadoEm:Date.now()
+      });
+    }
+    
+    fecharModal('modal-ativacao');
+    showNotif('Cliente ativado! Já aparece na aba Renovações.');
+  }catch(e){
+    showNotif('Erro ao ativar contrato.',true);
+    console.error(e);
+  }
+}
+window.confirmarAtivacao=confirmarAtivacao;
 
 function marcarPerdida(docId){
   document.getElementById('mp-doc-id').value=docId;
@@ -2622,10 +2878,27 @@ const renFiltroStatus=document.getElementById('ren-filtro-status');
 if(renFiltroStatus)renFiltroStatus.addEventListener('change',function(){renderRenovacoes();});
 const renFiltroFid=document.getElementById('ren-filtro-fidelidade');
 if(renFiltroFid)renFiltroFid.addEventListener('change',function(){renderRenovacoes();});
+const renFiltroMesContrato=document.getElementById('ren-filtro-mes-contrato');
+if(renFiltroMesContrato)renFiltroMesContrato.addEventListener('change',function(){renderRenovacoes();});
 const renFiltroConsultor=document.getElementById('ren-filtro-consultor');
 if(renFiltroConsultor)renFiltroConsultor.addEventListener('change',function(){renderRenovacoes();});
 const renCpf=document.getElementById('ren-cpf');
 if(renCpf)renCpf.addEventListener('input',function(){this.value=fmtCPF(this.value);});
+
+// Listener data de ativação
+const atData=document.getElementById('at-data');
+if(atData)atData.addEventListener('change',function(){
+  const infoEl=document.getElementById('at-info');
+  if(!this.value){infoEl.style.display='none';return;}
+  const fid=calcularFidelidade(this.value);
+  if(!fid){infoEl.style.display='none';return;}
+  let txt='',bg='',cor='';
+  if(fid.meses<18){bg='#f8f8f6';cor='#555';txt='Contrato com '+fid.meses+' mes'+(fid.meses!==1?'es':'')+'. Ficará apto a renovar em '+Math.max(0,18-fid.meses)+' mes'+(18-fid.meses!==1?'es':'')+'.';}
+  else if(fid.comFidelidade){bg='#FAEEDA';cor='#633806';txt='✓ Já elegível com '+fid.meses+' meses — COM fidelidade. Perde fidelidade em '+(24-fid.meses)+' mes'+(24-fid.meses!==1?'es':'')+'.';}
+  else{bg='#EAF3DE';cor='#27500A';txt='✓ Elegível COM '+fid.meses+' meses — JÁ SEM fidelidade.';}
+  infoEl.style.background=bg;infoEl.style.color=cor;
+  infoEl.innerHTML=txt;infoEl.style.display='block';
+});
 
 const renTelefone=document.getElementById('ren-telefone');
 if(renTelefone)renTelefone.addEventListener('input',function(){
@@ -2650,6 +2923,8 @@ if(renCnpj)renCnpj.addEventListener('input',function(){
 });
 const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
 if(pipeFiltroConsultor)pipeFiltroConsultor.addEventListener('change',function(){renderPipeline();});
+const pipeFiltroMes=document.getElementById('pipe-filtro-mes');
+if(pipeFiltroMes)pipeFiltroMes.addEventListener('change',function(){renderPipeline();});
 
 document.getElementById('cal-prev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCal();});
 document.getElementById('cal-next').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCal();});
