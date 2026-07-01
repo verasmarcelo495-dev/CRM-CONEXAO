@@ -1091,7 +1091,7 @@ window.exportarRelatorioExcel=exportarRelatorioExcel;
 function atualizarAlertaHeader(){
   const el=document.getElementById('alerta-followup');
   if(!el)return;
-  const lista=getPropostas().filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6&&p.retorno;});
+  const lista=getPropostas().filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno;});
   const atrasados=lista.filter(function(p){return diffDays(p.retorno)<0;});
   const hoje=lista.filter(function(p){return p.retorno===TODAY_STR;});
   const total=atrasados.length+hoje.length;
@@ -1707,7 +1707,7 @@ const DIAS_SEM=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function renderCal(){
   if(!document.getElementById('cal-mes'))return;
   document.getElementById('cal-mes').textContent=MESES[calMonth]+' '+calYear;
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.retorno);
+  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno);
   const evMap={};
   lista.forEach(p=>{evMap[p.retorno]=(evMap[p.retorno]||[]).concat(p);});
   const firstDay=new Date(calYear,calMonth,1).getDay();
@@ -1734,7 +1734,7 @@ window.selectCalDay=selectCalDay;
 window.renderDashboard=renderDashboard;
 
 function showCalDetalhe(ds){
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.retorno===ds);
+  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno===ds);
   const det=document.getElementById('cal-detalhe');
   const titulo=document.getElementById('cal-detalhe-titulo');
   const cards=document.getElementById('cal-detalhe-cards');
@@ -1769,7 +1769,7 @@ function showCalDetalhe(ds){
 // ========= FOLLOW-UP =========
 function renderFollowup(){
   renderCal();
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.retorno);
+  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno);
   const atrasados=lista.filter(p=>diffDays(p.retorno)<0).sort((a,b)=>a.retorno>b.retorno?1:-1);
   const hoje=lista.filter(p=>p.retorno===TODAY_STR);
   const amanha=lista.filter(p=>p.retorno===TMRW_STR);
@@ -1833,7 +1833,7 @@ function renderFollowup(){
         </div>
       </div>
       <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
-        ${p.etapa<6?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar etapa</button>`:''}
+        ${p.etapa<7?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar etapa</button>`:''}
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
       </div>
     </div>`;
@@ -1899,7 +1899,7 @@ function renderLista(){
     const t=TIPOS[p.tipo]||TIPOS.novo;
     const cls=p.etapa==='perdida'?'proposta-card perdida':'proposta-card e'+p.etapa;
     let urgenciaBadge='';
-    if(p.retorno&&p.etapa!=='perdida'&&p.etapa!==6){
+    if(p.retorno&&p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7){
       const diff=diffDays(p.retorno);
       if(diff<0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FCEBEB;color:#791F1F;font-weight:600;">'+Math.abs(diff)+'d atrasado</span>';
       else if(diff===0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FAEEDA;color:#633806;font-weight:600;">Hoje</span>';
@@ -2204,7 +2204,7 @@ function verDetalhe(docId){
     ${p.obs?`<div style="font-size:13px;background:#f8f8f6;padding:8px 10px;border-radius:6px;color:#555;">${p.obs}</div>`:''}`;
   renderHistorico(p);
   document.getElementById('det-acoes').innerHTML=
-    (p.etapa!=='perdida'&&p.etapa<6?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
+    (p.etapa!=='perdida'&&p.etapa<7?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
     +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
     +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');abrirChecklist('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
     +`<button class="btn btn-azul" onclick="fecharModal('modal-detalhe');abrirModalProposta('${p._docId}');"><i class="ti ti-presentation"></i> Proposta</button>`
