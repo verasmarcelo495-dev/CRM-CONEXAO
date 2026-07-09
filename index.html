@@ -1031,7 +1031,7 @@ function renderPipeline(){
         else if(diff===0)retornoBadge='<span class="kc-tag" style="background:rgba(239,159,39,.2);color:#fbbf24;">Hoje</span>';
         else if(diff<=3)retornoBadge='<span class="kc-tag" style="background:rgba(99,153,34,.2);color:#86efac;">em '+diff+'d</span>';
       }
-      return '<div class="kanban-card-dark" draggable="true" data-id="'+p._docId+'" ondragstart="onDragStart(event,this.dataset.id)">'
+      return '<div class="kanban-card-dark" draggable="true" data-id="'+p._docId+'" data-id2="'+p._docId+'" data-action-card="detalhe" ondragstart="onDragStart(event,this.dataset.id)" style="cursor:pointer;">'
         +'<div class="kc-razao">'+(p.razao||'')+'</div>'
         +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
         +'<div class="kc-tags">'
@@ -3001,18 +3001,27 @@ if(pipeBusca)pipeBusca.addEventListener('input',function(){renderPipeline();});
 const listaBusca=document.getElementById('lista-busca');
 if(listaBusca)listaBusca.addEventListener('input',function(){renderLista();});
 
-// Listener global para botões do kanban dark
+// Listener global para botões e cards do kanban dark
 document.addEventListener('click', function(e){
+  // Clique nos botões de ação
   const btn = e.target.closest('[data-action]');
-  if(!btn)return;
-  const action = btn.dataset.action;
-  const id = btn.dataset.id2;
-  const etapa = btn.dataset.etapa;
-  e.stopPropagation();
-  if(action==='avancar')avancarEtapa(id, parseInt(etapa));
-  else if(action==='detalhe')verDetalhe(id);
-  else if(action==='editar')editarProposta(id);
-  else if(action==='perdida')marcarPerdida(id);
+  if(btn){
+    const action = btn.dataset.action;
+    const id = btn.dataset.id2;
+    const etapa = btn.dataset.etapa;
+    e.stopPropagation();
+    if(action==='avancar')avancarEtapa(id, parseInt(etapa));
+    else if(action==='detalhe')verDetalhe(id);
+    else if(action==='editar')editarProposta(id);
+    else if(action==='perdida')marcarPerdida(id);
+    return;
+  }
+  // Clique no card para abrir detalhe
+  const card = e.target.closest('[data-action-card="detalhe"]');
+  if(card){
+    const id = card.dataset.id2;
+    if(id)verDetalhe(id);
+  }
 });
 
 // Listeners renovações
