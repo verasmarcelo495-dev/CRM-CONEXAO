@@ -34,9 +34,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .notif{border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
 .notif-ok{background:#EAF3DE;border:1px solid #97C459;color:#27500A;}
 .notif-warn{background:#FAEEDA;border:1px solid #EF9F27;color:#633806;}
-.tab{font-size:13px;padding:10px 16px;cursor:pointer;color:#888;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;}
-.tab.ativo{color:#1a1a18;font-weight:500;border-bottom-color:#1a1a18;}
-.tab:hover{color:#1a1a18;}
+/* tabs removidos - usando sidebar */
 .avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:12px;flex-shrink:0;}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto;}
 .modal-bg.open{display:flex;}
@@ -48,8 +46,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f3;}
 .login-box{background:#fff;border-radius:16px;border:1px solid var(--border);padding:2rem;width:95%;max-width:380px;}
 .login-err{background:#FCEBEB;border:1px solid #E24B4A;border-radius:var(--radius);padding:8px 12px;font-size:13px;color:#791F1F;margin-bottom:1rem;display:none;align-items:center;gap:6px;}
-header{background:#fff;border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:12px;min-height:56px;position:sticky;top:0;z-index:10;flex-wrap:wrap;}
-header h1{font-size:15px;font-weight:500;flex:1;}
+/* header substituído por sidebar */
 .container{max-width:1200px;margin:0 auto;padding:1.5rem 1rem;}
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;}
 .sync-badge{font-size:11px;padding:3px 8px;border-radius:99px;background:#EAF3DE;color:#27500A;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
@@ -57,6 +54,36 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 .sync-badge.carregando{background:#FAEEDA;color:#633806;}
 @keyframes pulse-alert{0%,100%{opacity:1;}50%{opacity:.5;}}
 .alerta-pulse{background:#FCEBEB;color:#791F1F;font-size:11px;padding:3px 10px;border-radius:99px;display:flex;align-items:center;gap:4px;animation:pulse-alert 1.5s infinite;font-weight:600;}
+
+/* KANBAN DARK */
+#view-pipeline{background:#0f1117;border-radius:12px;padding:1.25rem;margin:-0.5rem;}
+.pipe-busca-bar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;}
+.pipe-busca-bar input,.pipe-busca-bar select{background:#1a1d27;border:1px solid rgba(255,255,255,.1);color:#e0e0e0;border-radius:8px;height:36px;padding:0 12px;font-size:13px;outline:none;}
+.pipe-busca-bar input::placeholder{color:rgba(255,255,255,.3);}
+.pipe-busca-bar input:focus,.pipe-busca-bar select:focus{border-color:#378ADD;}
+.pipe-busca-bar select option{background:#1a1d27;color:#e0e0e0;}
+.kanban-wrapper-dark{display:grid;gap:10px;margin-bottom:10px;}
+.kanban-col-dark{background:#13161f;border:1.5px dashed rgba(255,255,255,.12);border-radius:10px;padding:.75rem;min-height:160px;transition:border-color .15s;}
+.kanban-col-dark.drag-over{border-color:#378ADD;background:#1a2436;}
+.kanban-col-header-dark{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07);}
+.kanban-col-nome{font-size:11px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.06em;flex:1;}
+.kanban-col-count{font-size:11px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:99px;}
+.kanban-card-dark{background:#1e2130;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:border-color .12s,transform .1s;position:relative;}
+.kanban-card-dark:hover{border-color:rgba(255,255,255,.2);transform:translateY(-1px);}
+.kanban-card-dark:active{cursor:grabbing;}
+.kanban-card-dark.dragging{opacity:.4;}
+.kanban-card-dark .kc-razao{font-size:12px;font-weight:600;color:#e8e8e8;margin-bottom:2px;line-height:1.4;}
+.kanban-card-dark .kc-resp{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;}
+.kanban-card-dark .kc-tags{display:flex;gap:4px;flex-wrap:wrap;}
+.kanban-card-dark .kc-tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:500;}
+.kanban-card-dark .kc-actions{display:flex;gap:4px;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06);}
+.kanban-card-dark .kc-btn{width:26px;height:26px;border-radius:6px;border:none;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .12s;}
+.kanban-card-dark .kc-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
+.kanban-card-dark .kc-btn.verde:hover{background:rgba(29,158,117,.25);color:#1D9E75;}
+.kanban-card-dark .kc-btn.azul:hover{background:rgba(55,138,221,.25);color:#378ADD;}
+.kanban-card-dark .kc-btn.red:hover{background:rgba(226,75,74,.25);color:#E24B4A;}
+.kanban-ativo-dark{background:#0d1526;border:1px solid rgba(55,138,221,.25);border-radius:10px;padding:1rem;margin-top:10px;}
+.kanban-ativo-mes{background:#13161f;border:1.5px dashed rgba(55,138,221,.2);border-radius:8px;padding:.75rem;min-width:200px;flex:1;}
 
 /* KANBAN DRAG & DROP */
 .kanban-wrapper{display:grid;gap:10px;margin-bottom:10px;}
@@ -174,6 +201,38 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 @media(max-width:480px){
   .grid-2,.grid-3,.grid-4,.grid-5,.fu-stats{grid-template-columns:1fr;}
 }
+
+/* SIDEBAR LAYOUT */
+.app-layout{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:#0f1117;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:20;overflow-y:auto;}
+.sidebar-logo{padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;}
+.sidebar-logo-icon{width:32px;height:32px;border-radius:8px;background:#1a3a5c;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sidebar-logo-txt{font-size:13px;font-weight:600;color:#fff;line-height:1.3;}
+.sidebar-logo-sub{font-size:10px;color:rgba(255,255,255,.4);}
+.sidebar-user{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:8px;}
+.sidebar-user-nome{font-size:12px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar-user-role{font-size:10px;color:rgba(255,255,255,.4);}
+.sidebar-nav{flex:1;padding:6px 0;}
+.sidebar-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;padding:14px 16px 4px;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 16px;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;width:100%;text-align:left;border-radius:0;transition:all .12s;}
+.sidebar-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sidebar-item.ativo{background:rgba(55,138,221,.2);color:#60a5e8;font-weight:500;}
+.sidebar-item i{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+.sidebar-item.ativo i{color:#60a5e8;}
+.sidebar-badge-count{font-size:10px;padding:1px 7px;border-radius:99px;background:#E24B4A;color:#fff;margin-left:auto;}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;}
+.main-content{margin-left:220px;flex:1;min-height:100vh;background:#f5f5f3;}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:12px;min-height:52px;position:sticky;top:0;z-index:10;}
+.topbar-title{font-size:14px;font-weight:500;color:#1a1a18;flex:1;}
+.page-content{padding:1.5rem;}
+.container{padding:0;}
+@media(max-width:768px){
+  .sidebar{width:52px;}
+  .sidebar-logo-txt,.sidebar-logo-sub,.sidebar-user,.sidebar-section,.sidebar-item span{display:none;}
+  .sidebar-item{justify-content:center;padding:10px 0;}
+  .sidebar-badge-count{display:none;}
+  .main-content{margin-left:52px;}
+}
 </style>
 </head>
 <body>
@@ -208,28 +267,66 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 
 <!-- PAINEL -->
 <div id="view-painel" style="display:none;">
-  <header>
-    <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;" id="hd-av"></div>
-    <h1 id="hd-nome"></h1>
-    <div id="sync-status" class="sync-badge carregando"><i class="ti ti-loader"></i> Conectando...</div>
-    <div id="alerta-followup" style="display:none;cursor:pointer;" onclick="setTab('followup')"></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn btn-verde" onclick="abrirModalNova()"><i class="ti ti-plus"></i> Nova proposta</button>
-      <button class="btn" onclick="logout()"><i class="ti ti-logout"></i> Sair</button>
+  <div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon"><i class="ti ti-building" style="font-size:16px;color:#60a5e8;"></i></div>
+      <div><div class="sidebar-logo-txt">TIM Empresas</div><div class="sidebar-logo-sub">CRM Conexão</div></div>
     </div>
-  </header>
+    <div class="sidebar-user">
+      <div id="hd-av" style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;"><div class="sidebar-user-nome" id="hd-nome-sidebar"></div><div class="sidebar-user-role" id="hd-role-sidebar"></div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Início</div>
+      <button class="sidebar-item ativo" id="tab-dashboard" onclick="setTab('dashboard')">
+        <i class="ti ti-home"></i><span>Dashboard</span>
+      </button>
 
-  <div class="container">
-    <div id="notif-area"></div>
-    <div class="tabs">
-      <button class="tab ativo" id="tab-dashboard" onclick="setTab('dashboard')"><i class="ti ti-home"></i> Início</button>
-      <button class="tab" id="tab-pipeline" onclick="setTab('pipeline')"><i class="ti ti-layout-kanban"></i> Pipeline</button>
-      <button class="tab" id="tab-followup" onclick="setTab('followup')"><i class="ti ti-bell"></i> Follow-up</button>
-      <button class="tab" id="tab-lista" onclick="setTab('lista')"><i class="ti ti-list"></i> Lista</button>
-      <button class="tab" id="tab-metricas" onclick="setTab('metricas')"><i class="ti ti-chart-bar"></i> Métricas</button>
-      <button class="tab" id="tab-renovacoes" onclick="setTab('renovacoes')"><i class="ti ti-refresh"></i> Renovações</button>
-      <button class="tab" id="tab-usuarios" onclick="setTab('usuarios')" style="display:none;"><i class="ti ti-users"></i> Usuários</button>
+      <div class="sidebar-section">Comercial</div>
+      <button class="sidebar-item" id="tab-pipeline" onclick="setTab('pipeline')">
+        <i class="ti ti-layout-kanban"></i><span>Pipeline</span>
+      </button>
+      <button class="sidebar-item" id="tab-lista" onclick="setTab('lista')">
+        <i class="ti ti-list"></i><span>Lista de propostas</span>
+      </button>
+      <button class="sidebar-item" id="tab-followup" onclick="setTab('followup')">
+        <i class="ti ti-bell"></i><span>Follow-up</span>
+        <span class="sidebar-badge-count" id="badge-followup" style="display:none;"></span>
+      </button>
+      <button class="sidebar-item" id="tab-metricas" onclick="setTab('metricas')">
+        <i class="ti ti-chart-bar"></i><span>Métricas</span>
+      </button>
+
+      <div class="sidebar-section">Renovações</div>
+      <button class="sidebar-item" id="tab-renovacoes" onclick="setTab('renovacoes')">
+        <i class="ti ti-refresh"></i><span>Base de renovação</span>
+      </button>
+
+      <div class="sidebar-section" id="section-config">Configurações</div>
+      <button class="sidebar-item" id="tab-usuarios" style="display:none;" onclick="setTab('usuarios')">
+        <i class="ti ti-users"></i><span>Usuários</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sync-status" class="sync-badge carregando" style="flex:1;"><i class="ti ti-loader"></i> <span>Conectando...</span></div>
+      <button class="btn-sm" onclick="logout()" title="Sair"><i class="ti ti-logout"></i></button>
     </div>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div id="alerta-followup" style="display:none;cursor:pointer;" onclick="setTab('followup')"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-verde" onclick="abrirModalNova()"><i class="ti ti-plus"></i> Nova proposta</button>
+        <button class="btn btn-purple" onclick="document.getElementById('modal-senha').classList.add('open')" style="font-size:11px;"><i class="ti ti-lock"></i></button>
+      </div>
+    </div>
+    <div class="page-content">
+    <div id="notif-area"></div>
 
     <!-- DASHBOARD -->
     <div id="view-dashboard">
@@ -250,13 +347,13 @@ header h1{font-size:15px;font-weight:500;flex:1;}
 
     <!-- PIPELINE KANBAN -->
     <div id="view-pipeline" style="display:none;">
-      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-        <input type="text" id="pipe-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:260px;"/>
-        <select id="pipe-filtro-consultor" style="max-width:170px;display:none;"><option value="">Todos os consultores</option></select>
-        <select id="pipe-filtro-mes" style="max-width:200px;"><option value="">Todos os meses</option></select>
+      <div class="pipe-busca-bar">
+        <input type="text" id="pipe-busca" placeholder="🔍 Buscar por CNPJ ou razão social..." style="flex:1;min-width:200px;max-width:300px;"/>
+        <select id="pipe-filtro-consultor" style="display:none;"><option value="">Todos os consultores</option></select>
+        <select id="pipe-filtro-mes"><option value="">Todos os meses</option></select>
       </div>
-      <div class="kanban-wrapper" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
-      <div class="kanban-wrapper" style="grid-template-columns:repeat(3,1fr);" id="kanban-row2"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(3,1fr);margin-top:10px;" id="kanban-row2"></div>
       <div id="kanban-row3"></div>
     </div>
 
@@ -364,8 +461,10 @@ header h1{font-size:15px;font-weight:500;flex:1;}
         <div id="met-motivos-perda"></div>
       </div>
     </div>
-  </div>
-</div>
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+  </div><!-- /app-layout -->
+</div><!-- /view-painel -->
 
 <!-- MODAL NOVA/EDITAR -->
 <div class="modal-bg" id="modal-proposta">
@@ -781,9 +880,12 @@ window.fazerLogin=fazerLogin;
 function login(user){
   currentUser=user;const u=USERS[user];
   const av=document.getElementById('hd-av');
-  av.style.cssText=`background:${u.bg};color:${u.c};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;`;
+  av.style.cssText='background:'+u.bg+';color:'+u.c+';width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;';
   av.textContent=initials(u.nome);
-  document.getElementById('hd-nome').innerHTML=u.nome+' — '+u.role+' &nbsp;<button class="btn-sm btn-purple" onclick="document.getElementById(\'modal-senha\').classList.add(\'open\')" style="font-size:11px;height:26px;"><i class="ti ti-lock"></i> Alterar senha</button>';
+  var nomeEl=document.getElementById('hd-nome-sidebar');
+  if(nomeEl)nomeEl.textContent=u.nomeCompleto||u.nome;
+  var roleEl=document.getElementById('hd-role-sidebar');
+  if(roleEl)roleEl.textContent=u.role;
   document.getElementById('filtro-consultor').style.display=user==='master'?'':'none';
   document.getElementById('wrap-consultor-sel').style.display=user==='master'?'':'none';
   document.getElementById('tab-usuarios').style.display=user==='master'?'':'none';
@@ -834,12 +936,18 @@ async function salvarSenha(){
 }
 window.salvarSenha=salvarSenha;
 
+const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de propostas',followup:'Follow-up',metricas:'Métricas',renovacoes:'Base de renovação',usuarios:'Usuários'};
+
 function setTab(tab){
   currentTab=tab;
   ['dashboard','pipeline','followup','lista','metricas','renovacoes','usuarios'].forEach(function(t){
-    document.getElementById('view-'+t).style.display=t===tab?'block':'none';
-    document.getElementById('tab-'+t).classList.toggle('ativo',t===tab);
+    const viewEl=document.getElementById('view-'+t);
+    const tabEl=document.getElementById('tab-'+t);
+    if(viewEl)viewEl.style.display=t===tab?'block':'none';
+    if(tabEl)tabEl.classList.toggle('ativo',t===tab);
   });
+  const titleEl=document.getElementById('topbar-title');
+  if(titleEl)titleEl.textContent=TAB_TITULOS[tab]||tab;
   if(tab==='dashboard')renderDashboard();
   else if(tab==='pipeline')renderPipeline();
   else if(tab==='followup')renderFollowup();
@@ -908,30 +1016,43 @@ function renderPipeline(){
   }
   
   function buildCol(etapa){
-    const ps=lista.filter(p=>p.etapa==etapa.id);
-    const totalLn=ps.reduce((s,p)=>s+(+p.linhas||0),0);
-    const cards=ps.map(p=>{
-      const u=USERS[p.consultor]||USERS.karla||{bg:'#fff',c:'#333',nome:'?'};
+    const ps=lista.filter(function(p){return p.etapa==etapa.id;});
+    const totalLn=ps.reduce(function(s,p){return s+(+p.linhas||0);},0);
+    const cards=ps.map(function(p){
+      const u=USERS[p.consultor]||{bg:'#2a2d3a',c:'#aaa',nome:'?'};
       const t=TIPOS[p.tipo]||TIPOS.novo;
-      const corFundo=u.bg||'#fff';
-      const nomeConsultor=(USERS[p.consultor]&&(USERS[p.consultor]||{nome:'?'}).nome)?(USERS[p.consultor]||{nome:'?'}).nome:'?';
-      return`<div class="kanban-card" draggable="true" data-id="${p._docId}" ondragstart="onDragStart(event,'${p._docId}')" onclick="verDetalhe('${p._docId}')" style="background:${corFundo};">
-        <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${p.razao||''}</div>
-        <div style="font-size:12px;color:#666;">${p.responsavel||''}</div>
-        <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;">
-          <span class="badge ${t.cls}" style="font-size:10px;">${t.label}</span>
-          ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.6);color:#3C3489;">${p.linhas}ln</span>`:''}
-          ${p.receita?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.6);color:#27500A;">R$${Number(p.receita).toLocaleString('pt-BR')}</span>`:''}
-          ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.8);color:${u.c};font-weight:600;">${nomeConsultor}</span>`:''}
-        </div>
-      </div>`;
-    }).join('')||'<div style="font-size:12px;color:#aaa;padding:.5rem 0;">Vazio</div>';
-    return`<div class="kanban-col" data-etapa="${etapa.id}" ondragover="onDragOver(event,${etapa.id})" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${etapa.id})">
-      <div class="kanban-col-header">
-        <div class="kanban-dot" style="background:${etapa.cor};"></div>
-        <div class="kanban-title">${etapa.nome}</div>
-        <div class="kanban-count">${ps.length}${totalLn?' · '+totalLn+'ln':''}</div>
-      </div>${cards}</div>`;
+      const nomeConsultor=(USERS[p.consultor]&&USERS[p.consultor].nome)?USERS[p.consultor].nome:'?';
+      const tipoCors={novo:{bg:'rgba(55,138,221,.18)',c:'#60a5e8'},portado:{bg:'rgba(127,119,221,.18)',c:'#a89ee8'},renovacao:{bg:'rgba(29,158,117,.18)',c:'#34d399'}};
+      const tipoStyle=tipoCors[p.tipo]||tipoCors.novo;
+      let retornoBadge='';
+      if(p.retorno&&p.etapa!==6&&p.etapa!==7){
+        const diff=diffDays(p.retorno);
+        if(diff<0)retornoBadge='<span class="kc-tag" style="background:rgba(226,75,74,.2);color:#f87171;">'+Math.abs(diff)+'d atraso</span>';
+        else if(diff===0)retornoBadge='<span class="kc-tag" style="background:rgba(239,159,39,.2);color:#fbbf24;">Hoje</span>';
+        else if(diff<=3)retornoBadge='<span class="kc-tag" style="background:rgba(99,153,34,.2);color:#86efac;">em '+diff+'d</span>';
+      }
+      return '<div class="kanban-card-dark" draggable="true" data-id="'+p._docId+'" ondragstart="onDragStart(event,this.dataset.id)">'
+        +'<div class="kc-razao">'+(p.razao||'')+'</div>'
+        +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
+        +'<div class="kc-tags">'
+        +'<span class="kc-tag" style="background:'+tipoStyle.bg+';color:'+tipoStyle.c+';">'+t.label+'</span>'
+        +(p.linhas?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">'+p.linhas+'ln</span>':'')
+        +(p.receita?'<span class="kc-tag" style="background:rgba(29,158,117,.15);color:#34d399;">R$'+Number(p.receita).toLocaleString('pt-BR')+'</span>':'')
+        +(currentUser==='master'?'<span class="kc-tag" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">'+nomeConsultor+'</span>':'')
+        +retornoBadge
+        +'</div>'
+        +'<div class="kc-actions">'
+        +(p.etapa<7?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="'+p.etapa+'" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'')
+        +'<button class="kc-btn azul" data-action="detalhe" data-id2="'+p._docId+'" title="Detalhes"><i class="ti ti-eye"></i></button>'
+        +'<button class="kc-btn" data-action="editar" data-id2="'+p._docId+'" title="Editar"><i class="ti ti-edit"></i></button>'
+        +(p.etapa!=='perdida'&&p.etapa!==7?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')+'</div></div>';
+    }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
+    return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" ondragover="onDragOver(event,'+etapa.id+')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'+etapa.id+')">'
+      +'<div class="kanban-col-header-dark">'
+      +'<div style="width:7px;height:7px;border-radius:50%;background:'+etapa.cor+';flex-shrink:0;"></div>'
+      +'<div class="kanban-col-nome">'+etapa.nome+'</div>'
+      +'<span class="kanban-col-count">'+ps.length+(totalLn?' · '+totalLn+'ln':'')+'</span>'
+      +'</div>'+cards+'</div>';
   }
   document.getElementById('kanban-row1').innerHTML=ETAPAS.slice(0,4).map(buildCol).join('');
   document.getElementById('kanban-row2').innerHTML=ETAPAS.slice(4,7).map(buildCol).join('');
@@ -953,11 +1074,11 @@ function renderPipeline(){
   
   const chavesAtivos=Object.keys(ativosPorMes).sort().reverse();
   
-  let row3HTML='<div style="margin-top:10px;">';
-  row3HTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
-  row3HTML+='<div style="width:8px;height:8px;border-radius:50%;background:#0C447C;flex-shrink:0;"></div>';
-  row3HTML+='<div style="font-size:12px;font-weight:500;">Ativos</div>';
-  row3HTML+='<div style="font-size:11px;color:#888;">'+todosAtivos.length+' clientes</div>';
+  let row3HTML='<div class="kanban-ativo-dark">';
+  row3HTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
+  row3HTML+='<div style="width:7px;height:7px;border-radius:50%;background:#378ADD;flex-shrink:0;"></div>';
+  row3HTML+='<div style="font-size:11px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.06em;flex:1;">Ativos</div>';
+  row3HTML+='<span style="font-size:11px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:99px;">'+todosAtivos.length+' clientes</span>';
   row3HTML+='</div>';
   
   if(todosAtivos.length===0){
@@ -974,14 +1095,17 @@ function renderPipeline(){
       const anoChave=parseInt(partes[0]);
       const mesChave=parseInt(partes[1])-1;
       const mesesAtivo=(hoje.getFullYear()-anoChave)*12+(hoje.getMonth()-mesChave);
-      let corMes='#E6F1FB',corTexto='#0C447C',corBorda='#378ADD';
-      if(mesesAtivo>=24){corMes='#EAF3DE';corTexto='#27500A';corBorda='#639922';}
-      else if(mesesAtivo>=18){corMes='#FAEEDA';corTexto='#633806';corBorda='#EF9F27';}
+      let corBorda='rgba(55,138,221,.25)',corTexto='#60a5e8',corTag='';
+      if(mesesAtivo>=24){corBorda='rgba(29,158,117,.35)';corTexto='#34d399';corTag='<span style="font-size:10px;padding:1px 7px;border-radius:5px;background:rgba(29,158,117,.2);color:#34d399;font-weight:600;">Sem fidelidade</span>';}
+      else if(mesesAtivo>=18){corBorda='rgba(239,159,39,.35)';corTexto='#fbbf24';corTag='<span style="font-size:10px;padding:1px 7px;border-radius:5px;background:rgba(239,159,39,.2);color:#fbbf24;font-weight:600;">Apto a renovar</span>';}
       
-      row3HTML+='<div style="background:'+corMes+';border:1.5px solid '+corBorda+';border-radius:var(--radius-lg);padding:.75rem;min-width:200px;flex:1;">';
-      row3HTML+='<div style="font-size:12px;font-weight:600;color:'+corTexto+';margin-bottom:6px;">'+mesLabel+' · Mês '+mesesAtivo+'</div>';
-      if(mesesAtivo>=18)row3HTML+='<div style="font-size:10px;font-weight:600;color:'+corTexto+';margin-bottom:6px;">'+(mesesAtivo>=24?'✓ Sem fidelidade':'⚠ Apto a renovar')+'</div>';
-      row3HTML+='<div style="font-size:11px;color:#666;margin-bottom:6px;">'+ativos.length+' cliente'+(ativos.length>1?'s':'')+' · '+totalLinhas+'ln · '+fmtMoeda(totalReceita)+'/mês</div>';
+      row3HTML+='<div class="kanban-ativo-mes" style="border-color:'+corBorda+';min-width:200px;flex:1;">';
+      row3HTML+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+      row3HTML+='<div style="font-size:11px;font-weight:700;color:'+corTexto+';text-transform:uppercase;letter-spacing:.04em;">'+mesLabel+'</div>';
+      row3HTML+='<span style="font-size:10px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:1px 6px;border-radius:99px;">Mês '+mesesAtivo+'</span>';
+      if(corTag)row3HTML+=corTag;
+      row3HTML+='</div>';
+      row3HTML+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;">'+ativos.length+' cliente'+(ativos.length>1?'s':'')+' · '+totalLinhas+'ln · '+fmtMoeda(totalReceita)+'/mês</div>';
       ativos.forEach(function(p){
         const u=USERS[p.consultor]||{bg:'#fff',c:'#333',nome:'?'};
         const nomeConsultor=(USERS[p.consultor]&&USERS[p.consultor].nome)?USERS[p.consultor].nome:'?';
@@ -1090,17 +1214,23 @@ window.exportarRelatorioExcel=exportarRelatorioExcel;
 // ========= ALERTA HEADER =========
 function atualizarAlertaHeader(){
   const el=document.getElementById('alerta-followup');
-  if(!el)return;
+  const badge=document.getElementById('badge-followup');
   const lista=getPropostas().filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno;});
   const atrasados=lista.filter(function(p){return diffDays(p.retorno)<0;});
   const hoje=lista.filter(function(p){return p.retorno===TODAY_STR;});
   const total=atrasados.length+hoje.length;
-  if(total>0){
-    el.style.display='flex';
-    el.className='alerta-pulse';
-    el.innerHTML='<i class="ti ti-alert-triangle"></i> '+total+' retorno'+(total>1?'s':'')+' pendente'+(total>1?'s':'')+' hoje';
-  }else{
-    el.style.display='none';
+  if(el){
+    if(total>0){
+      el.style.display='flex';
+      el.className='alerta-pulse';
+      el.innerHTML='<i class="ti ti-alert-triangle"></i> '+total+' retorno'+(total>1?'s':'')+' pendente'+(total>1?'s':'')+' hoje';
+    }else{
+      el.style.display='none';
+    }
+  }
+  if(badge){
+    if(total>0){badge.style.display='block';badge.textContent=total;}
+    else{badge.style.display='none';}
   }
 }
 
@@ -2870,6 +3000,20 @@ const pipeBusca=document.getElementById('pipe-busca');
 if(pipeBusca)pipeBusca.addEventListener('input',function(){renderPipeline();});
 const listaBusca=document.getElementById('lista-busca');
 if(listaBusca)listaBusca.addEventListener('input',function(){renderLista();});
+
+// Listener global para botões do kanban dark
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action]');
+  if(!btn)return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id2;
+  const etapa = btn.dataset.etapa;
+  e.stopPropagation();
+  if(action==='avancar')avancarEtapa(id, parseInt(etapa));
+  else if(action==='detalhe')verDetalhe(id);
+  else if(action==='editar')editarProposta(id);
+  else if(action==='perdida')marcarPerdida(id);
+});
 
 // Listeners renovações
 const renBusca=document.getElementById('ren-busca');
