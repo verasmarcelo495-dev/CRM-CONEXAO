@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaLogado() {
+      return request.auth != null;
+    }
+
+    // "master" é definido exatamente como o app já faz: o UID logado precisa
+    // bater com o valor salvo em config/uid_map.master.
+    function souMaster() {
+      return estaLogado()
+        && get(/databases/$(database)/documents/config/uid_map).data.master == request.auth.uid;
+    }
+
+    // Propostas e Renovações: qualquer usuário logado pode ler/gravar,
+    // igual ao comportamento atual do CRM (todos os consultores veem tudo).
+    match /propostas/{docId} {
+      allow read, create, update: if estaLogado();
+      allow delete: if estaLogado();
+    }
+
+    match /renovacoes/{docId} {
+      allow read, create, update, delete: if estaLogado();
+    }
+
+    // Backoffice: leitura/criação para qualquer logado. Alterar ou excluir um
+    // pedido que já está "ativo" só pode o master (mesma regra já aplicada na tela).
+    match /backoffice/{docId} {
+      allow read, create: if estaLogado();
+      allow update, delete: if estaLogado()
+        && (resource.data.status != 'ativo' || souMaster());
+    }
+
+    // Mapeamento de UID -> usuário: qualquer logado precisa poder ler (é usado
+    // no login para descobrir quem é quem). Só o master pode escrever aqui,
+    // porque é aqui que se decide quem é master.
+    match /config/uid_map {
+      allow read: if estaLogado();
+      allow write: if souMaster();
+    }
+
+    // Perfis dos consultores: leitura liberada para logados, escrita só master.
+    match /config/usuarios {
+      allow read: if estaLogado();
+      allow write: if souMaster();
+    }
+
+    // Legado: senhas em texto puro (pré-Firebase Auth). Só o master pode ver/editar.
+    match /config/senhas {
+      allow read, write: if souMaster();
+    }
+
+    // Qualquer outro documento/coleção não previsto acima: bloqueado por padrão.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

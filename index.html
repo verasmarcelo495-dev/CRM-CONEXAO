@@ -304,6 +304,11 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <i class="ti ti-refresh"></i><span>Base de renovação</span>
       </button>
 
+      <div class="sidebar-section">Backoffice</div>
+      <button class="sidebar-item" id="tab-backoffice" onclick="setTab('backoffice')">
+        <i class="ti ti-truck-delivery"></i><span>Acompanhamento de pedidos</span>
+      </button>
+
       <div class="sidebar-section" id="section-config">Configurações</div>
       <button class="sidebar-item" id="tab-usuarios" style="display:none;" onclick="setTab('usuarios')">
         <i class="ti ti-users"></i><span>Usuários</span>
@@ -414,6 +419,23 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
       <div id="ren-lista"></div>
     </div>
 
+    <!-- BACKOFFICE -->
+    <div id="view-backoffice" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <input type="text" id="bo-busca" placeholder="🔍 Buscar por CNPJ ou razão social..." style="flex:1;min-width:200px;max-width:300px;"/>
+        <button class="btn" id="bo-btn-fechamento" style="display:none;" onclick="abrirModalFechamentoBackoffice()"><i class="ti ti-file-spreadsheet"></i> Exportar fechamento</button>
+        <button class="btn btn-verde" id="bo-btn-novo" onclick="abrirModalBackoffice()"><i class="ti ti-plus"></i> Novo pedido</button>
+      </div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);" id="backoffice-row1"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);margin-top:10px;" id="backoffice-row2"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin:1.25rem 0 .5rem;">
+        <div style="width:7px;height:7px;border-radius:50%;background:#1D9E75;flex-shrink:0;"></div>
+        <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;flex:1;">Ativos</div>
+        <select id="bo-filtro-mes" style="max-width:180px;"><option value="">Mês atual</option></select>
+      </div>
+      <div id="backoffice-ativos"></div>
+    </div>
+
     <!-- USUÁRIOS (só master) -->
     <div id="view-usuarios" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
@@ -499,6 +521,38 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL BACKOFFICE -->
+<div class="modal-bg" id="modal-backoffice">
+  <div class="modal">
+    <h3 id="modal-backoffice-titulo"><i class="ti ti-truck-delivery"></i> Novo pedido</h3>
+    <input type="hidden" id="bo-id"/>
+    <input type="hidden" id="bo-status"/>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Razão social *</label><input type="text" id="bo-razao" placeholder="Ex: Silva Ltda"/></div>
+      <div class="form-group"><label class="form-label">CNPJ</label><input type="text" id="bo-cnpj" placeholder="00.000.000/0000-00" maxlength="18"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Responsável</label><input type="text" id="bo-responsavel" placeholder="Nome do contato"/></div>
+      <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input type="tel" id="bo-telefone" placeholder="Ex: 61999990000"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Nº do pedido/protocolo TIM</label><input type="text" id="bo-protocolo" placeholder="Ex: 123456789"/></div>
+    <div class="prop-section">Produtos</div>
+    <div id="bo-produtos-lista"></div>
+    <button class="btn-sm btn-verde" type="button" onclick="adicionarProdutoBackoffice()" style="margin-bottom:.5rem;"><i class="ti ti-plus"></i> Adicionar produto</button>
+    <div style="text-align:right;font-size:13px;font-weight:600;color:#333;margin-bottom:1rem;">Total do pedido: <span id="bo-produtos-total">R$ 0,00</span></div>
+    <div class="form-group" id="bo-wrap-consultor"><label class="form-label">Consultor responsável pela venda</label><select id="bo-consultor"><option value="">—</option></select></div>
+    <div class="form-group"><label class="form-label">Observações / pendências</label><textarea id="bo-obs" placeholder="Ex: aguardando documento do cliente..."></textarea></div>
+    <div id="bo-historico-wrap" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Histórico de movimentação</div>
+      <div id="bo-historico"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-backoffice')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBackoffice()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DETALHE -->
 <div class="modal-bg" id="modal-detalhe">
   <div class="modal">
@@ -529,6 +583,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <div class="form-group"><label class="form-label">E-mail</label><input type="text" id="u-email-prop" placeholder="Ex: joao@conexaoco.com.br"/></div>
       </div>
       <div class="form-group"><label class="form-label">Meta mensal de receita (R$)</label><input type="number" id="u-meta" placeholder="Ex: 5000" min="0"/></div>
+    </div>
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="u-backoffice" style="width:auto;"/> Pode mover cards do Backoffice</label>
     </div>
     <div class="login-err" id="u-err"><i class="ti ti-alert-circle"></i> <span id="u-err-msg"></span></div>
     <div class="modal-footer">
@@ -702,6 +759,47 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL ATIVAÇÃO BACKOFFICE -->
+<div class="modal-bg" id="modal-ativacao-bo">
+  <div class="modal" style="max-width:420px;">
+    <h3><i class="ti ti-circle-check"></i> Ativar pedido</h3>
+    <input type="hidden" id="at-bo-doc-id"/>
+    <div style="background:#E6F1FB;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:1rem;">
+      <i class="ti ti-info-circle"></i> Informe a data em que o pedido foi ativado no sistema da TIM. Essa data é usada para saber em qual mês a venda conta para comissão.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data de ativação</label>
+      <input type="date" id="at-bo-data"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-ativacao-bo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAtivacaoBackoffice()"><i class="ti ti-check"></i> Confirmar ativação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FECHAMENTO BACKOFFICE (EXPORTAR PLANILHA DE COMISSÃO) -->
+<div class="modal-bg" id="modal-fechamento-bo">
+  <div class="modal" style="max-width:420px;">
+    <h3><i class="ti ti-file-spreadsheet"></i> Exportar fechamento</h3>
+    <div style="background:#E6F1FB;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:1rem;">
+      <i class="ti ti-info-circle"></i> Gera uma planilha com os pedidos ativos, com uma aba separada para você preencher o fator de comissão de cada consultor.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mês de ativação</label>
+      <select id="fc-filtro-mes"><option value="">Mês atual</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Consultor</label>
+      <select id="fc-filtro-consultor"><option value="">Todos os consultores</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-fechamento-bo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="gerarFechamentoBackoffice()"><i class="ti ti-download"></i> Gerar planilha</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL MOTIVO PERDA -->
 <div class="modal-bg" id="modal-motivo-perda">
   <div class="modal" style="max-width:420px;">
@@ -806,6 +904,7 @@ function fmtTel(t){const d=t.replace(/\D/g,'');if(d.length===11)return`(${d.slic
 function cleanTel(t){return t.replace(/\D/g,'');}
 function initials(n){return n.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();}
 function getPropostas(){return currentUser==='master'?propostas:propostas.filter(p=>p.consultor===currentUser);}
+function podeMoverBackoffice(){return currentUser==='master'||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
 function tipoBadge(tipo){const t=TIPOS[tipo]||TIPOS.novo;return`<span class="badge ${t.cls}">${t.label}</span>`;}
 function telLinks(tel){if(!tel)return'';const d=cleanTel(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
 
@@ -894,7 +993,7 @@ function login(user){
   document.getElementById('login-senha').value='';
   document.getElementById('p-etapa').innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
-  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();iniciarSyncRenovacoes();setTab('dashboard');
+  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();iniciarSyncRenovacoes();iniciarSyncBackoffice();setTab('dashboard');
 }
 function logout(){
   if(_unsub){_unsub();_unsub=null;}
@@ -936,11 +1035,11 @@ async function salvarSenha(){
 }
 window.salvarSenha=salvarSenha;
 
-const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de propostas',followup:'Follow-up',metricas:'Métricas',renovacoes:'Base de renovação',usuarios:'Usuários'};
+const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de propostas',followup:'Follow-up',metricas:'Métricas',renovacoes:'Base de renovação',backoffice:'Acompanhamento de pedidos',usuarios:'Usuários'};
 
 function setTab(tab){
   currentTab=tab;
-  ['dashboard','pipeline','followup','lista','metricas','renovacoes','usuarios'].forEach(function(t){
+  ['dashboard','pipeline','followup','lista','metricas','renovacoes','backoffice','usuarios'].forEach(function(t){
     const viewEl=document.getElementById('view-'+t);
     const tabEl=document.getElementById('tab-'+t);
     if(viewEl)viewEl.style.display=t===tab?'block':'none';
@@ -954,6 +1053,7 @@ function setTab(tab){
   else if(tab==='lista')renderLista();
   else if(tab==='metricas')renderMetricas();
   else if(tab==='renovacoes')renderRenovacoes();
+  else if(tab==='backoffice')renderBackoffice();
   else if(tab==='usuarios')renderUsuarios();
 }
 window.setTab=setTab;
@@ -1350,6 +1450,472 @@ function iniciarSyncRenovacoes(){
 function getRenovacoes(){
   return currentUser==='master'?renovacoes:renovacoes.filter(function(r){return r.consultor===currentUser;});
 }
+
+// ========= BACKOFFICE =========
+const ETAPAS_BACKOFFICE=[
+  {id:'gerar_contrato',nome:'Gerar contrato',cor:'#60a5e8'},
+  {id:'aguard_assinatura',nome:'Aguardando assinatura',cor:'#2fa8a0'},
+  {id:'pendente_input',nome:'Pendente input',cor:'#EF9F27'},
+  {id:'antifraude',nome:'Análise antifraude',cor:'#378ADD'},
+  {id:'credito',nome:'Análise de crédito',cor:'#a89ee8'},
+  {id:'preativacao',nome:'Pré-ativação',cor:'#7F77DD'},
+  {id:'faturamento',nome:'Faturamento',cor:'#D85A30'},
+  {id:'logistica',nome:'Logística',cor:'#639922'},
+];
+// 'ativo' não é uma coluna do kanban: é um estado terminal separado (ver ETAPA_ATIVO_BACKOFFICE), agrupado por mês de ativação.
+const ETAPA_ATIVO_BACKOFFICE={id:'ativo',nome:'Ativo',cor:'#1D9E75'};
+let backofficeLista=[],_unsubBo=null,dragIdBo=null;
+
+function iniciarSyncBackoffice(){
+  if(_unsubBo)_unsubBo();
+  try{
+    _unsubBo=db.collection('backoffice').orderBy('criadoEm','desc').onSnapshot(function(snap){
+      backofficeLista=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
+      if(currentTab==='backoffice')renderBackoffice();
+    },function(err){console.error(err);});
+  }catch(e){}
+}
+
+function getBackoffice(){return backofficeLista;}
+
+const MESES_NOMES_BO=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function mesChaveBO(dataStr){if(!dataStr)return'';const d=new Date(dataStr+'T12:00');return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function mesAtualChaveBO(){const h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');}
+
+function totaisProdutosBackoffice(p){
+  const produtos=p.produtos||[];
+  let qtd=0,valor=0;
+  produtos.forEach(function(pr){qtd+=parseFloat(pr.quantidade)||0;valor+=(parseFloat(pr.quantidade)||0)*(parseFloat(pr.valor)||0);});
+  return{qtd,valor};
+}
+
+function nomeEtapaBackoffice(id){
+  if(id==='ativo')return ETAPA_ATIVO_BACKOFFICE.nome;
+  const e=ETAPAS_BACKOFFICE.find(function(x){return x.id===id;});
+  return e?e.nome:id;
+}
+
+function novoHistoricoBackoffice(docId,texto){
+  const p=backofficeLista.find(function(x){return x._docId===docId;});
+  const hist=(p&&p.historico)?p.historico.slice():[];
+  hist.push({data:Date.now(),autor:currentUser,texto:texto});
+  return hist;
+}
+
+function renderHistoricoBackoffice(p){
+  const container=document.getElementById('bo-historico');
+  const wrap=document.getElementById('bo-historico-wrap');
+  if(!container||!wrap)return;
+  const hist=(p&&p.historico)?p.historico:[];
+  if(!p||hist.length===0){wrap.style.display='none';return;}
+  wrap.style.display='';
+  const histOrdenado=hist.slice().reverse();
+  container.innerHTML=histOrdenado.map(function(h){
+    const data=new Date(h.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const autor=USERS[h.autor]?USERS[h.autor].nome:h.autor;
+    return '<div class="hist-item"><div class="hist-data">'+data+' – '+autor+'</div>'+h.texto+'</div>';
+  }).join('');
+}
+
+function renderBackoffice(){
+  let lista=getBackoffice();
+  const buscaEl=document.getElementById('bo-busca');
+  const busca=buscaEl?buscaEl.value.trim().toLowerCase():'';
+  if(busca){
+    lista=lista.filter(function(p){
+      const cnpjLimpo=(p.cnpj||'').replace(/\D/g,'');
+      const buscaLimpa=busca.replace(/\D/g,'');
+      return (p.razao||'').toLowerCase().includes(busca)
+        || (buscaLimpa&&cnpjLimpo.includes(buscaLimpa))
+        || (p.cnpj||'').toLowerCase().includes(busca);
+    });
+  }
+  const podeMover=podeMoverBackoffice();
+  const btnNovo=document.getElementById('bo-btn-novo');
+  if(btnNovo)btnNovo.style.display=podeMover?'':'none';
+  const btnFechamento=document.getElementById('bo-btn-fechamento');
+  if(btnFechamento)btnFechamento.style.display=currentUser==='master'?'':'none';
+
+  const nomeConsultor=function(p){return(USERS[p.consultor]&&USERS[p.consultor].nome)?USERS[p.consultor].nome:'';};
+  const totaisProdutos=totaisProdutosBackoffice;
+
+  function buildColBo(etapa,idx){
+    const ps=lista.filter(function(p){return p.status===etapa.id;});
+    const cards=ps.map(function(p){
+      const tot=totaisProdutos(p);
+      return '<div class="kanban-card-dark" '+(podeMover?'draggable="true" ondragstart="onDragStartBo(event,\''+p._docId+'\')"':'')+' style="cursor:pointer;" onclick="abrirModalBackoffice(\''+p._docId+'\','+(!podeMover)+')">'
+        +'<div class="kc-razao">'+(p.razao||'')+'</div>'
+        +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
+        +'<div class="kc-tags">'
+        +(tot.qtd?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">'+tot.qtd+'ln</span>':'')
+        +(tot.valor?'<span class="kc-tag" style="background:rgba(29,158,117,.15);color:#34d399;">R$'+tot.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>':'')
+        +(p.protocolo?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">#'+p.protocolo+'</span>':'')
+        +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">'+nomeConsultor(p)+'</span>':'')
+        +'</div>'
+        +(podeMover?'<div class="kc-actions">'
+          +(idx<ETAPAS_BACKOFFICE.length-1?'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Ativar"><i class="ti ti-circle-check"></i></button>')
+          +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
+          +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>'
+          +'</div>':'')
+        +'</div>';
+    }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
+    return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" '+(podeMover?'ondragover="onDragOverBo(event,\''+etapa.id+'\')" ondragleave="onDragLeaveBo(event)" ondrop="onDropBo(event,\''+etapa.id+'\')"':'')+'>'
+      +'<div class="kanban-col-header-dark">'
+      +'<div style="width:7px;height:7px;border-radius:50%;background:'+etapa.cor+';flex-shrink:0;"></div>'
+      +'<div class="kanban-col-nome">'+etapa.nome+'</div>'
+      +'<span class="kanban-col-count">'+ps.length+'</span>'
+      +'</div>'+cards+'</div>';
+  }
+  document.getElementById('backoffice-row1').innerHTML=ETAPAS_BACKOFFICE.slice(0,4).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
+  document.getElementById('backoffice-row2').innerHTML=ETAPAS_BACKOFFICE.slice(4,8).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
+
+  // ===== Ativos: agrupados por mês de ativação, somem por padrão ao virar o mês =====
+  const todosAtivos=getBackoffice().filter(function(p){return p.status==='ativo';});
+  const mesChave=mesChaveBO;
+  const mesAtualChave=mesAtualChaveBO();
+  const MESES_NOMES=MESES_NOMES_BO;
+
+  const filtroMesEl=document.getElementById('bo-filtro-mes');
+  if(filtroMesEl){
+    const valorAtual=filtroMesEl.value;
+    const mesesExistentes={};
+    todosAtivos.forEach(function(p){
+      const chave=mesChave(p.dataAtivacao);
+      if(!chave||chave===mesAtualChave)return;
+      const partes=chave.split('-');
+      mesesExistentes[chave]=MESES_NOMES[parseInt(partes[1])-1]+'/'+partes[0];
+    });
+    const chavesOrdenadas=Object.keys(mesesExistentes).sort().reverse();
+    filtroMesEl.innerHTML='<option value="">Mês atual</option>'
+      +chavesOrdenadas.map(function(c){return '<option value="'+c+'">'+mesesExistentes[c]+'</option>';}).join('')
+      +'<option value="todos">Todos os meses</option>';
+    filtroMesEl.value=valorAtual;
+  }
+  const filtroMes=filtroMesEl?filtroMesEl.value:'';
+
+  // busca (CNPJ/razão) já aplicada em `lista`; quando há busca, ignora o filtro de mês
+  let ativosVisiveis=lista.filter(function(p){return p.status==='ativo';});
+  if(!busca){
+    if(filtroMes==='todos'){/* sem filtro de mês */}
+    else{
+      const chaveAlvo=filtroMes||mesAtualChave;
+      ativosVisiveis=ativosVisiveis.filter(function(p){return mesChave(p.dataAtivacao)===chaveAlvo;});
+    }
+  }
+
+  const ativosEl=document.getElementById('backoffice-ativos');
+  if(ativosEl){
+    if(ativosVisiveis.length===0){
+      ativosEl.innerHTML='<div style="font-size:12px;color:#999;padding:.5rem 0;">Nenhum pedido ativo '+(busca?'encontrado.':'neste período.')+'</div>';
+    }else{
+      const podeEditarAtivo=currentUser==='master';
+      ativosEl.innerHTML='<div class="kanban-wrapper-dark" style="grid-template-columns:repeat(3,1fr);">'
+        +ativosVisiveis.map(function(p){
+          const tot=totaisProdutos(p);
+          return '<div class="kanban-card-dark" style="cursor:pointer;" onclick="abrirModalBackoffice(\''+p._docId+'\','+(!podeEditarAtivo)+')">'
+            +'<div class="kc-razao">'+(p.razao||'')+'</div>'
+            +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
+            +'<div class="kc-tags">'
+            +(p.dataAtivacao?'<span class="kc-tag" style="background:rgba(29,158,117,.15);color:#34d399;">'+new Date(p.dataAtivacao+'T12:00').toLocaleDateString('pt-BR')+'</span>':'')
+            +(tot.qtd?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">'+tot.qtd+'ln</span>':'')
+            +(tot.valor?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">R$'+tot.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>':'')
+            +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">'+nomeConsultor(p)+'</span>':'')
+            +'</div>'
+            +(podeEditarAtivo?'<div class="kc-actions">'
+              +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
+              +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>'
+              +'</div>':'')
+            +'</div>';
+        }).join('')
+        +'</div>';
+    }
+  }
+}
+window.renderBackoffice=renderBackoffice;
+
+function onDragStartBo(e,id){if(!podeMoverBackoffice())return;dragIdBo=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function onDragOverBo(e,statusId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('#view-backoffice .kanban-col-dark').forEach(c=>c.classList.remove('drag-over'));e.currentTarget.classList.add('drag-over');}
+function onDragLeaveBo(e){e.currentTarget.classList.remove('drag-over');}
+async function onDropBo(e,statusId){
+  e.preventDefault();document.querySelectorAll('#view-backoffice .kanban-col-dark').forEach(c=>c.classList.remove('drag-over'));
+  if(!dragIdBo||!podeMoverBackoffice())return;
+  const p=backofficeLista.find(x=>x._docId===dragIdBo);
+  if(!p||p.status===statusId){dragIdBo=null;return;}
+  const texto='Moveu de "'+nomeEtapaBackoffice(p.status)+'" para "'+nomeEtapaBackoffice(statusId)+'"';
+  try{await db.collection('backoffice').doc(dragIdBo).update({status:statusId,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(dragIdBo,texto)});showNotif('Movido para: '+ETAPAS_BACKOFFICE.find(e=>e.id===statusId).nome);}
+  catch(err){showNotif('Erro ao mover.',true);}
+  dragIdBo=null;
+}
+window.onDragStartBo=onDragStartBo;window.onDragOverBo=onDragOverBo;window.onDragLeaveBo=onDragLeaveBo;window.onDropBo=onDropBo;
+
+// Produtos dinâmicos do pedido de backoffice
+let _produtosBackoffice=[],_boProdutosReadOnly=false;
+
+function adicionarProdutoBackoffice(nome,quantidade,valor){
+  nome=nome||'';quantidade=quantidade||'';valor=valor||'';
+  const id=Date.now()+Math.random();
+  _produtosBackoffice.push({id:id,nome:nome,quantidade:quantidade,valor:valor});
+  renderProdutosBackoffice();
+}
+window.adicionarProdutoBackoffice=adicionarProdutoBackoffice;
+
+function removerProdutoBackoffice(id){
+  if(_produtosBackoffice.length<=1)return;
+  _produtosBackoffice=_produtosBackoffice.filter(function(x){return x.id!==id;});
+  renderProdutosBackoffice();
+}
+window.removerProdutoBackoffice=removerProdutoBackoffice;
+
+function updateProdutoBackoffice(id,campo,valor){
+  const p=_produtosBackoffice.find(function(x){return x.id===id;});
+  if(p)p[campo]=valor;
+  atualizarTotaisProdutos();
+}
+window.updateProdutoBackoffice=updateProdutoBackoffice;
+
+function atualizarTotaisProdutos(){
+  let totalGeral=0;
+  _produtosBackoffice.forEach(function(p){
+    const qtd=parseFloat(p.quantidade)||0,val=parseFloat(p.valor)||0;
+    const totalLinha=qtd*val;
+    totalGeral+=totalLinha;
+    const linhaEl=document.getElementById('bo-prod-total-'+p.id);
+    if(linhaEl)linhaEl.textContent='Total: R$ '+totalLinha.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  });
+  const totalEl=document.getElementById('bo-produtos-total');
+  if(totalEl)totalEl.textContent='R$ '+totalGeral.toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+function renderProdutosBackoffice(){
+  const container=document.getElementById('bo-produtos-lista');
+  if(!container)return;
+  const dis=_boProdutosReadOnly?'disabled':'';
+  let html='';
+  for(let i=0;i<_produtosBackoffice.length;i++){
+    const p=_produtosBackoffice[i];
+    const qtd=parseFloat(p.quantidade)||0,val=parseFloat(p.valor)||0;
+    const totalLinha=qtd*val;
+    const podeRemover=_produtosBackoffice.length>1&&!_boProdutosReadOnly;
+    html+='<div style="border:1px solid #e8e8e0;border-radius:8px;padding:10px;margin-bottom:8px;">';
+    html+='<div style="display:grid;grid-template-columns:2fr 1fr 1fr 30px;gap:6px;align-items:end;">';
+    html+='<div>'+(i===0?'<label class="form-label">Plano/produto</label>':'')+'<input type="text" '+dis+' value="'+(p.nome||'')+'" placeholder="Ex: TIM Empresas 10GB" data-id="'+p.id+'" data-campo="nome" class="bo-produto-input"/></div>';
+    html+='<div>'+(i===0?'<label class="form-label">Quantidade</label>':'')+'<input type="number" '+dis+' min="0" value="'+(p.quantidade||'')+'" placeholder="Ex: 10" data-id="'+p.id+'" data-campo="quantidade" class="bo-produto-input"/></div>';
+    html+='<div>'+(i===0?'<label class="form-label">Valor unit. (R$)</label>':'')+'<input type="number" '+dis+' min="0" step="0.01" value="'+(p.valor||'')+'" placeholder="Ex: 39.99" data-id="'+p.id+'" data-campo="valor" class="bo-produto-input"/></div>';
+    html+='<div style="padding-bottom:1px;">'+(podeRemover?'<button class="btn-sm btn-del" type="button" style="width:30px;padding:0;justify-content:center;" data-remove-produto="'+p.id+'"><i class="ti ti-minus"></i></button>':'')+'</div>';
+    html+='</div>';
+    html+='<div id="bo-prod-total-'+p.id+'" style="font-size:12px;color:#666;margin-top:4px;text-align:right;">Total: R$ '+totalLinha.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div>';
+    html+='</div>';
+  }
+  container.innerHTML=html;
+  const addBtn=container.nextElementSibling;
+  if(addBtn)addBtn.style.display=_boProdutosReadOnly?'none':'';
+  atualizarTotaisProdutos();
+  container.querySelectorAll('.bo-produto-input').forEach(function(inp){
+    inp.addEventListener('input',function(){updateProdutoBackoffice(parseFloat(this.dataset.id),this.dataset.campo,this.value);});
+  });
+  container.querySelectorAll('[data-remove-produto]').forEach(function(btn){
+    btn.addEventListener('click',function(){removerProdutoBackoffice(parseFloat(this.dataset.removeProduto));});
+  });
+}
+window.renderProdutosBackoffice=renderProdutosBackoffice;
+
+function abrirModalBackoffice(docId,readOnly){
+  if(readOnly&&!docId)return;
+  const campos=['bo-razao','bo-cnpj','bo-responsavel','bo-telefone','bo-protocolo','bo-consultor','bo-obs'];
+  const titulo=document.getElementById('modal-backoffice-titulo');
+  const footer=document.querySelector('#modal-backoffice .modal-footer');
+  const selConsultor=document.getElementById('bo-consultor');
+  const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+  selConsultor.innerHTML='<option value="">—</option>'+consultores.map(function(k){return '<option value="'+k+'">'+USERS[k].nome+'</option>';}).join('');
+
+  const p=docId?backofficeLista.find(function(x){return x._docId===docId;}):null;
+  document.getElementById('bo-id').value=docId||'';
+  document.getElementById('bo-status').value=(p&&p.status)||ETAPAS_BACKOFFICE[0].id;
+  document.getElementById('bo-razao').value=p?p.razao||'':'';
+  document.getElementById('bo-cnpj').value=p?p.cnpj||'':'';
+  document.getElementById('bo-responsavel').value=p?p.responsavel||'':'';
+  document.getElementById('bo-telefone').value=p?p.telefone||'':'';
+  document.getElementById('bo-protocolo').value=p?p.protocolo||'':'';
+  selConsultor.value=p?p.consultor||'':'';
+  document.getElementById('bo-obs').value=p?p.obs||'':'';
+
+  const isReadOnly=!!readOnly;
+  _boProdutosReadOnly=isReadOnly;
+  _produtosBackoffice=(p&&p.produtos&&p.produtos.length)?p.produtos.map(function(x){return Object.assign({id:Date.now()+Math.random()},x);}):[{id:Date.now()+Math.random(),nome:'',quantidade:'',valor:''}];
+  renderProdutosBackoffice();
+
+  campos.forEach(function(id){document.getElementById(id).disabled=isReadOnly;});
+  if(footer)footer.style.display=isReadOnly?'none':'';
+  titulo.innerHTML=isReadOnly?'<i class="ti ti-eye"></i> Detalhes do pedido':(docId?'<i class="ti ti-edit"></i> Editar pedido':'<i class="ti ti-truck-delivery"></i> Novo pedido');
+  renderHistoricoBackoffice(p);
+  document.getElementById('modal-backoffice').classList.add('open');
+}
+window.abrirModalBackoffice=abrirModalBackoffice;
+
+async function salvarBackoffice(){
+  if(!podeMoverBackoffice())return;
+  const docId=document.getElementById('bo-id').value;
+  const existente=docId?backofficeLista.find(function(x){return x._docId===docId;}):null;
+  if(existente&&existente.status==='ativo'&&currentUser!=='master'){showNotif('Só o master pode alterar um pedido já ativo.',true);return;}
+  const razao=document.getElementById('bo-razao').value.trim();
+  if(!razao){showNotif('Preencha a razão social.',true);return;}
+  const produtos=_produtosBackoffice.filter(function(p){return p.nome&&p.nome.trim();}).map(function(p){return{nome:p.nome.trim(),quantidade:p.quantidade,valor:p.valor};});
+  const dados={
+    razao,
+    cnpj:document.getElementById('bo-cnpj').value.trim(),
+    responsavel:document.getElementById('bo-responsavel').value.trim(),
+    telefone:document.getElementById('bo-telefone').value.trim(),
+    protocolo:document.getElementById('bo-protocolo').value.trim(),
+    consultor:document.getElementById('bo-consultor').value,
+    obs:document.getElementById('bo-obs').value.trim(),
+    produtos,
+    atualizadoEm:Date.now()
+  };
+  try{
+    if(docId){await db.collection('backoffice').doc(docId).update(dados);}
+    else{
+      dados.status=document.getElementById('bo-status').value||ETAPAS_BACKOFFICE[0].id;
+      dados.criadoEm=Date.now();
+      dados.historico=[{data:Date.now(),autor:currentUser,texto:'Pedido criado'}];
+      await db.collection('backoffice').add(dados);
+    }
+    fecharModal('modal-backoffice');
+    showNotif(docId?'Pedido atualizado!':'Pedido adicionado!');
+  }catch(e){showNotif('Erro ao salvar.',true);}
+}
+window.salvarBackoffice=salvarBackoffice;
+
+async function avancarBackoffice(docId,statusAtual){
+  if(!podeMoverBackoffice())return;
+  const idx=ETAPAS_BACKOFFICE.findIndex(function(e){return e.id===statusAtual;});
+  if(idx<0)return;
+  if(idx>=ETAPAS_BACKOFFICE.length-1){abrirModalAtivacaoBackoffice(docId);return;}
+  const novo=ETAPAS_BACKOFFICE[idx+1].id;
+  const texto='Moveu de "'+ETAPAS_BACKOFFICE[idx].nome+'" para "'+ETAPAS_BACKOFFICE[idx+1].nome+'"';
+  try{await db.collection('backoffice').doc(docId).update({status:novo,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});showNotif('Avançou para: '+ETAPAS_BACKOFFICE[idx+1].nome);}
+  catch(e){showNotif('Erro ao atualizar.',true);}
+}
+window.avancarBackoffice=avancarBackoffice;
+
+function abrirModalAtivacaoBackoffice(docId){
+  if(!podeMoverBackoffice())return;
+  document.getElementById('at-bo-doc-id').value=docId;
+  document.getElementById('at-bo-data').value=dateStr(new Date());
+  document.getElementById('modal-ativacao-bo').classList.add('open');
+}
+window.abrirModalAtivacaoBackoffice=abrirModalAtivacaoBackoffice;
+
+async function confirmarAtivacaoBackoffice(){
+  if(!podeMoverBackoffice())return;
+  const docId=document.getElementById('at-bo-doc-id').value;
+  const dataAtivacao=document.getElementById('at-bo-data').value;
+  if(!dataAtivacao){showNotif('Informe a data de ativação.',true);return;}
+  const texto='Ativado em '+new Date(dataAtivacao+'T12:00').toLocaleDateString('pt-BR');
+  try{
+    await db.collection('backoffice').doc(docId).update({status:'ativo',dataAtivacao,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});
+    fecharModal('modal-ativacao-bo');
+    showNotif('Pedido ativado!');
+  }catch(e){showNotif('Erro ao ativar.',true);}
+}
+window.confirmarAtivacaoBackoffice=confirmarAtivacaoBackoffice;
+
+async function excluirBackoffice(docId){
+  if(!podeMoverBackoffice())return;
+  const p=backofficeLista.find(function(x){return x._docId===docId;});
+  if(p&&p.status==='ativo'&&currentUser!=='master'){showNotif('Só o master pode excluir um pedido já ativo.',true);return;}
+  if(!confirm('Excluir este pedido do Backoffice?'))return;
+  try{await db.collection('backoffice').doc(docId).delete();showNotif('Pedido excluído.');}
+  catch(e){showNotif('Erro ao excluir.',true);}
+}
+window.excluirBackoffice=excluirBackoffice;
+
+function abrirModalFechamentoBackoffice(){
+  if(currentUser!=='master')return;
+  const todosAtivos=backofficeLista.filter(function(p){return p.status==='ativo';});
+  const mesAtual=mesAtualChaveBO();
+
+  const selMes=document.getElementById('fc-filtro-mes');
+  const mesesExistentes={};
+  todosAtivos.forEach(function(p){
+    const chave=mesChaveBO(p.dataAtivacao);
+    if(!chave||chave===mesAtual)return;
+    const partes=chave.split('-');
+    mesesExistentes[chave]=MESES_NOMES_BO[parseInt(partes[1])-1]+'/'+partes[0];
+  });
+  const chavesOrdenadas=Object.keys(mesesExistentes).sort().reverse();
+  selMes.innerHTML='<option value="">Mês atual</option>'
+    +chavesOrdenadas.map(function(c){return '<option value="'+c+'">'+mesesExistentes[c]+'</option>';}).join('')
+    +'<option value="todos">Todos os meses</option>';
+
+  const selConsultor=document.getElementById('fc-filtro-consultor');
+  const consultoresComAtivo=Array.from(new Set(todosAtivos.map(function(p){return p.consultor;}).filter(Boolean)));
+  selConsultor.innerHTML='<option value="">Todos os consultores</option>'
+    +consultoresComAtivo.map(function(k){return '<option value="'+k+'">'+(USERS[k]?USERS[k].nome:k)+'</option>';}).join('');
+
+  document.getElementById('modal-fechamento-bo').classList.add('open');
+}
+window.abrirModalFechamentoBackoffice=abrirModalFechamentoBackoffice;
+
+function gerarFechamentoBackoffice(){
+  if(currentUser!=='master')return;
+  const filtroMes=document.getElementById('fc-filtro-mes').value;
+  const filtroConsultor=document.getElementById('fc-filtro-consultor').value;
+  const mesAtual=mesAtualChaveBO();
+
+  let lista=backofficeLista.filter(function(p){return p.status==='ativo';});
+  if(filtroMes!=='todos'){
+    const chaveAlvo=filtroMes||mesAtual;
+    lista=lista.filter(function(p){return mesChaveBO(p.dataAtivacao)===chaveAlvo;});
+  }
+  if(filtroConsultor)lista=lista.filter(function(p){return p.consultor===filtroConsultor;});
+
+  if(lista.length===0){showNotif('Nenhum pedido ativo encontrado para esse filtro.',true);return;}
+
+  carregarSheetJS(function(){
+    const nomeConsultor=function(p){return USERS[p.consultor]?USERS[p.consultor].nome:(p.consultor||'—');};
+
+    // ===== Aba "Fatores de Comissão": um campo editável por consultor, preenchido pelo master no Excel =====
+    const consultoresDistintos=Array.from(new Set(lista.map(function(p){return nomeConsultor(p);})));
+    const fatoresLinhas=[['Consultor','Fator de comissão (%)']].concat(
+      consultoresDistintos.map(function(nome){return[nome,0];})
+    );
+    const wsFatores=XLSX.utils.aoa_to_sheet(fatoresLinhas);
+    wsFatores['!cols']=[{wch:26},{wch:22}];
+
+    // ===== Aba "Fechamento": dados completos da empresa e do pedido, com fórmulas ligadas à aba de fatores =====
+    const headers=['Razão Social','CNPJ','Responsável','Telefone','Protocolo TIM','Consultor','Data Ativação','Produtos','Qtd. Linhas','Valor Total (R$)','Fator Comissão (%)','Comissão (R$)'];
+    const linhasDados=lista.map(function(p){
+      const tot=totaisProdutosBackoffice(p);
+      const produtosTxt=(p.produtos||[]).map(function(pr){
+        return (pr.nome||'?')+' (x'+(pr.quantidade||0)+' @ R$'+(parseFloat(pr.valor)||0).toFixed(2)+')';
+      }).join('; ');
+      const dataAtivFmt=p.dataAtivacao?new Date(p.dataAtivacao+'T12:00').toLocaleDateString('pt-BR'):'';
+      return[p.razao||'',p.cnpj||'',p.responsavel||'',p.telefone||'',p.protocolo||'',nomeConsultor(p),dataAtivFmt,produtosTxt,tot.qtd,tot.valor,0,0];
+    });
+    const wsFechamento=XLSX.utils.aoa_to_sheet([headers].concat(linhasDados));
+    wsFechamento['!cols']=[{wch:28},{wch:18},{wch:20},{wch:16},{wch:16},{wch:16},{wch:14},{wch:45},{wch:11},{wch:15},{wch:16},{wch:14}];
+
+    // Fórmulas: Fator (col K) busca na aba Fatores pelo nome do consultor (col F); Comissão (col L) = Valor Total (col J) * Fator / 100
+    linhasDados.forEach(function(_,i){
+      const row=i+2; // linha 1 = cabeçalho
+      wsFechamento['K'+row]={t:'n',f:'IFERROR(VLOOKUP(F'+row+',Fatores!$A$2:$B$1000,2,FALSE),0)'};
+      wsFechamento['L'+row]={t:'n',f:'J'+row+'*K'+row+'/100'};
+    });
+    const ultimaLinha=linhasDados.length+1;
+    wsFechamento['!autofilter']={ref:'A1:L'+ultimaLinha};
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,wsFatores,'Fatores');
+    XLSX.utils.book_append_sheet(wb,wsFechamento,'Fechamento');
+
+    const sufixoMes=filtroMes==='todos'?'Todos':(filtroMes||mesAtual);
+    const nomeArq='Fechamento_Comissao_'+sufixoMes+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb,nomeArq);
+    fecharModal('modal-fechamento-bo');
+    showNotif('Planilha de fechamento gerada!');
+  });
+}
+window.gerarFechamentoBackoffice=gerarFechamentoBackoffice;
 
 function abrirModalRenovacao(docId){
   const wrapConsultor=document.getElementById('ren-wrap-consultor');
@@ -2858,6 +3424,7 @@ function abrirModalUsuario(key){
     document.getElementById('u-senha').value='';
     document.getElementById('u-senha').disabled=true;
     document.getElementById('u-senha').placeholder='Para trocar a senha, use o painel do Firebase';
+    document.getElementById('u-backoffice').checked=!!u.podeBackoffice;
   }else{
     document.getElementById('modal-user-titulo').innerHTML='<i class="ti ti-user-plus"></i> Novo consultor';
     document.getElementById('u-key').value='';
@@ -2873,6 +3440,7 @@ function abrirModalUsuario(key){
     document.getElementById('u-telefone-prop').value='';
     document.getElementById('u-email-prop').value='';
     document.getElementById('u-meta').value='';
+    document.getElementById('u-backoffice').checked=false;
   }
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -2921,7 +3489,8 @@ async function salvarUsuario(){
   const telProp=document.getElementById('u-telefone-prop').value.trim();
   const emailProp=document.getElementById('u-email-prop').value.trim();
   const meta=parseFloat(document.getElementById('u-meta').value)||0;
-  
+  const podeBackoffice=document.getElementById('u-backoffice').checked;
+
   const btnSalvar=document.querySelector('#modal-usuario .btn-primary');
   if(btnSalvar){btnSalvar.disabled=true;btnSalvar.innerHTML='<i class="ti ti-loader"></i> Salvando...';}
   
@@ -2934,6 +3503,7 @@ async function salvarUsuario(){
       USERS[keyOriginal].emailProp=emailProp;
       USERS[keyOriginal].meta=meta;
       USERS[keyOriginal].email=emailLogin;
+      USERS[keyOriginal].podeBackoffice=podeBackoffice;
       await saveUsers();
       fecharModal('modal-usuario');renderUsuarios();
       showNotif('Consultor atualizado! Para trocar a senha dele, use o painel do Firebase Authentication.');
@@ -2952,7 +3522,7 @@ async function salvarUsuario(){
       map[keyInput]=novoUid;
       await db.collection('config').doc('uid_map').set(map);
       
-      USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idxColor].bg,c:AVATAR_COLORS[idxColor].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta,email:emailLogin};
+      USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idxColor].bg,c:AVATAR_COLORS[idxColor].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta,email:emailLogin,podeBackoffice};
       await saveUsers();
       fecharModal('modal-usuario');renderUsuarios();
       showNotif('Consultor adicionado! Ele j\u00e1 pode entrar com o e-mail e senha cadastrados.');
@@ -2986,6 +3556,19 @@ document.getElementById('p-cnpj').addEventListener('input',function(){
     }
   }
 });
+
+document.getElementById('bo-cnpj').addEventListener('input',function(){
+  this.value=fmtCNPJ(this.value);
+  const raw=this.value.replace(/\D/g,'');
+  if(raw.length===14){
+    const razaoEl=document.getElementById('bo-razao');
+    if(!razaoEl.value){
+      consultarCNPJ(this.value,'bo-razao',null);
+    }
+  }
+});
+document.getElementById('bo-busca').addEventListener('input',function(){if(currentTab==='backoffice')renderBackoffice();});
+document.getElementById('bo-filtro-mes').addEventListener('change',function(){if(currentTab==='backoffice')renderBackoffice();});
 
 // Adicionar formatação CPF nos campos do checklist
 ['ck-gestor-cpf','ck-rep-cpf'].forEach(function(id){
