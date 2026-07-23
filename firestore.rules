@@ -51,6 +51,19 @@ service cloud.firestore {
       allow read, write: if souMaster();
     }
 
+    // Disparo de WhatsApp: histórico de campanhas em massa. Só o backend
+    // (Admin SDK, que ignora estas regras) grava aqui; o CRM só lê, pra
+    // alimentar o dashboard e a tela de último disparo.
+    match /disparos_lote/{campanhaId} {
+      allow read: if estaLogado();
+      allow write: if false;
+
+      match /itens/{itemId} {
+        allow read: if estaLogado();
+        allow write: if false;
+      }
+    }
+
     // Qualquer outro documento/coleção não previsto acima: bloqueado por padrão.
     match /{document=**} {
       allow read, write: if false;
