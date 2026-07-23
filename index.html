@@ -309,6 +309,11 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <i class="ti ti-truck-delivery"></i><span>Acompanhamento de pedidos</span>
       </button>
 
+      <div class="sidebar-section">Disparo</div>
+      <button class="sidebar-item" id="tab-disparo" onclick="setTab('disparo')">
+        <i class="ti ti-brand-whatsapp"></i><span>Disparo</span>
+      </button>
+
       <div class="sidebar-section" id="section-config">Configurações</div>
       <button class="sidebar-item" id="tab-usuarios" style="display:none;" onclick="setTab('usuarios')">
         <i class="ti ti-users"></i><span>Usuários</span>
@@ -434,6 +439,26 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <select id="bo-filtro-mes" style="max-width:180px;"><option value="">Mês atual</option></select>
       </div>
       <div id="backoffice-ativos"></div>
+    </div>
+
+    <!-- DISPARO -->
+    <div id="view-disparo" style="display:none;">
+      <div id="disparo-status-box" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;text-align:center;">
+        <div id="disparo-status-texto" style="font-size:13px;color:#888;">Conectando...</div>
+        <img id="disparo-qr-img" style="display:none;max-width:220px;margin:1rem auto 0;border:1px solid var(--border);border-radius:8px;padding:8px;"/>
+      </div>
+      <div id="disparo-envio-box" style="display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:1rem;"><i class="ti ti-send"></i> Enviar mensagem</div>
+        <div class="form-group">
+          <label class="form-label">Buscar cliente</label>
+          <input type="text" id="disparo-busca-cliente" placeholder="Buscar por CNPJ ou razão social..." oninput="renderResultadosBuscaDisparo(this.value)"/>
+        </div>
+        <div id="disparo-resultados-busca" style="max-height:220px;overflow-y:auto;margin-bottom:.5rem;"></div>
+        <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input type="tel" id="disparo-telefone" placeholder="Ex: 61999990000"/></div>
+        <div class="form-group"><label class="form-label">Mensagem</label><textarea id="disparo-mensagem" rows="4" placeholder="Digite a mensagem..." style="width:100%;resize:vertical;"></textarea></div>
+        <button class="btn btn-verde" onclick="enviarMensagemDisparo()"><i class="ti ti-send"></i> Enviar</button>
+        <div id="disparo-envio-msg" style="margin-top:.5rem;font-size:12px;"></div>
+      </div>
     </div>
 
     <!-- USUÁRIOS (só master) -->
@@ -860,6 +885,8 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const auth=firebase.auth();
 
+const DISPARO_API_URL='https://crm-disparo-production.up.railway.app';
+
 const ETAPAS=[
   {id:0,nome:'Proposta enviada',cor:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'},
   {id:1,nome:'Aguardando resposta',cor:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},
@@ -1035,16 +1062,17 @@ async function salvarSenha(){
 }
 window.salvarSenha=salvarSenha;
 
-const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de propostas',followup:'Follow-up',metricas:'Métricas',renovacoes:'Base de renovação',backoffice:'Acompanhamento de pedidos',usuarios:'Usuários'};
+const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de propostas',followup:'Follow-up',metricas:'Métricas',renovacoes:'Base de renovação',backoffice:'Acompanhamento de pedidos',disparo:'Disparo',usuarios:'Usuários'};
 
 function setTab(tab){
   currentTab=tab;
-  ['dashboard','pipeline','followup','lista','metricas','renovacoes','backoffice','usuarios'].forEach(function(t){
+  ['dashboard','pipeline','followup','lista','metricas','renovacoes','backoffice','disparo','usuarios'].forEach(function(t){
     const viewEl=document.getElementById('view-'+t);
     const tabEl=document.getElementById('tab-'+t);
     if(viewEl)viewEl.style.display=t===tab?'block':'none';
     if(tabEl)tabEl.classList.toggle('ativo',t===tab);
   });
+  if(tab!=='disparo'&&_disparoInterval){clearInterval(_disparoInterval);_disparoInterval=null;}
   const titleEl=document.getElementById('topbar-title');
   if(titleEl)titleEl.textContent=TAB_TITULOS[tab]||tab;
   if(tab==='dashboard')renderDashboard();
@@ -1054,9 +1082,112 @@ function setTab(tab){
   else if(tab==='metricas')renderMetricas();
   else if(tab==='renovacoes')renderRenovacoes();
   else if(tab==='backoffice')renderBackoffice();
+  else if(tab==='disparo')renderDisparo();
   else if(tab==='usuarios')renderUsuarios();
 }
 window.setTab=setTab;
+
+// ========= DISPARO WHATSAPP =========
+let _disparoInterval=null;
+
+async function chamarApiDisparo(caminho,opcoes){
+  const token=await auth.currentUser.getIdToken();
+  const resp=await fetch(DISPARO_API_URL+caminho,Object.assign({},opcoes,{
+    headers:Object.assign({'Authorization':'Bearer '+token,'Content-Type':'application/json'},(opcoes&&opcoes.headers)||{})
+  }));
+  const dados=await resp.json();
+  if(!resp.ok)throw new Error(dados.erro||'Erro na requisição.');
+  return dados;
+}
+
+function renderDisparo(){
+  atualizarStatusDisparo();
+  if(_disparoInterval)clearInterval(_disparoInterval);
+  _disparoInterval=setInterval(atualizarStatusDisparo,4000);
+}
+
+async function atualizarStatusDisparo(){
+  const textoEl=document.getElementById('disparo-status-texto');
+  const qrEl=document.getElementById('disparo-qr-img');
+  const envioEl=document.getElementById('disparo-envio-box');
+  if(!textoEl)return;
+  try{
+    const dados=await chamarApiDisparo('/status');
+    if(dados.status==='conectado'){
+      textoEl.innerHTML='<i class="ti ti-circle-check" style="color:#1D9E75;"></i> WhatsApp conectado';
+      qrEl.style.display='none';
+      envioEl.style.display='block';
+      if(_disparoInterval){clearInterval(_disparoInterval);_disparoInterval=setInterval(atualizarStatusDisparo,30000);}
+    }else if(dados.status==='qr'&&dados.qr){
+      textoEl.textContent='Escaneie o QR code no WhatsApp do celular (Aparelhos conectados):';
+      qrEl.src=dados.qr;
+      qrEl.style.display='block';
+      envioEl.style.display='none';
+    }else{
+      textoEl.textContent='Aguardando conexão com o WhatsApp...';
+      qrEl.style.display='none';
+      envioEl.style.display='none';
+    }
+  }catch(e){
+    textoEl.textContent='Não foi possível conectar ao servidor de disparo. Verifique se o backend está no ar.';
+    qrEl.style.display='none';
+    envioEl.style.display='none';
+  }
+}
+
+function buscarClientesDisparo(termo){
+  termo=(termo||'').toLowerCase().trim();
+  if(!termo)return[];
+  const todos=[].concat(
+    getPropostas().map(p=>({razao:p.razao,cnpj:p.cnpj,telefone:p.telefone})),
+    getRenovacoes().map(r=>({razao:r.razao,cnpj:r.cnpj,telefone:r.telefone}))
+  );
+  const vistos={};
+  return todos.filter(function(c){
+    if(!c.telefone)return false;
+    const chave=c.cnpj||c.telefone;
+    if(vistos[chave])return false;
+    if(!((c.razao||'').toLowerCase().includes(termo)||(c.cnpj||'').includes(termo)))return false;
+    vistos[chave]=true;
+    return true;
+  }).slice(0,8);
+}
+
+function renderResultadosBuscaDisparo(termo){
+  const resultados=buscarClientesDisparo(termo);
+  const el=document.getElementById('disparo-resultados-busca');
+  if(!el)return;
+  el.innerHTML=resultados.map(function(c){
+    return '<div style="padding:8px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;" onclick="selecionarClienteDisparo(\''+(c.razao||'').replace(/'/g,"\\'")+'\',\''+cleanTel(c.telefone)+'\')">'
+      +'<div style="font-weight:500;">'+(c.razao||'—')+'</div>'
+      +'<div style="color:#888;font-size:12px;">'+(c.cnpj||'')+' · '+fmtTel(c.telefone)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function selecionarClienteDisparo(razao,telefone){
+  document.getElementById('disparo-busca-cliente').value=razao;
+  document.getElementById('disparo-telefone').value=telefone;
+  document.getElementById('disparo-resultados-busca').innerHTML='';
+}
+
+async function enviarMensagemDisparo(){
+  const telefone=document.getElementById('disparo-telefone').value.trim();
+  const mensagem=document.getElementById('disparo-mensagem').value.trim();
+  const msgEl=document.getElementById('disparo-envio-msg');
+  if(!telefone||!mensagem){msgEl.style.color='#c0392b';msgEl.textContent='Preencha telefone e mensagem.';return;}
+  msgEl.style.color='#888';msgEl.textContent='Enviando...';
+  try{
+    await chamarApiDisparo('/send',{method:'POST',body:JSON.stringify({telefone:telefone,mensagem:mensagem})});
+    msgEl.style.color='#1D9E75';msgEl.textContent='Mensagem enviada!';
+    document.getElementById('disparo-mensagem').value='';
+  }catch(e){
+    msgEl.style.color='#c0392b';msgEl.textContent=e.message||'Erro ao enviar.';
+  }
+}
+window.renderResultadosBuscaDisparo=renderResultadosBuscaDisparo;
+window.selecionarClienteDisparo=selecionarClienteDisparo;
+window.enviarMensagemDisparo=enviarMensagemDisparo;
 
 // ========= KANBAN COM DRAG & DROP =========
 function renderPipeline(){
