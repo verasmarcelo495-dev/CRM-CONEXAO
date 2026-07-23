@@ -491,9 +491,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
           <div class="form-group"><label class="form-label">Enviar por</label>
             <select id="disparo-conta-lote"><option value="1">WhatsApp 1</option><option value="2">WhatsApp 2</option></select>
           </div>
-          <div class="form-group"><label class="form-label">Mensagem 1</label><textarea class="disparo-lote-msg" rows="3" placeholder="Ex: Olá {{nome}}, tudo bem? Aqui é da equipe da {{empresa}}..." style="width:100%;resize:vertical;"></textarea></div>
-          <div class="form-group"><label class="form-label">Mensagem 2</label><textarea class="disparo-lote-msg" rows="3" placeholder="Use as variáveis {{nome}} e {{empresa}} pra personalizar" style="width:100%;resize:vertical;"></textarea></div>
-          <div class="form-group"><label class="form-label">Mensagem 3</label><textarea class="disparo-lote-msg" rows="3" placeholder="Deixe pelo menos 1 preenchida (as outras são opcionais)" style="width:100%;resize:vertical;"></textarea></div>
+          <div class="form-group"><label class="form-label">Mensagem 1</label><textarea class="disparo-lote-msg" rows="3" placeholder="Ex: Olá {{nome}}, tudo bem? Aqui é da equipe da {{empresa}}..." style="width:100%;resize:vertical;" onblur="salvarTemplatesDisparo()"></textarea></div>
+          <div class="form-group"><label class="form-label">Mensagem 2</label><textarea class="disparo-lote-msg" rows="3" placeholder="Use as variáveis {{nome}} e {{empresa}} pra personalizar" style="width:100%;resize:vertical;" onblur="salvarTemplatesDisparo()"></textarea></div>
+          <div class="form-group"><label class="form-label">Mensagem 3</label><textarea class="disparo-lote-msg" rows="3" placeholder="Deixe pelo menos 1 preenchida (as outras são opcionais)" style="width:100%;resize:vertical;" onblur="salvarTemplatesDisparo()"></textarea></div>
 
           <div class="form-group">
             <label class="form-label">Planilha (.xlsx ou .csv com colunas: telefone, nome, empresa)</label>
@@ -1215,8 +1215,28 @@ function setDisparoSubtab(sub){
   });
   if(sub==='dashboard')renderDisparoDashboard();
   else if(sub==='ultimo')renderDisparoUltimo();
+  else if(sub==='envio')carregarTemplatesDisparo();
 }
 window.setDisparoSubtab=setDisparoSubtab;
+
+let _templatesDisparoCarregados=false;
+function carregarTemplatesDisparo(){
+  if(_templatesDisparoCarregados)return;
+  _templatesDisparoCarregados=true;
+  db.collection('config').doc('disparo_templates').get().then(function(doc){
+    const dados=doc.exists?doc.data():{};
+    const campos=document.querySelectorAll('.disparo-lote-msg');
+    campos.forEach(function(campo,i){campo.value=dados['msg'+(i+1)]||'';});
+  }).catch(function(e){console.error('Erro ao carregar modelos de disparo:',e);});
+}
+
+function salvarTemplatesDisparo(){
+  const campos=document.querySelectorAll('.disparo-lote-msg');
+  const dados={};
+  campos.forEach(function(campo,i){dados['msg'+(i+1)]=campo.value;});
+  db.collection('config').doc('disparo_templates').set(dados,{merge:true}).catch(function(e){console.error('Erro ao salvar modelos de disparo:',e);});
+}
+window.salvarTemplatesDisparo=salvarTemplatesDisparo;
 
 function renderDisparoDashboard(){
   if(_disparoDashUnsub)return;
@@ -1282,9 +1302,19 @@ function processarArquivoDisparo(ev){
         const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
         const ws=wb.Sheets[wb.SheetNames[0]];
         const linhas=XLSX.utils.sheet_to_json(ws,{defval:''});
+        function normalizarChave(k){
+          const s=String(k||'').toLowerCase().trim().normalize('NFD');
+          let out='';
+          for(let i=0;i<s.length;i++){const cp=s.codePointAt(i);if(cp<768||cp>879)out+=s[i];}
+          return out;
+        }
         _disparoLoteContatos=linhas.map(function(l){
-          const chave=Object.keys(l).reduce(function(acc,k){acc[k.toLowerCase().trim()]=l[k];return acc;},{});
-          return{telefone:String(chave.telefone||chave.celular||chave.whatsapp||'').trim(),nome:String(chave.nome||'').trim(),empresa:String(chave.empresa||chave.razao||'').trim()};
+          const chave=Object.keys(l).reduce(function(acc,k){acc[normalizarChave(k)]=l[k];return acc;},{});
+          return{
+            telefone:String(chave.telefone||chave.celular||chave.whatsapp||chave.numero||chave.fone||chave.contato||'').trim(),
+            nome:String(chave.nome||chave.cliente||'').trim(),
+            empresa:String(chave.empresa||chave.razao||chave['razao social']||'').trim()
+          };
         }).filter(function(c){return c.telefone;});
         if(!_disparoLoteContatos.length){
           previewEl.innerHTML='<span style="color:#c0392b;">Nenhum contato com telefone encontrado. Confira as colunas da planilha (telefone, nome, empresa).</span>';

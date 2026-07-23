@@ -51,6 +51,12 @@ service cloud.firestore {
       allow read, write: if souMaster();
     }
 
+    // Modelos de mensagem do disparo em massa: qualquer logado pode ver/editar
+    // (é só um rascunho compartilhado, não tem dado sensível).
+    match /config/disparo_templates {
+      allow read, write: if estaLogado();
+    }
+
     // Disparo de WhatsApp: histórico de campanhas em massa. Só o backend
     // (Admin SDK, que ignora estas regras) grava aqui; o CRM só lê, pra
     // alimentar o dashboard e a tela de último disparo.
