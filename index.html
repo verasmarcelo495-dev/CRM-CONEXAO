@@ -452,9 +452,17 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 
       <!-- SUBTAB: WHATSAPP CONECTADO -->
       <div id="disparo-sub-conectado">
-        <div id="disparo-status-box" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;text-align:center;">
-          <div id="disparo-status-texto" style="font-size:13px;color:#888;">Conectando...</div>
-          <img id="disparo-qr-img" style="display:none;max-width:220px;margin:1rem auto 0;border:1px solid var(--border);border-radius:8px;padding:8px;"/>
+        <div class="grid-2">
+          <div id="disparo-status-box-1" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;text-align:center;">
+            <div style="font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">WhatsApp 1</div>
+            <div id="disparo-status-texto-1" style="font-size:13px;color:#888;">Conectando...</div>
+            <img id="disparo-qr-img-1" style="display:none;max-width:200px;margin:1rem auto 0;border:1px solid var(--border);border-radius:8px;padding:8px;"/>
+          </div>
+          <div id="disparo-status-box-2" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;text-align:center;">
+            <div style="font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">WhatsApp 2</div>
+            <div id="disparo-status-texto-2" style="font-size:13px;color:#888;">Conectando...</div>
+            <img id="disparo-qr-img-2" style="display:none;max-width:200px;margin:1rem auto 0;border:1px solid var(--border);border-radius:8px;padding:8px;"/>
+          </div>
         </div>
       </div>
 
@@ -462,6 +470,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
       <div id="disparo-sub-envio" style="display:none;">
         <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;">
           <div style="font-size:13px;font-weight:500;margin-bottom:1rem;"><i class="ti ti-send"></i> Enviar mensagem individual</div>
+          <div class="form-group"><label class="form-label">Enviar por</label>
+            <select id="disparo-conta-individual"><option value="1">WhatsApp 1</option><option value="2">WhatsApp 2</option></select>
+          </div>
           <div class="form-group">
             <label class="form-label">Buscar cliente</label>
             <input type="text" id="disparo-busca-cliente" placeholder="Buscar por CNPJ ou razão social..." oninput="renderResultadosBuscaDisparo(this.value)"/>
@@ -477,6 +488,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
           <div style="font-size:13px;font-weight:500;margin-bottom:.25rem;"><i class="ti ti-upload"></i> Disparo em massa</div>
           <div style="font-size:12px;color:#888;margin-bottom:1rem;">As mensagens variam entre os 3 modelos abaixo (reduz risco de bloqueio) e são enviadas com intervalo de 10 a 20s entre cada contato.</div>
 
+          <div class="form-group"><label class="form-label">Enviar por</label>
+            <select id="disparo-conta-lote"><option value="1">WhatsApp 1</option><option value="2">WhatsApp 2</option></select>
+          </div>
           <div class="form-group"><label class="form-label">Mensagem 1</label><textarea class="disparo-lote-msg" rows="3" placeholder="Ex: Olá {{nome}}, tudo bem? Aqui é da equipe da {{empresa}}..." style="width:100%;resize:vertical;"></textarea></div>
           <div class="form-group"><label class="form-label">Mensagem 2</label><textarea class="disparo-lote-msg" rows="3" placeholder="Use as variáveis {{nome}} e {{empresa}} pra personalizar" style="width:100%;resize:vertical;"></textarea></div>
           <div class="form-group"><label class="form-label">Mensagem 3</label><textarea class="disparo-lote-msg" rows="3" placeholder="Deixe pelo menos 1 preenchida (as outras são opcionais)" style="width:100%;resize:vertical;"></textarea></div>
@@ -1154,26 +1168,36 @@ function renderDisparo(){
 }
 
 async function atualizarStatusDisparo(){
-  const textoEl=document.getElementById('disparo-status-texto');
-  const qrEl=document.getElementById('disparo-qr-img');
-  if(!textoEl)return;
+  const textoEl1=document.getElementById('disparo-status-texto-1');
+  if(!textoEl1)return;
   try{
     const dados=await chamarApiDisparo('/status');
-    if(dados.status==='conectado'){
-      textoEl.innerHTML='<i class="ti ti-circle-check" style="color:#1D9E75;"></i> WhatsApp conectado';
-      qrEl.style.display='none';
-      if(_disparoInterval){clearInterval(_disparoInterval);_disparoInterval=setInterval(atualizarStatusDisparo,30000);}
-    }else if(dados.status==='qr'&&dados.qr){
-      textoEl.textContent='Escaneie o QR code no WhatsApp do celular (Aparelhos conectados):';
-      qrEl.src=dados.qr;
-      qrEl.style.display='block';
-    }else{
-      textoEl.textContent='Aguardando conexão com o WhatsApp...';
-      qrEl.style.display='none';
-    }
+    let algumConectado=false;
+    (dados.contas||[]).forEach(function(c){
+      const textoEl=document.getElementById('disparo-status-texto-'+c.id);
+      const qrEl=document.getElementById('disparo-qr-img-'+c.id);
+      if(!textoEl)return;
+      if(c.status==='conectado'){
+        textoEl.innerHTML='<i class="ti ti-circle-check" style="color:#1D9E75;"></i> Conectado';
+        qrEl.style.display='none';
+        algumConectado=true;
+      }else if(c.status==='qr'&&c.qr){
+        textoEl.textContent='Escaneie o QR code no WhatsApp do celular (Aparelhos conectados):';
+        qrEl.src=c.qr;
+        qrEl.style.display='block';
+      }else{
+        textoEl.textContent='Aguardando conexão...';
+        qrEl.style.display='none';
+      }
+    });
+    if(_disparoInterval&&algumConectado){clearInterval(_disparoInterval);_disparoInterval=setInterval(atualizarStatusDisparo,30000);}
   }catch(e){
-    textoEl.textContent='Não foi possível conectar ao servidor de disparo. Verifique se o backend está no ar.';
-    qrEl.style.display='none';
+    ['1','2'].forEach(function(id){
+      const textoEl=document.getElementById('disparo-status-texto-'+id);
+      const qrEl=document.getElementById('disparo-qr-img-'+id);
+      if(textoEl)textoEl.textContent='Não foi possível conectar ao servidor de disparo. Verifique se o backend está no ar.';
+      if(qrEl)qrEl.style.display='none';
+    });
   }
 }
 
@@ -1228,7 +1252,7 @@ function renderDisparoUltimo(){
     const doc=snap.docs[0];
     const dados=doc.data();
     const data=dados.criadoEm?new Date(dados.criadoEm.toDate()).toLocaleString('pt-BR'):'';
-    if(resumoEl)resumoEl.textContent=(dados.total||0)+' contatos · disparado em '+data;
+    if(resumoEl)resumoEl.textContent=(dados.total||0)+' contatos · WhatsApp '+(dados.conta||'—')+' · disparado em '+data;
     _disparoUltimoUnsub=doc.ref.collection('itens').orderBy(firebase.firestore.FieldPath.documentId()).onSnapshot(function(itensSnap){
       let html='';
       itensSnap.forEach(function(itemDoc){
@@ -1289,8 +1313,9 @@ async function iniciarDisparoLote(){
   if(!confirm('Confirmar disparo para '+_disparoLoteContatos.length+' contatos? Isso vai levar um tempo (intervalo de 10-20s entre cada envio).'))return;
   btnEl.disabled=true;
   msgEl.style.color='#888';msgEl.textContent='Iniciando disparo em massa...';
+  const conta=document.getElementById('disparo-conta-lote').value;
   try{
-    await chamarApiDisparo('/disparo-lote',{method:'POST',body:JSON.stringify({contatos:_disparoLoteContatos,mensagens:mensagens})});
+    await chamarApiDisparo('/disparo-lote',{method:'POST',body:JSON.stringify({conta:conta,contatos:_disparoLoteContatos,mensagens:mensagens})});
     msgEl.style.color='#1D9E75';msgEl.textContent='Disparo iniciado! Acompanhe o progresso em "Último disparo" ou "Dashboard geral".';
     _disparoLoteContatos=[];
     document.getElementById('disparo-arquivo').value='';
@@ -1345,8 +1370,9 @@ async function enviarMensagemDisparo(){
   const msgEl=document.getElementById('disparo-envio-msg');
   if(!telefone||!mensagem){msgEl.style.color='#c0392b';msgEl.textContent='Preencha telefone e mensagem.';return;}
   msgEl.style.color='#888';msgEl.textContent='Enviando...';
+  const conta=document.getElementById('disparo-conta-individual').value;
   try{
-    await chamarApiDisparo('/send',{method:'POST',body:JSON.stringify({telefone:telefone,mensagem:mensagem})});
+    await chamarApiDisparo('/send',{method:'POST',body:JSON.stringify({conta:conta,telefone:telefone,mensagem:mensagem})});
     msgEl.style.color='#1D9E75';msgEl.textContent='Mensagem enviada!';
     document.getElementById('disparo-mensagem').value='';
   }catch(e){
