@@ -3840,6 +3840,8 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
       tipoFatura:tipoFatura,tipoVenda:tipoVenda,dataVencimento:dataVencimento,fastChip:fastChip,
       local:local,pontoReferencia:pontoReferencia,autNome:autNome,autTel:autTel,autRg:autRg,autCpf:autCpf
     };
+    const pAtual=propostas.find(function(x){return x._docId===docId;});
+    if(pAtual)pAtual.checklist=checklistData;
     db.collection('propostas').doc(docId).update({checklist:checklistData}).catch(function(e){});
   }
 
