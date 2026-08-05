@@ -3392,7 +3392,7 @@ function verDetalhe(docId){
   document.getElementById('det-acoes').innerHTML=
     (etapaEmAndamento(p.etapa)?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
     +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
-    +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');abrirChecklist('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
+    +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');${etapaEmAndamento(p.etapa)?'abrirChecklistParaTransferencia':'abrirChecklist'}('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
     +`<button class="btn btn-azul" onclick="fecharModal('modal-detalhe');abrirModalProposta('${p._docId}');"><i class="ti ti-presentation"></i> Proposta</button>`
     +`<button class="btn" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>`
     +`<button class="btn" onclick="fecharModal('modal-detalhe')">Fechar</button>`;
