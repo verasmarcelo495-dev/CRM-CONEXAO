@@ -2378,10 +2378,42 @@ function atualizarPreviewContrato(){
 }
 window.atualizarPreviewContrato=atualizarPreviewContrato;
 
+function salvarContratoDados(docId,p){
+  const acessosPorProduto=[];
+  document.querySelectorAll('#gc-acessos-lista textarea').forEach(function(ta){
+    acessosPorProduto[parseInt(ta.dataset.produtoIdx)]=ta.value;
+  });
+  const contratoDados={
+    tipoContratacao:document.getElementById('gc-tipo-contratacao').value,
+    dataVencimento:document.getElementById('gc-data-vencimento').value,
+    tipoFatura:document.getElementById('gc-tipo-fatura').value,
+    tipoVenda:document.getElementById('gc-tipo-venda').value,
+    fastChip:document.getElementById('gc-fast-chip').checked,
+    acessosPorProduto:acessosPorProduto,
+    repNome:document.getElementById('gc-rep-nome').value.trim(),
+    repCpf:document.getElementById('gc-rep-cpf').value.trim(),
+    local:document.getElementById('gc-local').value.trim(),
+    dataAssinatura:document.getElementById('gc-data-assinatura').value,
+    pontoReferencia:document.getElementById('gc-ponto-referencia').value.trim(),
+    autNome:document.getElementById('gc-aut-nome').value.trim(),
+    autTel:document.getElementById('gc-aut-tel').value.trim(),
+    autRg:document.getElementById('gc-aut-rg').value.trim(),
+    autCpf:document.getElementById('gc-aut-cpf').value.trim(),
+    obs:document.getElementById('gc-obs').value.trim()
+  };
+  p.contratoDados=contratoDados;
+  db.collection('backoffice').doc(docId).update({contratoDados:contratoDados,atualizadoEm:Date.now()})
+    .catch(function(e){showNotif('Erro ao salvar dados do contrato: '+e.message,true);});
+  return contratoDados;
+}
+window.salvarContratoDados=salvarContratoDados;
+
 function gerarContratoDocx(){
   const docId=document.getElementById('gc-doc-id').value;
   const p=backofficeLista.find(function(x){return x._docId===docId;});
   if(!p){showNotif('Pedido não encontrado.',true);return;}
+
+  salvarContratoDados(docId,p);
 
   const produtos=(p.produtos&&p.produtos.length)?p.produtos:[{nome:'',quantidade:''}];
   const gruposAcessos=[];
@@ -2392,7 +2424,7 @@ function gerarContratoDocx(){
   });
   const plano=produtos.map(function(pr){return pr.nome;}).filter(Boolean).join(', ');
   const acessos=gruposAcessos.join('; ');
-  if(!plano||!acessos){showNotif('Preencha os números das linhas por plano.',true);return;}
+  if(!plano||!acessos){showNotif('Dados salvos. Preencha os números das linhas por plano para gerar o arquivo.',true);return;}
 
   const tot=totaisProdutosBackoffice(p);
   const fastChip=document.getElementById('gc-fast-chip').checked;
@@ -2401,31 +2433,6 @@ function gerarContratoDocx(){
   const valorChipFmt=valorChip.toLocaleString('pt-BR',{minimumFractionDigits:2});
   const dataAssinaturaVal=document.getElementById('gc-data-assinatura').value;
   const dataAssinaturaFmt=dataAssinaturaVal?new Date(dataAssinaturaVal+'T12:00').toLocaleDateString('pt-BR'):'';
-
-  const acessosPorProduto=[];
-  document.querySelectorAll('#gc-acessos-lista textarea').forEach(function(ta){
-    acessosPorProduto[parseInt(ta.dataset.produtoIdx)]=ta.value;
-  });
-  const contratoDados={
-    tipoContratacao:document.getElementById('gc-tipo-contratacao').value,
-    dataVencimento:document.getElementById('gc-data-vencimento').value,
-    tipoFatura:document.getElementById('gc-tipo-fatura').value,
-    tipoVenda:document.getElementById('gc-tipo-venda').value,
-    fastChip:fastChip,
-    acessosPorProduto:acessosPorProduto,
-    repNome:document.getElementById('gc-rep-nome').value.trim(),
-    repCpf:document.getElementById('gc-rep-cpf').value.trim(),
-    local:document.getElementById('gc-local').value.trim(),
-    dataAssinatura:dataAssinaturaVal,
-    pontoReferencia:document.getElementById('gc-ponto-referencia').value.trim(),
-    autNome:document.getElementById('gc-aut-nome').value.trim(),
-    autTel:document.getElementById('gc-aut-tel').value.trim(),
-    autRg:document.getElementById('gc-aut-rg').value.trim(),
-    autCpf:document.getElementById('gc-aut-cpf').value.trim(),
-    obs:document.getElementById('gc-obs').value.trim()
-  };
-  p.contratoDados=contratoDados;
-  db.collection('backoffice').doc(docId).update({contratoDados:contratoDados,atualizadoEm:Date.now()}).catch(function(e){});
 
   const btn=document.getElementById('btn-gerar-contrato');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Gerando...';
