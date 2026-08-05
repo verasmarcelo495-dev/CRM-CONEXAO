@@ -1633,7 +1633,7 @@ function renderPipeline(){
 function onDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
 function onDragOver(e,etapaId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));e.currentTarget.closest('.kanban-col').classList.add('drag-over');}
 function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
-async function transferirParaBackoffice(docId){
+async function transferirParaBackoffice(docId,checklistOverride){
   const p=propostas.find(x=>x._docId===docId);
   if(!p||p.backofficeId)return; // idempotente: já transferido, não duplica
   const linhas=parseFloat(p.linhas)||0, receita=parseFloat(p.receita)||0;
@@ -1643,7 +1643,7 @@ async function transferirParaBackoffice(docId){
       razao:p.razao||'', cnpj:p.cnpj||'', responsavel:p.responsavel||'', telefone:p.telefone||'',
       consultor:p.consultor||'', protocolo:'',
       produtos:[{nome:(TIPOS[p.tipo]&&TIPOS[p.tipo].label)||'Plano',quantidade:linhas||'',valor:valorUnit}],
-      checklist:p.checklist||null,
+      checklist:checklistOverride||p.checklist||null,
       status:ETAPAS_BACKOFFICE[0].id,
       historico:[{data:Date.now(),autor:currentUser,texto:'Transferido do Pipeline (proposta)'}],
       criadoEm:Date.now(),atualizadoEm:Date.now()
@@ -3831,21 +3831,24 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
 ━━━━━━━━━━━━━━━━━━━━━`;
 
   // Salvar dados do checklist no Firebase para preencher automaticamente na próxima vez
+  const checklistData={
+    consultor:consultor,razao:razao,cnpj:cnpj,linhas:linhasQtd,valor:valor,tipo:tipo,
+    gestor:gestor,gestorCpf:gestorCpf,gestorCel:gestorCel,gestorFixo:gestorFixo,
+    rep:rep,repCpf:repCpf,repCel:repCel,repFixo:repFixo,email:email,
+    operadora:operadora,plano:plano,
+    tipoFatura:tipoFatura,tipoVenda:tipoVenda,dataVencimento:dataVencimento,fastChip:fastChip,
+    local:local,pontoReferencia:pontoReferencia,autNome:autNome,autTel:autTel,autRg:autRg,autCpf:autCpf
+  };
   if(docId){
-    const checklistData={
-      consultor:consultor,razao:razao,cnpj:cnpj,linhas:linhasQtd,valor:valor,tipo:tipo,
-      gestor:gestor,gestorCpf:gestorCpf,gestorCel:gestorCel,gestorFixo:gestorFixo,
-      rep:rep,repCpf:repCpf,repCel:repCel,repFixo:repFixo,email:email,
-      operadora:operadora,plano:plano,
-      tipoFatura:tipoFatura,tipoVenda:tipoVenda,dataVencimento:dataVencimento,fastChip:fastChip,
-      local:local,pontoReferencia:pontoReferencia,autNome:autNome,autTel:autTel,autRg:autRg,autCpf:autCpf
-    };
     const pAtual=propostas.find(function(x){return x._docId===docId;});
     if(pAtual)pAtual.checklist=checklistData;
     db.collection('propostas').doc(docId).update({checklist:checklistData}).catch(function(e){});
   }
 
+  let _checklistFinalizado=false;
   function finalizarChecklist(){
+    if(_checklistFinalizado)return;
+    _checklistFinalizado=true;
     const eraGate=_checklistGateDocId===docId;
     _checklistGateDocId=null;
     const aviso=document.getElementById('ck-gate-aviso');
@@ -3853,7 +3856,7 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
     if(aviso)aviso.style.display='none';
     if(btn)btn.innerHTML='<i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp';
     fecharModal('modal-checklist');
-    if(eraGate)transferirParaBackoffice(docId);
+    if(eraGate)transferirParaBackoffice(docId,checklistData);
   }
 
   navigator.clipboard.writeText(linhas.trim()).then(function(){
