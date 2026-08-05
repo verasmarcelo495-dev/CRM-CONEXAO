@@ -82,8 +82,6 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .kanban-card-dark .kc-btn.verde:hover{background:rgba(29,158,117,.25);color:#1D9E75;}
 .kanban-card-dark .kc-btn.azul:hover{background:rgba(55,138,221,.25);color:#378ADD;}
 .kanban-card-dark .kc-btn.red:hover{background:rgba(226,75,74,.25);color:#E24B4A;}
-.kanban-ativo-dark{background:#0d1526;border:1px solid rgba(55,138,221,.25);border-radius:10px;padding:1rem;margin-top:10px;}
-.kanban-ativo-mes{background:#13161f;border:1.5px dashed rgba(55,138,221,.2);border-radius:8px;padding:.75rem;min-width:200px;flex:1;}
 
 /* KANBAN DRAG & DROP */
 .kanban-wrapper{display:grid;gap:10px;margin-bottom:10px;}
@@ -153,12 +151,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 /* LISTA */
 .proposta-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px;}
 .proposta-card.e0{border-left:3px solid #378ADD;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e1{border-left:3px solid #EF9F27;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e2{border-left:3px solid #7F77DD;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e3{border-left:3px solid #D85A30;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e4{border-left:3px solid #1D9E75;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e5{border-left:3px solid #639922;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
-.proposta-card.e6{border-left:3px solid #27500A;border-radius:0 var(--radius-lg) var(--radius-lg) 0;background:#F6FBF0;}
+.proposta-card.e1{border-left:3px solid #7F77DD;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e2{border-left:3px solid #D85A30;border-radius:0 var(--radius-lg) var(--radius-lg) 0;}
+.proposta-card.e3{border-left:3px solid #1D9E75;border-radius:0 var(--radius-lg) var(--radius-lg) 0;background:#F6FBF0;}
 .proposta-card.perdida{border-left:3px solid #888;border-radius:0 var(--radius-lg) var(--radius-lg) 0;opacity:.7;}
 .tel-link{font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:3px;}
 .tel-link.tel{color:#185FA5;}.tel-link.wpp{color:#085041;}
@@ -363,8 +358,6 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <select id="pipe-filtro-mes"><option value="">Todos os meses</option></select>
       </div>
       <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
-      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(3,1fr);margin-top:10px;" id="kanban-row2"></div>
-      <div id="kanban-row3"></div>
     </div>
 
     <!-- FOLLOW-UP -->
@@ -822,24 +815,6 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 </div>
 
 <!-- MODAL ATIVAÇÃO -->
-<div class="modal-bg" id="modal-ativacao">
-  <div class="modal" style="max-width:420px;">
-    <h3><i class="ti ti-circle-check"></i> Mover para Ativo</h3>
-    <input type="hidden" id="at-doc-id"/>
-    <div style="background:#E6F1FB;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:1rem;">
-      <i class="ti ti-info-circle"></i> Informe a data em que o contrato foi ativado. Essa data será usada para calcular os 24 meses de fidelidade e aparecerá automaticamente na aba de Renovações.
-    </div>
-    <div class="form-group">
-      <label class="form-label">Data de ativação do contrato</label>
-      <input type="date" id="at-data"/>
-    </div>
-    <div id="at-info" style="display:none;margin-top:8px;padding:8px 12px;border-radius:var(--radius);font-size:13px;"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="fecharModal('modal-ativacao')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarAtivacao()"><i class="ti ti-check"></i> Confirmar ativação</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL ATIVAÇÃO BACKOFFICE -->
 <div class="modal-bg" id="modal-ativacao-bo">
@@ -1029,14 +1004,23 @@ const DISPARO_API_URL='https://crm-disparo-production.up.railway.app';
 
 const ETAPAS=[
   {id:0,nome:'Proposta enviada',cor:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'},
-  {id:1,nome:'Aguardando resposta',cor:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},
-  {id:2,nome:'Follow-up',cor:'#7F77DD',bg:'#EEEDFE',tc:'#3C3489'},
-  {id:3,nome:'Aguardando docs',cor:'#D85A30',bg:'#FAECE7',tc:'#712B13'},
-  {id:4,nome:'Gerar contrato',cor:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
-  {id:5,nome:'Aguard. assinatura',cor:'#639922',bg:'#EAF3DE',tc:'#27500A'},
-  {id:6,nome:'Assinado',cor:'#27500A',bg:'#EAF3DE',tc:'#27500A'},
-  {id:7,nome:'Ativo',cor:'#0C447C',bg:'#C8DCF5',tc:'#0C447C'},
+  {id:1,nome:'Follow-up',cor:'#7F77DD',bg:'#EEEDFE',tc:'#3C3489'},
+  {id:2,nome:'Aguardando documentação',cor:'#D85A30',bg:'#FAECE7',tc:'#712B13'},
+  {id:3,nome:'Gerar contrato',cor:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
 ];
+// Etapas antigas removidas do kanban ativo — mantidas só para exibir corretamente
+// propostas já existentes que ficaram paradas nelas. Nunca usadas para novos cards.
+const ETAPAS_ARQUIVADAS={
+  1:{nome:'Aguardando resposta (arquivado)',cor:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},
+  5:{nome:'Aguard. assinatura (arquivado)',cor:'#639922',bg:'#EAF3DE',tc:'#27500A'},
+  6:{nome:'Assinado (arquivado)',cor:'#27500A',bg:'#EAF3DE',tc:'#27500A'},
+  7:{nome:'Ativo (arquivado)',cor:'#0C447C',bg:'#C8DCF5',tc:'#0C447C'},
+};
+function infoEtapa(etapa){
+  if(etapa==='perdida')return{nome:'Perdida',bg:'#F1EFE8',tc:'#444'};
+  return ETAPAS[etapa]||ETAPAS_ARQUIVADAS[etapa]||{nome:'Etapa '+etapa,cor:'#888',bg:'#eee',tc:'#555'};
+}
+function etapaEmAndamento(etapa){return etapa===0||etapa===1||etapa===2;}
 const TIPOS={novo:{label:'Novo',cls:'tipo-novo'},portado:{label:'Portado',cls:'tipo-portado'},renovacao:{label:'Renovação',cls:'tipo-renovacao'}};
 const USERS={master:{nome:'Marcelo',role:'Gestor master',bg:'#FCEBEB',c:'#791F1F'},karla:{nome:'Karla',role:'Consultora',bg:'#EEEDFE',c:'#3C3489'},lucas:{nome:'Lucas',role:'Consultor',bg:'#E1F5EE',c:'#085041'}};
 const SK_SENHAS='crm_senhas_v2';
@@ -1563,7 +1547,7 @@ function renderPipeline(){
       const tipoCors={novo:{bg:'rgba(55,138,221,.18)',c:'#60a5e8'},portado:{bg:'rgba(127,119,221,.18)',c:'#a89ee8'},renovacao:{bg:'rgba(29,158,117,.18)',c:'#34d399'}};
       const tipoStyle=tipoCors[p.tipo]||tipoCors.novo;
       let retornoBadge='';
-      if(p.retorno&&p.etapa!==6&&p.etapa!==7){
+      if(p.retorno&&etapaEmAndamento(p.etapa)){
         const diff=diffDays(p.retorno);
         if(diff<0)retornoBadge='<span class="kc-tag" style="background:rgba(226,75,74,.2);color:#f87171;">'+Math.abs(diff)+'d atraso</span>';
         else if(diff===0)retornoBadge='<span class="kc-tag" style="background:rgba(239,159,39,.2);color:#fbbf24;">Hoje</span>';
@@ -1580,10 +1564,11 @@ function renderPipeline(){
         +retornoBadge
         +'</div>'
         +'<div class="kc-actions">'
-        +(p.etapa<7?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="'+p.etapa+'" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'')
+        +(etapaEmAndamento(p.etapa)?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="'+p.etapa+'" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'')
         +'<button class="kc-btn azul" data-action="detalhe" data-id2="'+p._docId+'" title="Detalhes"><i class="ti ti-eye"></i></button>'
         +'<button class="kc-btn" data-action="editar" data-id2="'+p._docId+'" title="Editar"><i class="ti ti-edit"></i></button>'
-        +(p.etapa!=='perdida'&&p.etapa!==7?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')+'</div></div>';
+        +(etapaEmAndamento(p.etapa)?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')
+        +(p.backofficeId?'<span class="kc-tag" style="background:rgba(29,158,117,.2);color:#34d399;">Transferido ✓</span>':'')+'</div></div>';
     }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
     return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" ondragover="onDragOver(event,'+etapa.id+')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'+etapa.id+')">'
       +'<div class="kanban-col-header-dark">'
@@ -1592,77 +1577,8 @@ function renderPipeline(){
       +'<span class="kanban-col-count">'+ps.length+(totalLn?' · '+totalLn+'ln':'')+'</span>'
       +'</div>'+cards+'</div>';
   }
-  document.getElementById('kanban-row1').innerHTML=ETAPAS.slice(0,4).map(buildCol).join('');
-  document.getElementById('kanban-row2').innerHTML=ETAPAS.slice(4,7).map(buildCol).join('');
-  
-  // Coluna ATIVO separada — filtra por mês selecionado
-  const MESES_NOMES_AT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const etapaAtivo=ETAPAS[7];
-  const todosAtivos=getPropostas().filter(function(p){return p.etapa===7;});
-  
-  // Agrupar ativos por mês de assinatura
-  const ativosPorMes={};
-  todosAtivos.forEach(function(p){
-    const ts=p.dataAssinatura||p.atualizadoEm||p.criadoEm||0;
-    const d=new Date(ts);
-    const chave=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    if(!ativosPorMes[chave])ativosPorMes[chave]=[];
-    ativosPorMes[chave].push(p);
-  });
-  
-  const chavesAtivos=Object.keys(ativosPorMes).sort().reverse();
-  
-  let row3HTML='<div class="kanban-ativo-dark">';
-  row3HTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
-  row3HTML+='<div style="width:7px;height:7px;border-radius:50%;background:#378ADD;flex-shrink:0;"></div>';
-  row3HTML+='<div style="font-size:11px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.06em;flex:1;">Ativos</div>';
-  row3HTML+='<span style="font-size:11px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:99px;">'+todosAtivos.length+' clientes</span>';
-  row3HTML+='</div>';
-  
-  if(todosAtivos.length===0){
-    row3HTML+='<div style="font-size:12px;color:#aaa;padding:.5rem 0;">Nenhum cliente ativo ainda.</div>';
-  }else{
-    row3HTML+='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-    chavesAtivos.forEach(function(chave){
-      const partes=chave.split('-');
-      const mesLabel=MESES_NOMES_AT[parseInt(partes[1])-1]+'/'+partes[0];
-      const ativos=ativosPorMes[chave];
-      const totalLinhas=ativos.reduce(function(s,p){return s+(+p.linhas||0);},0);
-      const totalReceita=ativos.reduce(function(s,p){return s+(parseFloat(p.receita)||0);},0);
-      const hoje=new Date();
-      const anoChave=parseInt(partes[0]);
-      const mesChave=parseInt(partes[1])-1;
-      const mesesAtivo=(hoje.getFullYear()-anoChave)*12+(hoje.getMonth()-mesChave);
-      let corBorda='rgba(55,138,221,.25)',corTexto='#60a5e8',corTag='';
-      if(mesesAtivo>=24){corBorda='rgba(29,158,117,.35)';corTexto='#34d399';corTag='<span style="font-size:10px;padding:1px 7px;border-radius:5px;background:rgba(29,158,117,.2);color:#34d399;font-weight:600;">Sem fidelidade</span>';}
-      else if(mesesAtivo>=18){corBorda='rgba(239,159,39,.35)';corTexto='#fbbf24';corTag='<span style="font-size:10px;padding:1px 7px;border-radius:5px;background:rgba(239,159,39,.2);color:#fbbf24;font-weight:600;">Apto a renovar</span>';}
-      
-      row3HTML+='<div class="kanban-ativo-mes" style="border-color:'+corBorda+';min-width:200px;flex:1;">';
-      row3HTML+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
-      row3HTML+='<div style="font-size:11px;font-weight:700;color:'+corTexto+';text-transform:uppercase;letter-spacing:.04em;">'+mesLabel+'</div>';
-      row3HTML+='<span style="font-size:10px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:1px 6px;border-radius:99px;">Mês '+mesesAtivo+'</span>';
-      if(corTag)row3HTML+=corTag;
-      row3HTML+='</div>';
-      row3HTML+='<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;">'+ativos.length+' cliente'+(ativos.length>1?'s':'')+' · '+totalLinhas+'ln · '+fmtMoeda(totalReceita)+'/mês</div>';
-      ativos.forEach(function(p){
-        const u=USERS[p.consultor]||{bg:'#fff',c:'#333',nome:'?'};
-        const nomeConsultor=(USERS[p.consultor]&&USERS[p.consultor].nome)?USERS[p.consultor].nome:'?';
-        row3HTML+='<div class="kanban-card" onclick="verDetalhe(\''+p._docId+'\')" style="background:#fff;margin-bottom:4px;">';
-        row3HTML+='<div style="font-size:12px;font-weight:500;">'+p.razao+'</div>';
-        row3HTML+='<div style="font-size:11px;color:#666;">'+p.responsavel+'</div>';
-        row3HTML+='<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">';
-        if(p.linhas)row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EEEDFE;color:#3C3489;">'+p.linhas+'ln</span>';
-        if(p.receita)row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#EAF3DE;color:#27500A;">R$'+Number(p.receita).toLocaleString('pt-BR')+'</span>';
-        if(currentUser==='master')row3HTML+='<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:'+u.bg+';color:'+u.c+';">'+nomeConsultor+'</span>';
-        row3HTML+='</div></div>';
-      });
-      row3HTML+='</div>';
-    });
-    row3HTML+='</div>';
-  }
-  row3HTML+='</div>';
-  document.getElementById('kanban-row3').innerHTML=row3HTML;
-  
+  document.getElementById('kanban-row1').innerHTML=ETAPAS.map(buildCol).join('');
+
   // Popular filtro de consultor (só master)
   if(currentUser==='master'&&filtroEl){
     const valorAtual=filtroEl.value;
@@ -1678,11 +1594,32 @@ function renderPipeline(){
 function onDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
 function onDragOver(e,etapaId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));e.currentTarget.closest('.kanban-col').classList.add('drag-over');}
 function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+async function transferirParaBackoffice(docId){
+  const p=propostas.find(x=>x._docId===docId);
+  if(!p||p.backofficeId)return; // idempotente: já transferido, não duplica
+  const linhas=parseFloat(p.linhas)||0, receita=parseFloat(p.receita)||0;
+  const valorUnit=linhas?Math.round((receita/linhas)*100)/100:receita;
+  try{
+    const boDoc=await db.collection('backoffice').add({
+      razao:p.razao||'', cnpj:p.cnpj||'', responsavel:p.responsavel||'', telefone:p.telefone||'',
+      consultor:p.consultor||'', protocolo:'',
+      produtos:[{nome:(TIPOS[p.tipo]&&TIPOS[p.tipo].label)||'Plano',quantidade:linhas||'',valor:valorUnit}],
+      status:ETAPAS_BACKOFFICE[0].id,
+      historico:[{data:Date.now(),autor:currentUser,texto:'Transferido do Pipeline (proposta)'}],
+      criadoEm:Date.now(),atualizadoEm:Date.now()
+    });
+    await db.collection('propostas').doc(docId).update({etapa:3,backofficeId:boDoc.id,atualizadoEm:Date.now()});
+    showNotif('Cliente transferido para Acompanhamento de pedidos!');
+  }catch(e){showNotif('Erro ao transferir para o Backoffice.',true);}
+}
+window.transferirParaBackoffice=transferirParaBackoffice;
+
 async function onDrop(e,etapaId){
   e.preventDefault();document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));
   if(!dragId)return;
   const p=propostas.find(x=>x._docId===dragId);
   if(!p||p.etapa===etapaId){dragId=null;return;}
+  if(etapaId===3){const id=dragId;dragId=null;await transferirParaBackoffice(id);return;}
   try{await db.collection('propostas').doc(dragId).update({etapa:etapaId,atualizadoEm:Date.now()});showNotif(`Movido para: ${ETAPAS[etapaId].nome}`);}
   catch(err){showNotif('Erro ao mover.',true);}
   dragId=null;
@@ -1703,7 +1640,7 @@ function exportarRelatorioExcel(){
   carregarSheetJS(function(){
     const lista=getPropostas();
     const linhas=lista.map(function(p){
-      const e=p.etapa==='perdida'?'Perdida':(ETAPAS[p.etapa]?ETAPAS[p.etapa].nome:'-');
+      const e=infoEtapa(p.etapa).nome;
       const t=TIPOS[p.tipo]?TIPOS[p.tipo].label:'Novo';
       const u=USERS[p.consultor]?(USERS[p.consultor]||{nome:'?'}).nome:p.consultor;
       return{
@@ -1726,7 +1663,7 @@ function exportarRelatorioExcel(){
     ws['!cols']=[{wch:30},{wch:18},{wch:20},{wch:16},{wch:12},{wch:18},{wch:14},{wch:10},{wch:14},{wch:12},{wch:16},{wch:30}];
 
     // Aba resumo
-    const fechadas=lista.filter(function(p){return p.etapa===6;});
+    const fechadas=lista.filter(function(p){return p.etapa===3;});
     const totalReceita=fechadas.reduce(function(s,p){return s+(parseFloat(p.receita)||0);},0);
     const resumo=[
       {Indicador:'Total de propostas',Valor:lista.length},
@@ -1753,7 +1690,7 @@ window.exportarRelatorioExcel=exportarRelatorioExcel;
 function atualizarAlertaHeader(){
   const el=document.getElementById('alerta-followup');
   const badge=document.getElementById('badge-followup');
-  const lista=getPropostas().filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno;});
+  const lista=getPropostas().filter(function(p){return etapaEmAndamento(p.etapa)&&p.retorno;});
   const atrasados=lista.filter(function(p){return diffDays(p.retorno)<0;});
   const hoje=lista.filter(function(p){return p.retorno===TODAY_STR;});
   const total=atrasados.length+hoje.length;
@@ -2249,11 +2186,26 @@ async function confirmarAtivacaoBackoffice(){
   const docId=document.getElementById('at-bo-doc-id').value;
   const dataAtivacao=document.getElementById('at-bo-data').value;
   if(!dataAtivacao){showNotif('Informe a data de ativação.',true);return;}
+  const p=backofficeLista.find(function(x){return x._docId===docId;});
+  if(!p){showNotif('Pedido não encontrado.',true);return;}
   const texto='Ativado em '+new Date(dataAtivacao+'T12:00').toLocaleDateString('pt-BR');
   try{
     await db.collection('backoffice').doc(docId).update({status:'ativo',dataAtivacao,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});
+
+    const jaExiste=renovacoes.find(function(r){return r.origemBackofficeId===docId;});
+    if(!jaExiste){
+      const tot=totaisProdutosBackoffice(p);
+      await db.collection('renovacoes').add({
+        razao:p.razao||'', cnpj:p.cnpj||'', responsavel:p.responsavel||'', telefone:p.telefone||'',
+        linhas:tot.qtd||'', valor:tot.valor||'', plano:'', dataInicio:dataAtivacao,
+        linhasDetalhe:[], status:'nao_atribuido', consultor:p.consultor||'',
+        obs:'Criado automaticamente ao ativar pedido em '+new Date(dataAtivacao+'T12:00').toLocaleDateString('pt-BR'),
+        origemBackofficeId:docId, criadoEm:Date.now(), atualizadoEm:Date.now()
+      });
+    }
+
     fecharModal('modal-ativacao-bo');
-    showNotif('Pedido ativado!');
+    showNotif('Pedido ativado! Já aparece na aba Renovações.');
   }catch(e){showNotif('Erro ao ativar.',true);}
 }
 window.confirmarAtivacaoBackoffice=confirmarAtivacaoBackoffice;
@@ -2895,7 +2847,7 @@ function renderDashboard(){
   if(hora>=5&&hora<12)saudacao='Bom dia';
   else if(hora>=12&&hora<18)saudacao='Boa tarde';
   
-  const ativos=lista.filter(function(p){return p.etapa!=='perdida'&&p.etapa!==6;});
+  const ativos=lista.filter(function(p){return etapaEmAndamento(p.etapa);});
   const comRetorno=ativos.filter(function(p){return p.retorno;});
   const atrasados=comRetorno.filter(function(p){return diffDays(p.retorno)<0;});
   const hojeArr=comRetorno.filter(function(p){return p.retorno===TODAY_STR;});
@@ -2905,7 +2857,7 @@ function renderDashboard(){
   const mesAtual=hojeMes.getMonth();
   const anoAtual=hojeMes.getFullYear();
   const fechadasMes=lista.filter(function(p){
-    if(p.etapa!==6)return false;
+    if(p.etapa!==3)return false;
     const d=new Date(p.atualizadoEm||p.criadoEm||0);
     return d.getMonth()===mesAtual&&d.getFullYear()===anoAtual;
   });
@@ -2953,7 +2905,7 @@ function renderDashboard(){
   }
   
   // Fechamentos recentes (5 últimos)
-  const fechadas=lista.filter(function(p){return p.etapa===6;}).slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);}).slice(0,5);
+  const fechadas=lista.filter(function(p){return p.etapa===3;}).slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);}).slice(0,5);
   const fechDiv=document.getElementById('dash-fechamentos');
   if(fechadas.length===0){
     fechDiv.innerHTML='<div class="empty">Nenhum contrato fechado ainda.</div>';
@@ -2977,7 +2929,7 @@ const DIAS_SEM=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function renderCal(){
   if(!document.getElementById('cal-mes'))return;
   document.getElementById('cal-mes').textContent=MESES[calMonth]+' '+calYear;
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno);
+  const lista=getPropostas().filter(p=>etapaEmAndamento(p.etapa)&&p.retorno);
   const evMap={};
   lista.forEach(p=>{evMap[p.retorno]=(evMap[p.retorno]||[]).concat(p);});
   const firstDay=new Date(calYear,calMonth,1).getDay();
@@ -3004,7 +2956,7 @@ window.selectCalDay=selectCalDay;
 window.renderDashboard=renderDashboard;
 
 function showCalDetalhe(ds){
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno===ds);
+  const lista=getPropostas().filter(p=>etapaEmAndamento(p.etapa)&&p.retorno===ds);
   const det=document.getElementById('cal-detalhe');
   const titulo=document.getElementById('cal-detalhe-titulo');
   const cards=document.getElementById('cal-detalhe-cards');
@@ -3039,7 +2991,7 @@ function showCalDetalhe(ds){
 // ========= FOLLOW-UP =========
 function renderFollowup(){
   renderCal();
-  const lista=getPropostas().filter(p=>p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7&&p.retorno);
+  const lista=getPropostas().filter(p=>etapaEmAndamento(p.etapa)&&p.retorno);
   const atrasados=lista.filter(p=>diffDays(p.retorno)<0).sort((a,b)=>a.retorno>b.retorno?1:-1);
   const hoje=lista.filter(p=>p.retorno===TODAY_STR);
   const amanha=lista.filter(p=>p.retorno===TMRW_STR);
@@ -3087,7 +3039,7 @@ function renderFollowup(){
     else{cls='futuro';badge=`<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#f0efea;color:#666;">em ${diff}d</span>`;}
     const u=USERS[p.consultor]||USERS.karla;
     const t=TIPOS[p.tipo]||TIPOS.novo;
-    const e=ETAPAS[p.etapa]||ETAPAS[0];
+    const e=infoEtapa(p.etapa);
     return`<div class="fu-list-card ${cls}">
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="avatar" style="background:${u.bg};color:${u.c};">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
@@ -3103,7 +3055,7 @@ function renderFollowup(){
         </div>
       </div>
       <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
-        ${p.etapa<7?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar etapa</button>`:''}
+        ${etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar etapa</button>`:''}
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
       </div>
     </div>`;
@@ -3164,18 +3116,20 @@ function renderLista(){
   const c=document.getElementById('lista-propostas');
   if(!lista.length){c.innerHTML='<div class="empty">Nenhuma proposta encontrada.</div>';return;}
   c.innerHTML=lista.map(p=>{
-    const e=p.etapa==='perdida'?{nome:'Perdida',bg:'#F1EFE8',tc:'#444'}:ETAPAS[p.etapa];
+    const e=infoEtapa(p.etapa);
     const u=USERS[p.consultor]||USERS.karla;
     const t=TIPOS[p.tipo]||TIPOS.novo;
-    const cls=p.etapa==='perdida'?'proposta-card perdida':'proposta-card e'+p.etapa;
+    const legado=p.etapa!=='perdida'&&!ETAPAS[p.etapa];
+    const cls=p.etapa==='perdida'?'proposta-card perdida':(legado?'proposta-card':'proposta-card e'+p.etapa);
+    const estiloLegado=legado?'border-left:3px solid '+e.cor+';border-radius:0 var(--radius-lg) var(--radius-lg) 0;':'';
     let urgenciaBadge='';
-    if(p.retorno&&p.etapa!=='perdida'&&p.etapa!==6&&p.etapa!==7){
+    if(p.retorno&&etapaEmAndamento(p.etapa)){
       const diff=diffDays(p.retorno);
       if(diff<0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FCEBEB;color:#791F1F;font-weight:600;">'+Math.abs(diff)+'d atrasado</span>';
       else if(diff===0)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#FAEEDA;color:#633806;font-weight:600;">Hoje</span>';
       else if(diff===1)urgenciaBadge='<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C;">Amanh\u00e3</span>';
     }
-    return`<div class="${cls}">
+    return`<div class="${cls}" style="${estiloLegado}">
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <div class="avatar" style="background:${u.bg};color:${u.c};">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
         <div style="flex:1;min-width:0;">
@@ -3197,12 +3151,12 @@ function renderLista(){
         </div>
       </div>
       <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
-        ${p.etapa!=='perdida'&&p.etapa<7?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar</button>`:''}
-        ${(p.etapa===6||p.etapa===7)?`<button class="btn-sm btn-verde" onclick="abrirChecklist('${p._docId}')"><i class="ti ti-clipboard-check"></i> Checklist</button>`:''}
+        ${etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar</button>`:''}
+        ${(p.etapa===3||p.etapa===6||p.etapa===7)?`<button class="btn-sm btn-verde" onclick="abrirChecklist('${p._docId}')"><i class="ti ti-clipboard-check"></i> Checklist</button>`:''}
         <button class="btn-sm btn-azul" onclick="abrirModalProposta('${p._docId}')"><i class="ti ti-presentation"></i> Proposta</button>
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
         <button class="btn-sm" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>
-        ${p.etapa!=='perdida'?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
+        ${etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
         ${p.etapa==='perdida'?`<button class="btn-sm btn-azul" onclick="reativar('${p._docId}')"><i class="ti ti-arrow-back"></i> Reativar</button>`:''}
       </div>
     </div>`;
@@ -3211,7 +3165,7 @@ function renderLista(){
 
 function renderMetricas(){
   const lista=getPropostas();
-  const fechadas=lista.filter(p=>p.etapa===6);
+  const fechadas=lista.filter(p=>p.etapa===3);
   const totalReceita=fechadas.reduce((s,p)=>s+(+p.receita||0),0);
   const totalLinhas=fechadas.reduce((s,p)=>s+(+p.linhas||0),0);
   const ticketMedio=fechadas.length?totalReceita/fechadas.length:0;
@@ -3233,7 +3187,7 @@ function renderMetricas(){
   const todosConsultores=Object.keys(USERS).filter(function(k){return k!=='master';});
   if(currentUser==='master'){
     consDiv.innerHTML=todosConsultores.map(function(c){
-      const u=USERS[c];const cl=lista.filter(function(p){return p.consultor===c;});const cf=cl.filter(function(p){return p.etapa===6;});const cr=cf.reduce(function(s,p){return s+(+p.receita||0);},0);
+      const u=USERS[c];const cl=lista.filter(function(p){return p.consultor===c;});const cf=cl.filter(function(p){return p.etapa===3;});const cr=cf.reduce(function(s,p){return s+(+p.receita||0);},0);
       const meta=u.meta||0;
       const pctMeta=meta>0?Math.min(100,Math.round(cr/meta*100)):0;
       return'<div style="padding:10px 0;border-bottom:1px solid #e8e8e0;">'
@@ -3334,18 +3288,9 @@ async function salvarProposta(){
 window.salvarProposta=salvarProposta;
 
 async function avancarEtapa(docId,etapaAtual){
-  if(etapaAtual==='perdida'||etapaAtual>=7)return;
+  if(etapaAtual==='perdida'||!etapaEmAndamento(etapaAtual))return;
   const nova=etapaAtual+1;
-  // Ao virar Ativo (7), abrir modal para informar data de ativação
-  if(nova===7){
-    document.getElementById('at-doc-id').value=docId;
-    // Sugerir data de hoje
-    document.getElementById('at-data').value=dateStr(new Date());
-    document.getElementById('at-info').style.display='none';
-    document.getElementById('modal-ativacao').classList.add('open');
-    fecharModal('modal-detalhe');
-    return;
-  }
+  if(nova===3){await transferirParaBackoffice(docId);fecharModal('modal-detalhe');return;}
   try{
     await db.collection('propostas').doc(docId).update({etapa:nova,atualizadoEm:Date.now()});
     showNotif('Avançou para: '+ETAPAS[nova].nome);
@@ -3353,55 +3298,6 @@ async function avancarEtapa(docId,etapaAtual){
   }catch(e){showNotif('Erro ao atualizar.',true);}
 }
 window.avancarEtapa=avancarEtapa;
-
-async function confirmarAtivacao(){
-  const docId=document.getElementById('at-doc-id').value;
-  const dataAtivacao=document.getElementById('at-data').value;
-  if(!dataAtivacao){showNotif('Informe a data de ativação.',true);return;}
-  
-  const p=propostas.find(function(x){return x._docId===docId;});
-  if(!p){showNotif('Proposta não encontrada.',true);return;}
-  
-  const tsAtivacao=new Date(dataAtivacao+'T12:00').getTime();
-  
-  try{
-    // 1. Mover proposta para etapa Ativo
-    await db.collection('propostas').doc(docId).update({
-      etapa:7,
-      dataAssinatura:tsAtivacao,
-      atualizadoEm:Date.now()
-    });
-    
-    // 2. Criar registro automático na aba Renovações
-    const jaExiste=renovacoes.find(function(r){return r.origemPropostaId===docId;});
-    if(!jaExiste){
-      await db.collection('renovacoes').add({
-        razao:p.razao||'',
-        cnpj:p.cnpj||'',
-        responsavel:p.responsavel||'',
-        telefone:p.telefone||'',
-        linhas:p.linhas||'',
-        valor:p.receita||'',
-        plano:'',
-        dataInicio:dataAtivacao,
-        linhasDetalhe:[],
-        status:'nao_atribuido',
-        consultor:p.consultor||'',
-        obs:'Criado automaticamente ao ativar contrato em '+new Date(tsAtivacao).toLocaleDateString('pt-BR'),
-        origemPropostaId:docId,
-        criadoEm:Date.now(),
-        atualizadoEm:Date.now()
-      });
-    }
-    
-    fecharModal('modal-ativacao');
-    showNotif('Cliente ativado! Já aparece na aba Renovações.');
-  }catch(e){
-    showNotif('Erro ao ativar contrato.',true);
-    console.error(e);
-  }
-}
-window.confirmarAtivacao=confirmarAtivacao;
 
 function marcarPerdida(docId){
   document.getElementById('mp-doc-id').value=docId;
@@ -3453,7 +3349,7 @@ window.reativar=reativar;
 
 function verDetalhe(docId){
   const p=propostas.find(x=>x._docId===docId);if(!p)return;
-  const e=p.etapa==='perdida'?{nome:'Perdida',bg:'#F1EFE8',tc:'#444'}:ETAPAS[p.etapa];
+  const e=infoEtapa(p.etapa);
   const u=USERS[p.consultor]||USERS.karla;
   const t=TIPOS[p.tipo]||TIPOS.novo;
   document.getElementById('det-titulo').textContent=p.razao;
@@ -3474,7 +3370,7 @@ function verDetalhe(docId){
     ${p.obs?`<div style="font-size:13px;background:#f8f8f6;padding:8px 10px;border-radius:6px;color:#555;">${p.obs}</div>`:''}`;
   renderHistorico(p);
   document.getElementById('det-acoes').innerHTML=
-    (p.etapa!=='perdida'&&p.etapa<7?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
+    (etapaEmAndamento(p.etapa)?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
     +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
     +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');abrirChecklist('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
     +`<button class="btn btn-azul" onclick="fecharModal('modal-detalhe');abrirModalProposta('${p._docId}');"><i class="ti ti-presentation"></i> Proposta</button>`
@@ -4196,21 +4092,6 @@ const renFiltroConsultor=document.getElementById('ren-filtro-consultor');
 if(renFiltroConsultor)renFiltroConsultor.addEventListener('change',function(){renderRenovacoes();});
 const renCpf=document.getElementById('ren-cpf');
 if(renCpf)renCpf.addEventListener('input',function(){this.value=fmtCPF(this.value);});
-
-// Listener data de ativação
-const atData=document.getElementById('at-data');
-if(atData)atData.addEventListener('change',function(){
-  const infoEl=document.getElementById('at-info');
-  if(!this.value){infoEl.style.display='none';return;}
-  const fid=calcularFidelidade(this.value);
-  if(!fid){infoEl.style.display='none';return;}
-  let txt='',bg='',cor='';
-  if(fid.meses<18){bg='#f8f8f6';cor='#555';txt='Contrato com '+fid.meses+' mes'+(fid.meses!==1?'es':'')+'. Ficará apto a renovar em '+Math.max(0,18-fid.meses)+' mes'+(18-fid.meses!==1?'es':'')+'.';}
-  else if(fid.comFidelidade){bg='#FAEEDA';cor='#633806';txt='✓ Já elegível com '+fid.meses+' meses — COM fidelidade. Perde fidelidade em '+(24-fid.meses)+' mes'+(24-fid.meses!==1?'es':'')+'.';}
-  else{bg='#EAF3DE';cor='#27500A';txt='✓ Elegível COM '+fid.meses+' meses — JÁ SEM fidelidade.';}
-  infoEl.style.background=bg;infoEl.style.color=cor;
-  infoEl.innerHTML=txt;infoEl.style.display='block';
-});
 
 const renTelefone=document.getElementById('ren-telefone');
 if(renTelefone)renTelefone.addEventListener('input',function(){
