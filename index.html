@@ -1607,6 +1607,7 @@ function renderPipeline(){
         +'<button class="kc-btn azul" data-action="detalhe" data-id2="'+p._docId+'" title="Detalhes"><i class="ti ti-eye"></i></button>'
         +'<button class="kc-btn" data-action="editar" data-id2="'+p._docId+'" title="Editar"><i class="ti ti-edit"></i></button>'
         +(etapaEmAndamento(p.etapa)?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')
+        +(currentUser==='master'?'<button class="kc-btn red" data-action="excluir-proposta" data-id2="'+p._docId+'" title="Excluir"><i class="ti ti-trash"></i></button>':'')
         +(p.backofficeId?'<span class="kc-tag" style="background:rgba(29,158,117,.2);color:#34d399;">Transferido ✓</span>':'')+'</div></div>';
     }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
     return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" ondragover="onDragOver(event,'+etapa.id+')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'+etapa.id+')">'
@@ -3254,6 +3255,7 @@ function renderLista(){
         <button class="btn-sm" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>
         ${etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
         ${p.etapa==='perdida'?`<button class="btn-sm btn-azul" onclick="reativar('${p._docId}')"><i class="ti ti-arrow-back"></i> Reativar</button>`:''}
+        ${currentUser==='master'?`<button class="btn-sm btn-del" onclick="excluirProposta('${p._docId}')"><i class="ti ti-trash"></i> Excluir</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3402,6 +3404,16 @@ function marcarPerdida(docId){
   document.getElementById('modal-motivo-perda').classList.add('open');
 }
 window.marcarPerdida=marcarPerdida;
+
+async function excluirProposta(docId){
+  if(currentUser!=='master'){showNotif('Só o master pode excluir propostas.',true);return;}
+  const p=propostas.find(function(x){return x._docId===docId;});
+  const aviso=p&&p.backofficeId?' Essa proposta já foi transferida para o Backoffice; o pedido lá continua existindo normalmente.':'';
+  if(!confirm('Excluir esta proposta definitivamente?'+aviso))return;
+  try{await db.collection('propostas').doc(docId).delete();showNotif('Proposta excluída.');}
+  catch(e){showNotif('Erro ao excluir.',true);}
+}
+window.excluirProposta=excluirProposta;
 
 async function confirmarPerda(){
   const docId=document.getElementById('mp-doc-id').value;
@@ -4222,6 +4234,7 @@ document.addEventListener('click', function(e){
     else if(action==='detalhe')verDetalhe(id);
     else if(action==='editar')editarProposta(id);
     else if(action==='perdida')marcarPerdida(id);
+    else if(action==='excluir-proposta')excluirProposta(id);
     return;
   }
   // Clique no card para abrir detalhe
