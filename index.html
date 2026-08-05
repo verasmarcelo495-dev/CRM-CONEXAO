@@ -808,6 +808,41 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
       </div>
       <div class="form-group"><label class="form-label">Plano e linhas para portabilidade</label><textarea id="ck-plano" style="height:56px;" placeholder="Ex: Plano Empresarial 15GB — Linhas: 61999990000, 61988880000..."></textarea></div>
       <div class="form-group"><label class="form-label">Valor mensal (R$)</label><input type="number" id="ck-valor" placeholder="Ex: 1500"/></div>
+
+      <div class="checklist-section">Dados do Contrato</div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Tipo de Fatura</label>
+          <select id="ck-tipo-fatura"><option value="Fatura Eletrônica">Fatura Eletrônica</option><option value="Fatura Impressa">Fatura Impressa</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Tipo de Venda</label>
+          <select id="ck-tipo-venda"><option value="Próprio">Próprio</option><option value="Comodato">Comodato</option><option value="Venda Facilitada">Venda Facilitada</option></select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Data de Vencimento</label>
+          <select id="ck-data-vencimento">
+            <option value="Dia 05">Dia 05</option><option value="Dia 10">Dia 10</option><option value="Dia 15">Dia 15</option>
+            <option value="Dia 20">Dia 20</option><option value="Dia 25">Dia 25</option><option value="Dia 30">Dia 30</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#333;cursor:pointer;align-self:end;padding-bottom:10px;">
+          <input type="checkbox" id="ck-fast-chip" style="width:auto;height:auto;"/> É Fast Chip (chip grátis, sem envio pela Logística)
+        </label>
+      </div>
+
+      <div class="checklist-section">Entrega dos Equipamentos</div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Local</label><input type="text" id="ck-local" placeholder="Ex: GO"/></div>
+        <div class="form-group"><label class="form-label">Ponto de referência para entrega</label><input type="text" id="ck-ponto-referencia"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Autorizado a receber - Nome</label><input type="text" id="ck-aut-nome"/></div>
+        <div class="form-group"><label class="form-label">Telefone</label><input type="tel" id="ck-aut-tel" placeholder="61999990000"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">RG</label><input type="text" id="ck-aut-rg"/></div>
+        <div class="form-group"><label class="form-label">CPF</label><input type="text" id="ck-aut-cpf" placeholder="000.000.000-00" maxlength="14"/></div>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -2344,22 +2379,22 @@ function abrirModalGerarContrato(docId){
       +'<textarea data-produto-idx="'+i+'" placeholder="Um número por linha, ou separados por vírgula" style="min-height:50px;">'+numerosSalvos+'</textarea>'
       +'</div>';
   }).join('');
-  document.getElementById('gc-fast-chip').checked=cd?!!cd.fastChip:false;
   const ck=p.checklist||{};
+  document.getElementById('gc-fast-chip').checked=cd?!!cd.fastChip:!!ck.fastChip;
   const TIPO_CONTRATACAO_POR_CHECKLIST={NOVO:'Novo',PORTABILIDADE:'Portabilidade',RENOVAÇÃO:'Renegociação/Aditivo'};
   document.getElementById('gc-tipo-contratacao').value=cd?cd.tipoContratacao:(TIPO_CONTRATACAO_POR_CHECKLIST[ck.tipo]||'Novo');
-  document.getElementById('gc-data-vencimento').value=(cd&&cd.dataVencimento)||'Dia 05';
-  document.getElementById('gc-tipo-fatura').value=(cd&&cd.tipoFatura)||'Fatura Eletrônica';
-  document.getElementById('gc-tipo-venda').value=(cd&&cd.tipoVenda)||'Próprio';
+  document.getElementById('gc-data-vencimento').value=(cd&&cd.dataVencimento)||ck.dataVencimento||'Dia 05';
+  document.getElementById('gc-tipo-fatura').value=(cd&&cd.tipoFatura)||ck.tipoFatura||'Fatura Eletrônica';
+  document.getElementById('gc-tipo-venda').value=(cd&&cd.tipoVenda)||ck.tipoVenda||'Próprio';
   document.getElementById('gc-rep-nome').value=cd?cd.repNome:(ck.rep||'');
   document.getElementById('gc-rep-cpf').value=cd?cd.repCpf:(ck.repCpf||'');
-  document.getElementById('gc-local').value=(cd&&cd.local)||'GO';
+  document.getElementById('gc-local').value=(cd&&cd.local)||ck.local||'GO';
   document.getElementById('gc-data-assinatura').value=(cd&&cd.dataAssinatura)||dateStr(new Date());
-  document.getElementById('gc-ponto-referencia').value=(cd&&cd.pontoReferencia)||'';
-  document.getElementById('gc-aut-nome').value=(cd&&cd.autNome)||'';
-  document.getElementById('gc-aut-tel').value=(cd&&cd.autTel)||'';
-  document.getElementById('gc-aut-rg').value=(cd&&cd.autRg)||'';
-  document.getElementById('gc-aut-cpf').value=(cd&&cd.autCpf)||'';
+  document.getElementById('gc-ponto-referencia').value=(cd&&cd.pontoReferencia)||ck.pontoReferencia||'';
+  document.getElementById('gc-aut-nome').value=(cd&&cd.autNome)||ck.autNome||'';
+  document.getElementById('gc-aut-tel').value=(cd&&cd.autTel)||ck.autTel||'';
+  document.getElementById('gc-aut-rg').value=(cd&&cd.autRg)||ck.autRg||'';
+  document.getElementById('gc-aut-cpf').value=(cd&&cd.autCpf)||ck.autCpf||'';
   document.getElementById('gc-obs').value=(cd&&cd.obs)||'';
   atualizarPreviewContrato();
   document.getElementById('modal-gerar-contrato').classList.add('open');
@@ -3697,7 +3732,17 @@ function abrirChecklist(docId){
   document.getElementById('ck-email').value=salvo.email||'';
   document.getElementById('ck-operadora').value=salvo.operadora||'';
   document.getElementById('ck-plano').value=salvo.plano||'';
-  
+  document.getElementById('ck-tipo-fatura').value=salvo.tipoFatura||'Fatura Eletrônica';
+  document.getElementById('ck-tipo-venda').value=salvo.tipoVenda||'Próprio';
+  document.getElementById('ck-data-vencimento').value=salvo.dataVencimento||'Dia 05';
+  document.getElementById('ck-fast-chip').checked=!!salvo.fastChip;
+  document.getElementById('ck-local').value=salvo.local||'GO';
+  document.getElementById('ck-ponto-referencia').value=salvo.pontoReferencia||'';
+  document.getElementById('ck-aut-nome').value=salvo.autNome||'';
+  document.getElementById('ck-aut-tel').value=salvo.autTel||'';
+  document.getElementById('ck-aut-rg').value=salvo.autRg||'';
+  document.getElementById('ck-aut-cpf').value=salvo.autCpf||'';
+
   document.getElementById('modal-checklist').classList.add('open');
 }
 window.abrirChecklist=abrirChecklist;
@@ -3728,6 +3773,16 @@ function copiarChecklist(){
   const repCel=document.getElementById('ck-rep-cel').value;
   const repFixo=document.getElementById('ck-rep-fixo').value;
   const email=document.getElementById('ck-email').value;
+  const tipoFatura=document.getElementById('ck-tipo-fatura').value;
+  const tipoVenda=document.getElementById('ck-tipo-venda').value;
+  const dataVencimento=document.getElementById('ck-data-vencimento').value;
+  const fastChip=document.getElementById('ck-fast-chip').checked;
+  const local=document.getElementById('ck-local').value;
+  const pontoReferencia=document.getElementById('ck-ponto-referencia').value;
+  const autNome=document.getElementById('ck-aut-nome').value;
+  const autTel=document.getElementById('ck-aut-tel').value;
+  const autRg=document.getElementById('ck-aut-rg').value;
+  const autCpf=document.getElementById('ck-aut-cpf').value;
 
   const linhas=`
 📋 *CHECKLIST DE FECHAMENTO*
@@ -3759,6 +3814,20 @@ ${operadora?'• Operadora doadora: '+operadora:''}
 ${plano?'• Plano/linhas portabilidade: '+plano:''}
 • Valor mensal: R$ ${valor?Number(valor).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}
 
+📄 *DADOS DO CONTRATO*
+• Tipo de Fatura: ${tipoFatura}
+• Tipo de Venda: ${tipoVenda}
+• Data de Vencimento: ${dataVencimento}
+• Fast Chip: ${fastChip?'Sim':'Não'}
+
+🚚 *ENTREGA DOS EQUIPAMENTOS*
+• Local: ${local||'—'}
+• Ponto de referência: ${pontoReferencia||'—'}
+• Autorizado a receber: ${autNome||'—'}
+• Telefone: ${fmtTelChecklist(autTel)}
+• RG: ${autRg||'—'}
+• CPF: ${autCpf||'—'}
+
 ━━━━━━━━━━━━━━━━━━━━━`;
 
   // Salvar dados do checklist no Firebase para preencher automaticamente na próxima vez
@@ -3767,7 +3836,9 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
       consultor:consultor,razao:razao,cnpj:cnpj,linhas:linhasQtd,valor:valor,tipo:tipo,
       gestor:gestor,gestorCpf:gestorCpf,gestorCel:gestorCel,gestorFixo:gestorFixo,
       rep:rep,repCpf:repCpf,repCel:repCel,repFixo:repFixo,email:email,
-      operadora:operadora,plano:plano
+      operadora:operadora,plano:plano,
+      tipoFatura:tipoFatura,tipoVenda:tipoVenda,dataVencimento:dataVencimento,fastChip:fastChip,
+      local:local,pontoReferencia:pontoReferencia,autNome:autNome,autTel:autTel,autRg:autRg,autCpf:autCpf
     };
     db.collection('propostas').doc(docId).update({checklist:checklistData}).catch(function(e){});
   }
