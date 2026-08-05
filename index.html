@@ -758,7 +758,10 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   <div class="modal" style="max-width:640px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
       <h3 style="margin:0;"><i class="ti ti-clipboard-check"></i> Checklist de Fechamento</h3>
-      <button class="btn-sm" onclick="fecharModal('modal-checklist')"><i class="ti ti-x"></i></button>
+      <button class="btn-sm" onclick="fecharChecklistGate()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="ck-gate-aviso" style="display:none;background:#E6F1FB;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:1rem;">
+      <i class="ti ti-info-circle"></i> Preencha o checklist antes de enviar para "Gerar contrato" — essas informações vão ser usadas no Backoffice.
     </div>
 
     <input type="hidden" id="ck-doc-id"/>
@@ -808,8 +811,8 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     </div>
 
     <div class="modal-footer">
-      <button class="btn" onclick="fecharModal('modal-checklist')">Cancelar</button>
-      <button class="btn btn-verde" onclick="copiarChecklist()"><i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp</button>
+      <button class="btn" onclick="fecharChecklistGate()">Cancelar</button>
+      <button class="btn btn-verde" id="btn-checklist-confirmar" onclick="copiarChecklist()"><i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp</button>
     </div>
   </div>
 </div>
@@ -1028,6 +1031,7 @@ const SENHAS_PADRAO={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
 
 let propostas=[],currentUser=null,currentTab='pipeline',_chart=null,_nt=null,_unsub=null;
 let dragId=null,dragOverCol=null;
+let _checklistGateDocId=null;
 
 const TODAY=new Date();TODAY.setHours(0,0,0,0);
 function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -1614,12 +1618,28 @@ async function transferirParaBackoffice(docId){
 }
 window.transferirParaBackoffice=transferirParaBackoffice;
 
+function abrirChecklistParaTransferencia(docId){
+  _checklistGateDocId=docId;
+  abrirChecklist(docId);
+  const aviso=document.getElementById('ck-gate-aviso');
+  const btn=document.getElementById('btn-checklist-confirmar');
+  if(aviso)aviso.style.display='block';
+  if(btn)btn.innerHTML='<i class="ti ti-arrow-right"></i> Salvar e enviar para Gerar contrato';
+}
+window.abrirChecklistParaTransferencia=abrirChecklistParaTransferencia;
+
+function fecharChecklistGate(){
+  _checklistGateDocId=null;
+  fecharModal('modal-checklist');
+}
+window.fecharChecklistGate=fecharChecklistGate;
+
 async function onDrop(e,etapaId){
   e.preventDefault();document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));
   if(!dragId)return;
   const p=propostas.find(x=>x._docId===dragId);
   if(!p||p.etapa===etapaId){dragId=null;return;}
-  if(etapaId===3){const id=dragId;dragId=null;await transferirParaBackoffice(id);return;}
+  if(etapaId===3){const id=dragId;dragId=null;abrirChecklistParaTransferencia(id);return;}
   try{await db.collection('propostas').doc(dragId).update({etapa:etapaId,atualizadoEm:Date.now()});showNotif(`Movido para: ${ETAPAS[etapaId].nome}`);}
   catch(err){showNotif('Erro ao mover.',true);}
   dragId=null;
@@ -3290,7 +3310,7 @@ window.salvarProposta=salvarProposta;
 async function avancarEtapa(docId,etapaAtual){
   if(etapaAtual==='perdida'||!etapaEmAndamento(etapaAtual))return;
   const nova=etapaAtual+1;
-  if(nova===3){await transferirParaBackoffice(docId);fecharModal('modal-detalhe');return;}
+  if(nova===3){fecharModal('modal-detalhe');abrirChecklistParaTransferencia(docId);return;}
   try{
     await db.collection('propostas').doc(docId).update({etapa:nova,atualizadoEm:Date.now()});
     showNotif('Avançou para: '+ETAPAS[nova].nome);
@@ -3645,6 +3665,11 @@ function fmtTelChecklist(t){if(!t)return'—';const d=t.replace(/\D/g,'');if(d.l
 
 function copiarChecklist(){
   const docId=document.getElementById('ck-doc-id').value;
+  if(_checklistGateDocId===docId){
+    if(!document.getElementById('ck-razao').value.trim()||!document.getElementById('ck-cnpj').value.trim()){
+      showNotif('Preencha ao menos razão social e CNPJ no checklist.',true);return;
+    }
+  }
   const tipo=document.getElementById('ck-tipo').value;
   const operadora=document.getElementById('ck-operadora').value;
   const plano=document.getElementById('ck-plano').value;
@@ -3706,15 +3731,26 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
     db.collection('propostas').doc(docId).update({checklist:checklistData}).catch(function(e){});
   }
 
+  function finalizarChecklist(){
+    const eraGate=_checklistGateDocId===docId;
+    _checklistGateDocId=null;
+    const aviso=document.getElementById('ck-gate-aviso');
+    const btn=document.getElementById('btn-checklist-confirmar');
+    if(aviso)aviso.style.display='none';
+    if(btn)btn.innerHTML='<i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp';
+    fecharModal('modal-checklist');
+    if(eraGate)transferirParaBackoffice(docId);
+  }
+
   navigator.clipboard.writeText(linhas.trim()).then(function(){
     showNotif('Checklist copiado e salvo! Cole no WhatsApp.');
-    fecharModal('modal-checklist');
+    finalizarChecklist();
   }).catch(function(){
     const ta=document.createElement('textarea');
     ta.value=linhas.trim();
     document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
     showNotif('Checklist copiado e salvo! Cole no WhatsApp.');
-    fecharModal('modal-checklist');
+    finalizarChecklist();
   });
 }
 window.copiarChecklist=copiarChecklist;
