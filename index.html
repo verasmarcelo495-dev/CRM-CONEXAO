@@ -2380,14 +2380,14 @@ function abrirModalGerarContrato(docId){
       +'</div>';
   }).join('');
   const ck=p.checklist||{};
-  document.getElementById('gc-fast-chip').checked=cd?!!cd.fastChip:!!ck.fastChip;
+  document.getElementById('gc-fast-chip').checked=!!((cd&&cd.fastChip)||(ck&&ck.fastChip));
   const TIPO_CONTRATACAO_POR_CHECKLIST={NOVO:'Novo',PORTABILIDADE:'Portabilidade',RENOVAÇÃO:'Renegociação/Aditivo'};
-  document.getElementById('gc-tipo-contratacao').value=cd?cd.tipoContratacao:(TIPO_CONTRATACAO_POR_CHECKLIST[ck.tipo]||'Novo');
+  document.getElementById('gc-tipo-contratacao').value=(cd&&cd.tipoContratacao)||TIPO_CONTRATACAO_POR_CHECKLIST[ck.tipo]||'Novo';
   document.getElementById('gc-data-vencimento').value=(cd&&cd.dataVencimento)||ck.dataVencimento||'Dia 05';
   document.getElementById('gc-tipo-fatura').value=(cd&&cd.tipoFatura)||ck.tipoFatura||'Fatura Eletrônica';
   document.getElementById('gc-tipo-venda').value=(cd&&cd.tipoVenda)||ck.tipoVenda||'Próprio';
-  document.getElementById('gc-rep-nome').value=cd?cd.repNome:(ck.rep||'');
-  document.getElementById('gc-rep-cpf').value=cd?cd.repCpf:(ck.repCpf||'');
+  document.getElementById('gc-rep-nome').value=(cd&&cd.repNome)||ck.rep||'';
+  document.getElementById('gc-rep-cpf').value=(cd&&cd.repCpf)||ck.repCpf||'';
   document.getElementById('gc-local').value=(cd&&cd.local)||ck.local||'GO';
   document.getElementById('gc-data-assinatura').value=(cd&&cd.dataAssinatura)||dateStr(new Date());
   document.getElementById('gc-ponto-referencia').value=(cd&&cd.pontoReferencia)||ck.pontoReferencia||'';
