@@ -2334,28 +2334,33 @@ function abrirModalGerarContrato(docId){
   if(!p)return;
   document.getElementById('gc-doc-id').value=docId;
   document.getElementById('gc-info-cliente').innerHTML='<b>'+(p.razao||'—')+'</b><br>CNPJ: '+(p.cnpj||'—')+' &nbsp;·&nbsp; Telefone: '+(p.telefone||'—');
+  const cd=p.contratoDados||null;
   const produtos=(p.produtos&&p.produtos.length)?p.produtos:[{nome:'',quantidade:''}];
   document.getElementById('gc-acessos-lista').innerHTML=produtos.map(function(pr,i){
     const qtd=pr.quantidade||0;
+    const numerosSalvos=(cd&&cd.acessosPorProduto&&cd.acessosPorProduto[i])||'';
     return '<div style="margin-bottom:8px;">'
       +'<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:2px;">'+(pr.nome||'(plano não informado)')+(qtd?' — '+qtd+' linha'+(qtd==1?'':'s'):'')+'</div>'
-      +'<textarea data-produto-idx="'+i+'" placeholder="Um número por linha, ou separados por vírgula" style="min-height:50px;"></textarea>'
+      +'<textarea data-produto-idx="'+i+'" placeholder="Um número por linha, ou separados por vírgula" style="min-height:50px;">'+numerosSalvos+'</textarea>'
       +'</div>';
   }).join('');
-  document.getElementById('gc-fast-chip').checked=false;
+  document.getElementById('gc-fast-chip').checked=cd?!!cd.fastChip:false;
   const ck=p.checklist||{};
   const TIPO_CONTRATACAO_POR_CHECKLIST={NOVO:'Novo',PORTABILIDADE:'Portabilidade',RENOVAÇÃO:'Renegociação/Aditivo'};
-  document.getElementById('gc-tipo-contratacao').value=TIPO_CONTRATACAO_POR_CHECKLIST[ck.tipo]||'Novo';
-  document.getElementById('gc-rep-nome').value=ck.rep||'';
-  document.getElementById('gc-rep-cpf').value=ck.repCpf||'';
-  document.getElementById('gc-local').value='GO';
-  document.getElementById('gc-data-assinatura').value=dateStr(new Date());
-  document.getElementById('gc-ponto-referencia').value='';
-  document.getElementById('gc-aut-nome').value='';
-  document.getElementById('gc-aut-tel').value='';
-  document.getElementById('gc-aut-rg').value='';
-  document.getElementById('gc-aut-cpf').value='';
-  document.getElementById('gc-obs').value='';
+  document.getElementById('gc-tipo-contratacao').value=cd?cd.tipoContratacao:(TIPO_CONTRATACAO_POR_CHECKLIST[ck.tipo]||'Novo');
+  document.getElementById('gc-data-vencimento').value=(cd&&cd.dataVencimento)||'Dia 05';
+  document.getElementById('gc-tipo-fatura').value=(cd&&cd.tipoFatura)||'Fatura Eletrônica';
+  document.getElementById('gc-tipo-venda').value=(cd&&cd.tipoVenda)||'Próprio';
+  document.getElementById('gc-rep-nome').value=cd?cd.repNome:(ck.rep||'');
+  document.getElementById('gc-rep-cpf').value=cd?cd.repCpf:(ck.repCpf||'');
+  document.getElementById('gc-local').value=(cd&&cd.local)||'GO';
+  document.getElementById('gc-data-assinatura').value=(cd&&cd.dataAssinatura)||dateStr(new Date());
+  document.getElementById('gc-ponto-referencia').value=(cd&&cd.pontoReferencia)||'';
+  document.getElementById('gc-aut-nome').value=(cd&&cd.autNome)||'';
+  document.getElementById('gc-aut-tel').value=(cd&&cd.autTel)||'';
+  document.getElementById('gc-aut-rg').value=(cd&&cd.autRg)||'';
+  document.getElementById('gc-aut-cpf').value=(cd&&cd.autCpf)||'';
+  document.getElementById('gc-obs').value=(cd&&cd.obs)||'';
   atualizarPreviewContrato();
   document.getElementById('modal-gerar-contrato').classList.add('open');
 }
@@ -2396,6 +2401,31 @@ function gerarContratoDocx(){
   const valorChipFmt=valorChip.toLocaleString('pt-BR',{minimumFractionDigits:2});
   const dataAssinaturaVal=document.getElementById('gc-data-assinatura').value;
   const dataAssinaturaFmt=dataAssinaturaVal?new Date(dataAssinaturaVal+'T12:00').toLocaleDateString('pt-BR'):'';
+
+  const acessosPorProduto=[];
+  document.querySelectorAll('#gc-acessos-lista textarea').forEach(function(ta){
+    acessosPorProduto[parseInt(ta.dataset.produtoIdx)]=ta.value;
+  });
+  const contratoDados={
+    tipoContratacao:document.getElementById('gc-tipo-contratacao').value,
+    dataVencimento:document.getElementById('gc-data-vencimento').value,
+    tipoFatura:document.getElementById('gc-tipo-fatura').value,
+    tipoVenda:document.getElementById('gc-tipo-venda').value,
+    fastChip:fastChip,
+    acessosPorProduto:acessosPorProduto,
+    repNome:document.getElementById('gc-rep-nome').value.trim(),
+    repCpf:document.getElementById('gc-rep-cpf').value.trim(),
+    local:document.getElementById('gc-local').value.trim(),
+    dataAssinatura:dataAssinaturaVal,
+    pontoReferencia:document.getElementById('gc-ponto-referencia').value.trim(),
+    autNome:document.getElementById('gc-aut-nome').value.trim(),
+    autTel:document.getElementById('gc-aut-tel').value.trim(),
+    autRg:document.getElementById('gc-aut-rg').value.trim(),
+    autCpf:document.getElementById('gc-aut-cpf').value.trim(),
+    obs:document.getElementById('gc-obs').value.trim()
+  };
+  p.contratoDados=contratoDados;
+  db.collection('backoffice').doc(docId).update({contratoDados:contratoDados,atualizadoEm:Date.now()}).catch(function(e){});
 
   const btn=document.getElementById('btn-gerar-contrato');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Gerando...';
