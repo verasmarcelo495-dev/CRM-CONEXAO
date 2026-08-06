@@ -1159,15 +1159,17 @@ async function fazerLogin(){
     }else if(e.code==='auth/too-many-requests'){
       msgEl.textContent='Muitas tentativas. Aguarde um momento.';
     }else{
-      msgEl.textContent='Erro ao entrar. Verifique sua conex\u00e3o. ['+(e.code||'sem-codigo')+': '+(e.message||'sem mensagem')+']';
+      msgEl.textContent='Erro ao entrar. Verifique sua conex\u00e3o.';
     }
     errEl.style.display='flex';
   }
 }
 window.fazerLogin=fazerLogin;
 
-function login(user){
+async function login(user){
+  if(!USERS[user])await loadUsersFirebase();
   currentUser=user;const u=USERS[user];
+  if(!u){showNotif('Perfil não encontrado. Tente novamente ou fale com o gestor.',true);logout();return;}
   const av=document.getElementById('hd-av');
   av.style.cssText='background:'+u.bg+';color:'+u.c+';width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;';
   av.textContent=initials(u.nome);
