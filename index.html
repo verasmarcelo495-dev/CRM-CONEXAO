@@ -1159,7 +1159,7 @@ async function fazerLogin(){
     }else if(e.code==='auth/too-many-requests'){
       msgEl.textContent='Muitas tentativas. Aguarde um momento.';
     }else{
-      msgEl.textContent='Erro ao entrar. Verifique sua conex\u00e3o.';
+      msgEl.textContent='Erro ao entrar. Verifique sua conex\u00e3o. ['+(e.code||'sem-codigo')+': '+(e.message||'sem mensagem')+']';
     }
     errEl.style.display='flex';
   }
