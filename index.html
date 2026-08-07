@@ -4097,10 +4097,19 @@ function editarUsuario(key){
 window.editarUsuario=editarUsuario;
 
 function removerUsuario(key){
-  if(!confirm(`Remover o consultor ${USERS[key].nome}? Isso não remove as propostas dele.`))return;
+  if(!confirm(`Remover o consultor ${USERS[key].nome}? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).`))return;
   delete USERS[key];
   const senhas=getSenhas();delete senhas[key];setSenhas(senhas);
-  saveUsers().then(function(){renderUsuarios();showNotif('Consultor removido.');});
+  saveUsers().then(async function(){
+    try{
+      const mapSnap=await db.collection('config').doc('uid_map').get();
+      if(mapSnap.exists){
+        const map=mapSnap.data();
+        if(map[key]){delete map[key];await db.collection('config').doc('uid_map').set(map);}
+      }
+    }catch(e){}
+    renderUsuarios();showNotif('Consultor removido.');
+  });
 }
 window.removerUsuario=removerUsuario;
 
