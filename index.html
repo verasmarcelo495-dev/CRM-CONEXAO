@@ -424,8 +424,8 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <button class="btn" id="bo-btn-fechamento" style="display:none;" onclick="abrirModalFechamentoBackoffice()"><i class="ti ti-file-spreadsheet"></i> Exportar fechamento</button>
         <button class="btn btn-verde" id="bo-btn-novo" onclick="abrirModalBackoffice()"><i class="ti ti-plus"></i> Novo pedido</button>
       </div>
-      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);" id="backoffice-row1"></div>
-      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);margin-top:10px;" id="backoffice-row2"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(5,1fr);" id="backoffice-row1"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(5,1fr);margin-top:10px;" id="backoffice-row2"></div>
       <div style="display:flex;align-items:center;gap:8px;margin:1.25rem 0 .5rem;">
         <div style="width:7px;height:7px;border-radius:50%;background:#1D9E75;flex-shrink:0;"></div>
         <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;flex:1;">Ativos</div>
@@ -1891,10 +1891,12 @@ const ETAPAS_BACKOFFICE=[
   {id:'aguard_assinatura',nome:'Aguardando assinatura',cor:'#2fa8a0'},
   {id:'pendente_input',nome:'Pendente input',cor:'#EF9F27'},
   {id:'antifraude',nome:'Análise antifraude',cor:'#378ADD'},
+  {id:'aguard_doc_credito',nome:'Aguardando documentação de crédito',cor:'#E0B03D'},
   {id:'credito',nome:'Análise de crédito',cor:'#a89ee8'},
   {id:'preativacao',nome:'Pré-ativação',cor:'#7F77DD'},
   {id:'faturamento',nome:'Faturamento',cor:'#D85A30'},
   {id:'logistica',nome:'Logística',cor:'#639922'},
+  {id:'aguard_portabilidade',nome:'Aguardando portabilidade',cor:'#4FA8D8'},
 ];
 // 'ativo' não é uma coluna do kanban: é um estado terminal separado (ver ETAPA_ATIVO_BACKOFFICE), agrupado por mês de ativação.
 const ETAPA_ATIVO_BACKOFFICE={id:'ativo',nome:'Ativo',cor:'#1D9E75'};
@@ -2001,8 +2003,8 @@ function renderBackoffice(){
       +'<span class="kanban-col-count">'+ps.length+'</span>'
       +'</div>'+cards+'</div>';
   }
-  document.getElementById('backoffice-row1').innerHTML=ETAPAS_BACKOFFICE.slice(0,4).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
-  document.getElementById('backoffice-row2').innerHTML=ETAPAS_BACKOFFICE.slice(4,8).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
+  document.getElementById('backoffice-row1').innerHTML=ETAPAS_BACKOFFICE.slice(0,5).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
+  document.getElementById('backoffice-row2').innerHTML=ETAPAS_BACKOFFICE.slice(5,10).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
 
   // ===== Ativos: agrupados por mês de ativação, somem por padrão ao virar o mês =====
   const todosAtivos=getBackoffice().filter(function(p){return p.status==='ativo';});
