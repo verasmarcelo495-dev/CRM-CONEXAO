@@ -68,6 +68,11 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .kanban-col-header-dark{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07);}
 .kanban-col-nome{font-size:11px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.06em;flex:1;}
 .kanban-col-count{font-size:11px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:99px;}
+.kanban-col-body-dark{max-height:520px;overflow-y:auto;overflow-x:hidden;padding-right:4px;margin-right:-4px;}
+.kanban-col-body-dark::-webkit-scrollbar{width:6px;}
+.kanban-col-body-dark::-webkit-scrollbar-track{background:transparent;}
+.kanban-col-body-dark::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:99px;}
+.kanban-col-body-dark::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.28);}
 .kanban-card-dark{background:#1e2130;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:border-color .12s,transform .1s;position:relative;}
 .kanban-card-dark:hover{border-color:rgba(255,255,255,.2);transform:translateY(-1px);}
 .kanban-card-dark:active{cursor:grabbing;}
@@ -422,6 +427,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
         <input type="text" id="bo-busca" placeholder="🔍 Buscar por CNPJ ou razão social..." style="flex:1;min-width:200px;max-width:300px;"/>
         <button class="btn" id="bo-btn-fechamento" style="display:none;" onclick="abrirModalFechamentoBackoffice()"><i class="ti ti-file-spreadsheet"></i> Exportar fechamento</button>
+        <button class="btn" onclick="exportarTodosPedidosBackoffice()"><i class="ti ti-table-export"></i> Exportar todos os pedidos</button>
         <button class="btn btn-verde" id="bo-btn-novo" onclick="abrirModalBackoffice()"><i class="ti ti-plus"></i> Novo pedido</button>
       </div>
       <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(5,1fr);" id="backoffice-row1"></div>
@@ -1617,7 +1623,7 @@ function renderPipeline(){
       +'<div style="width:7px;height:7px;border-radius:50%;background:'+etapa.cor+';flex-shrink:0;"></div>'
       +'<div class="kanban-col-nome">'+etapa.nome+'</div>'
       +'<span class="kanban-col-count">'+ps.length+(totalLn?' · '+totalLn+'ln':'')+'</span>'
-      +'</div>'+cards+'</div>';
+      +'</div><div class="kanban-col-body-dark">'+cards+'</div></div>';
   }
   document.getElementById('kanban-row1').innerHTML=ETAPAS.map(buildCol).join('');
 
@@ -2001,7 +2007,7 @@ function renderBackoffice(){
       +'<div style="width:7px;height:7px;border-radius:50%;background:'+etapa.cor+';flex-shrink:0;"></div>'
       +'<div class="kanban-col-nome">'+etapa.nome+'</div>'
       +'<span class="kanban-col-count">'+ps.length+'</span>'
-      +'</div>'+cards+'</div>';
+      +'</div><div class="kanban-col-body-dark">'+cards+'</div></div>';
   }
   document.getElementById('backoffice-row1').innerHTML=ETAPAS_BACKOFFICE.slice(0,5).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
   document.getElementById('backoffice-row2').innerHTML=ETAPAS_BACKOFFICE.slice(5,10).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
@@ -2368,6 +2374,37 @@ function gerarFechamentoBackoffice(){
   });
 }
 window.gerarFechamentoBackoffice=gerarFechamentoBackoffice;
+
+function exportarTodosPedidosBackoffice(){
+  const lista=getBackoffice();
+  if(lista.length===0){showNotif('Nenhum pedido encontrado.',true);return;}
+
+  carregarSheetJS(function(){
+    const nomeConsultor=function(p){return USERS[p.consultor]?USERS[p.consultor].nome:(p.consultor||'—');};
+
+    const headers=['Razão Social','CNPJ','Responsável','Telefone','Status','Protocolo TIM','Consultor','Data Ativação','Produtos','Qtd. Linhas','Valor Total (R$)'];
+    const linhasDados=lista.map(function(p){
+      const tot=totaisProdutosBackoffice(p);
+      const produtosTxt=(p.produtos||[]).map(function(pr){
+        return (pr.nome||'?')+' (x'+(pr.quantidade||0)+' @ R$'+(parseFloat(pr.valor)||0).toFixed(2)+')';
+      }).join('; ');
+      const dataAtivFmt=p.dataAtivacao?new Date(p.dataAtivacao+'T12:00').toLocaleDateString('pt-BR'):'';
+      return[p.razao||'',p.cnpj||'',p.responsavel||'',p.telefone||'',nomeEtapaBackoffice(p.status),p.protocolo||'',nomeConsultor(p),dataAtivFmt,produtosTxt,tot.qtd,tot.valor];
+    });
+    const ws=XLSX.utils.aoa_to_sheet([headers].concat(linhasDados));
+    ws['!cols']=[{wch:28},{wch:18},{wch:20},{wch:16},{wch:26},{wch:16},{wch:16},{wch:14},{wch:45},{wch:11},{wch:15}];
+    const ultimaLinha=linhasDados.length+1;
+    ws['!autofilter']={ref:'A1:K'+ultimaLinha};
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Todos os pedidos');
+
+    const nomeArq='Todos_Pedidos_Backoffice_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb,nomeArq);
+    showNotif('Planilha com todos os pedidos exportada!');
+  });
+}
+window.exportarTodosPedidosBackoffice=exportarTodosPedidosBackoffice;
 
 function abrirModalGerarContrato(docId){
   const p=backofficeLista.find(function(x){return x._docId===docId;});
