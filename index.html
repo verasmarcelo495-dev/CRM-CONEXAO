@@ -1585,7 +1585,15 @@ function renderPipeline(){
   }
   
   function buildCol(etapa){
-    const ps=lista.filter(function(p){return p.etapa==etapa.id;});
+    let ps=lista.filter(function(p){return p.etapa==etapa.id;});
+    if(etapa.id===3){
+      // Já transferido e com andamento dado no Backoffice (saiu do estágio inicial "Gerar contrato"): não mostrar mais aqui.
+      ps=ps.filter(function(p){
+        if(!p.backofficeId)return true;
+        const bo=backofficeLista.find(function(x){return x._docId===p.backofficeId;});
+        return bo&&bo.status===ETAPAS_BACKOFFICE[0].id;
+      });
+    }
     const totalLn=ps.reduce(function(s,p){return s+(+p.linhas||0);},0);
     const cards=ps.map(function(p){
       const u=USERS[p.consultor]||{bg:'#2a2d3a',c:'#aaa',nome:'?'};
@@ -1914,11 +1922,14 @@ function iniciarSyncBackoffice(){
     _unsubBo=db.collection('backoffice').orderBy('criadoEm','desc').onSnapshot(function(snap){
       backofficeLista=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
       if(currentTab==='backoffice')renderBackoffice();
+      else if(currentTab==='pipeline')renderPipeline();
     },function(err){console.error(err);});
   }catch(e){}
 }
 
-function getBackoffice(){return backofficeLista;}
+function getBackoffice(){
+  return podeMoverBackoffice()?backofficeLista:backofficeLista.filter(function(p){return p.consultor===currentUser;});
+}
 
 const MESES_NOMES_BO=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function mesChaveBO(dataStr){if(!dataStr)return'';const d=new Date(dataStr+'T12:00');return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
