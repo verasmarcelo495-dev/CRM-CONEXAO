@@ -602,6 +602,22 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL CHECKLIST (leitura, Backoffice) -->
+<div class="modal-bg" id="modal-checklist-bo">
+  <div class="modal" style="max-width:640px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h3 id="ckbo-titulo" style="margin:0;"></h3>
+      <button class="btn-sm" onclick="fecharModal('modal-checklist-bo')"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="ckbo-corpo"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-checklist-bo')">Fechar</button>
+      <button class="btn btn-primary" id="ckbo-editar" onclick="editarChecklistBackoffice(this.dataset.docId)" style="display:none;"></button>
+      <button class="btn btn-verde" id="ckbo-copiar" onclick="copiarChecklistBackoffice()"><i class="ti ti-brand-whatsapp"></i> Copiar texto</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL BACKOFFICE -->
 <div class="modal-bg" id="modal-backoffice">
   <div class="modal">
@@ -617,6 +633,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
       <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input type="tel" id="bo-telefone" placeholder="Ex: 61999990000"/></div>
     </div>
     <div class="form-group"><label class="form-label">Nº do pedido/protocolo TIM</label><input type="text" id="bo-protocolo" placeholder="Ex: 123456789"/></div>
+    <div id="bo-checklist-wrap" style="display:none;margin-bottom:.75rem;"><button class="btn-sm" type="button" onclick="abrirChecklistBackoffice(document.getElementById('bo-id').value)"><i class="ti ti-checklist"></i> Ver checklist do consultor</button></div>
     <div class="prop-section">Produtos</div>
     <div id="bo-produtos-lista"></div>
     <button class="btn-sm btn-verde" type="button" onclick="adicionarProdutoBackoffice()" style="margin-bottom:.5rem;"><i class="ti ti-plus"></i> Adicionar produto</button>
@@ -1683,6 +1700,7 @@ window.abrirChecklistParaTransferencia=abrirChecklistParaTransferencia;
 
 function fecharChecklistGate(){
   _checklistGateDocId=null;
+  _ckBoDocId=null;
   fecharModal('modal-checklist');
 }
 window.fecharChecklistGate=fecharChecklistGate;
@@ -2005,12 +2023,13 @@ function renderBackoffice(){
         +(p.protocolo?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">#'+p.protocolo+'</span>':'')
         +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">'+nomeConsultor(p)+'</span>':'')
         +'</div>'
-        +(podeMover?'<div class="kc-actions">'
-          +(etapa.id==='gerar_contrato'?'<button class="kc-btn" onclick="event.stopPropagation();abrirModalGerarContrato(\''+p._docId+'\')" title="Gerar contrato"><i class="ti ti-file-text"></i></button>':'')
-          +(idx<ETAPAS_BACKOFFICE.length-1?'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Ativar"><i class="ti ti-circle-check"></i></button>')
+        +'<div class="kc-actions">'
+          +'<button class="kc-btn" onclick="event.stopPropagation();abrirChecklistBackoffice(\''+p._docId+'\')" title="Ver checklist"><i class="ti ti-checklist"></i></button>'
+          +(podeMover&&etapa.id==='gerar_contrato'?'<button class="kc-btn" onclick="event.stopPropagation();abrirModalGerarContrato(\''+p._docId+'\')" title="Gerar contrato"><i class="ti ti-file-text"></i></button>':'')
+          +(!podeMover?'':(idx<ETAPAS_BACKOFFICE.length-1?'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Ativar"><i class="ti ti-circle-check"></i></button>')
           +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
-          +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>'
-          +'</div>':'')
+          +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>')
+          +'</div>'
         +'</div>';
     }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
     return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" '+(podeMover?'ondragover="onDragOverBo(event,\''+etapa.id+'\')" ondragleave="onDragLeaveBo(event)" ondrop="onDropBo(event,\''+etapa.id+'\')"':'')+'>'
@@ -2075,10 +2094,11 @@ function renderBackoffice(){
             +(tot.valor?'<span class="kc-tag" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">R$'+tot.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>':'')
             +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">'+nomeConsultor(p)+'</span>':'')
             +'</div>'
-            +(podeEditarAtivo?'<div class="kc-actions">'
-              +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
-              +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>'
-              +'</div>':'')
+            +'<div class="kc-actions">'
+              +'<button class="kc-btn" onclick="event.stopPropagation();abrirChecklistBackoffice(\''+p._docId+'\')" title="Ver checklist"><i class="ti ti-checklist"></i></button>'
+              +(!podeEditarAtivo?'':'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
+              +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>')
+              +'</div>'
             +'</div>';
         }).join('')
         +'</div>';
@@ -2202,6 +2222,7 @@ function abrirModalBackoffice(docId,readOnly){
   if(footer)footer.style.display=isReadOnly?'none':'';
   titulo.innerHTML=isReadOnly?'<i class="ti ti-eye"></i> Detalhes do pedido':(docId?'<i class="ti ti-edit"></i> Editar pedido':'<i class="ti ti-truck-delivery"></i> Novo pedido');
   renderHistoricoBackoffice(p);
+  document.getElementById('bo-checklist-wrap').style.display=docId?'':'none';
   document.getElementById('modal-backoffice').classList.add('open');
 }
 window.abrirModalBackoffice=abrirModalBackoffice;
@@ -3772,8 +3793,10 @@ async function consultarCNPJ(cnpj, campoRazao, statusEl){
 // ========= CHECKLIST =========
 function fmtCPF(v){v=v.replace(/\D/g,'').slice(0,11);if(v.length>9)v=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);else if(v.length>6)v=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else if(v.length>3)v=v.slice(0,3)+'.'+v.slice(3);return v;}
 
-function abrirChecklist(docId){
-  const p=propostas.find(function(x){return x._docId===docId;});
+let _ckBoDocId=null; // quando preenchido, o formulário do checklist grava no Backoffice (e não na proposta)
+function abrirChecklist(docId,fonte){
+  if(!fonte){_ckBoDocId=null;const bc=document.getElementById('btn-checklist-confirmar');if(bc)bc.innerHTML='<i class="ti ti-brand-whatsapp"></i> Copiar para WhatsApp';}
+  const p=fonte||propostas.find(function(x){return x._docId===docId;});
   if(!p)return;
   document.getElementById('ck-doc-id').value=docId;
   const u=USERS[currentUser]||USERS.karla;
@@ -3813,42 +3836,12 @@ window.abrirChecklist=abrirChecklist;
 
 function fmtTelChecklist(t){if(!t)return'—';const d=t.replace(/\D/g,'');if(d.length===11)return'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);if(d.length===10)return'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);return t;}
 
-function copiarChecklist(){
-  const docId=document.getElementById('ck-doc-id').value;
-  if(_checklistGateDocId===docId){
-    if(!document.getElementById('ck-razao').value.trim()||!document.getElementById('ck-cnpj').value.trim()){
-      showNotif('Preencha ao menos razão social e CNPJ no checklist.',true);return;
-    }
-  }
-  const tipo=document.getElementById('ck-tipo').value;
-  const operadora=document.getElementById('ck-operadora').value;
-  const plano=document.getElementById('ck-plano').value;
-  const valor=document.getElementById('ck-valor').value;
-  const consultor=document.getElementById('ck-consultor').value;
-  const razao=document.getElementById('ck-razao').value;
-  const cnpj=document.getElementById('ck-cnpj').value;
-  const linhasQtd=document.getElementById('ck-linhas').value;
-  const gestor=document.getElementById('ck-gestor').value;
-  const gestorCpf=document.getElementById('ck-gestor-cpf').value;
-  const gestorCel=document.getElementById('ck-gestor-cel').value;
-  const gestorFixo=document.getElementById('ck-gestor-fixo').value;
-  const rep=document.getElementById('ck-rep').value;
-  const repCpf=document.getElementById('ck-rep-cpf').value;
-  const repCel=document.getElementById('ck-rep-cel').value;
-  const repFixo=document.getElementById('ck-rep-fixo').value;
-  const email=document.getElementById('ck-email').value;
-  const tipoFatura=document.getElementById('ck-tipo-fatura').value;
-  const tipoVenda=document.getElementById('ck-tipo-venda').value;
-  const dataVencimento=document.getElementById('ck-data-vencimento').value;
-  const fastChip=document.getElementById('ck-fast-chip').checked;
-  const local=document.getElementById('ck-local').value;
-  const pontoReferencia=document.getElementById('ck-ponto-referencia').value;
-  const autNome=document.getElementById('ck-aut-nome').value;
-  const autTel=document.getElementById('ck-aut-tel').value;
-  const autRg=document.getElementById('ck-aut-rg').value;
-  const autCpf=document.getElementById('ck-aut-cpf').value;
-
-  const linhas=`
+function montarTextoChecklist(d){
+  const tipo=d.tipo,operadora=d.operadora,plano=d.plano,valor=d.valor,consultor=d.consultor,razao=d.razao,cnpj=d.cnpj,linhasQtd=d.linhas,
+    gestor=d.gestor,gestorCpf=d.gestorCpf,gestorCel=d.gestorCel,gestorFixo=d.gestorFixo,rep=d.rep,repCpf=d.repCpf,repCel=d.repCel,repFixo=d.repFixo,email=d.email,
+    tipoFatura=d.tipoFatura,tipoVenda=d.tipoVenda,dataVencimento=d.dataVencimento,fastChip=d.fastChip,local=d.local,pontoReferencia=d.pontoReferencia,
+    autNome=d.autNome,autTel=d.autTel,autRg=d.autRg,autCpf=d.autCpf;
+  return `
 📋 *CHECKLIST DE FECHAMENTO*
 ━━━━━━━━━━━━━━━━━━━━━
 
@@ -3892,7 +3885,113 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
 • RG: ${autRg||'—'}
 • CPF: ${autCpf||'—'}
 
-━━━━━━━━━━━━━━━━━━━━━`;
+━━━━━━━━━━━━━━━━━━━━━`.trim();
+}
+
+// ===== Checklist dentro do Acompanhamento de pedidos (somente leitura) =====
+function checklistDoPedidoBO(docId){
+  const bo=backofficeLista.find(function(x){return x._docId===docId;});
+  if(!bo)return null;
+  if(bo.checklist)return bo.checklist;
+  // pedidos transferidos antes do checklist ser gravado no backoffice: busca na proposta de origem
+  const prop=propostas.find(function(x){return x.backofficeId===docId;});
+  return (prop&&prop.checklist)||null;
+}
+function esc_ck(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+let _ckBoTexto='';
+function abrirChecklistBackoffice(docId){
+  const d=checklistDoPedidoBO(docId);
+  const bo=backofficeLista.find(function(x){return x._docId===docId;});
+  const corpo=document.getElementById('ckbo-corpo');
+  document.getElementById('ckbo-titulo').textContent='Checklist — '+((bo&&bo.razao)||'');
+  const podeEditar=!!bo&&podeMoverBackoffice()&&(bo.status!=='ativo'||currentUser==='master');
+  const btnEd=document.getElementById('ckbo-editar');
+  btnEd.style.display=podeEditar?'':'none';
+  btnEd.innerHTML=d?'<i class="ti ti-edit"></i> Editar checklist':'<i class="ti ti-pencil"></i> Preencher checklist';
+  btnEd.dataset.docId=docId;
+  if(!d){
+    _ckBoTexto='';
+    corpo.innerHTML='<div style="text-align:center;color:#888;padding:1.5rem 0;font-size:13px;">O consultor ainda não preencheu o checklist deste pedido.'+(podeEditar?'<br>Use o botão abaixo para preencher.':'')+'</div>';
+    document.getElementById('ckbo-copiar').style.display='none';
+  }else{
+    _ckBoTexto=montarTextoChecklist(d);
+    const linha=function(l,v){return '<div style="display:flex;gap:8px;padding:3px 0;font-size:13px;"><div style="min-width:150px;color:#888;">'+l+'</div><div style="color:#222;font-weight:500;word-break:break-word;">'+(v?esc_ck(v):'—')+'</div></div>';};
+    const sec=function(t){return '<div class="checklist-section">'+t+'</div>';};
+    const tel=function(t){return t?fmtTelChecklist(t):'';};
+    const valor=d.valor?'R$ '+Number(d.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
+    corpo.innerHTML=
+      sec('Dados do Consultor')+linha('Consultor',d.consultor)+linha('Razão social',d.razao)+linha('CNPJ',d.cnpj)+linha('Tipo do pedido',d.tipo)
+      +sec('Gestor de Conta')+linha('Nome',d.gestor)+linha('CPF',d.gestorCpf)+linha('Celular',tel(d.gestorCel))+linha('Fixo',tel(d.gestorFixo))
+      +sec('Representante Legal')+linha('Nome',d.rep)+linha('CPF',d.repCpf)+linha('Celular',tel(d.repCel))+linha('Fixo',tel(d.repFixo))+linha('E-mail',d.email)
+      +sec('Dados do Pedido')+linha('Operadora doadora',d.operadora)+linha('Qtd. de linhas',d.linhas)+linha('Plano / linhas',d.plano)+linha('Valor mensal',valor)
+      +sec('Dados do Contrato')+linha('Tipo de fatura',d.tipoFatura)+linha('Tipo de venda',d.tipoVenda)+linha('Data de vencimento',d.dataVencimento)+linha('Fast Chip',d.fastChip?'Sim':'Não')
+      +sec('Entrega dos Equipamentos')+linha('Local',d.local)+linha('Ponto de referência',d.pontoReferencia)+linha('Autorizado a receber',d.autNome)+linha('Telefone',tel(d.autTel))+linha('RG',d.autRg)+linha('CPF',d.autCpf);
+    document.getElementById('ckbo-copiar').style.display='';
+  }
+  document.getElementById('modal-checklist-bo').classList.add('open');
+}
+window.abrirChecklistBackoffice=abrirChecklistBackoffice;
+function editarChecklistBackoffice(docId){
+  const bo=backofficeLista.find(function(x){return x._docId===docId;});
+  if(!bo)return;
+  const tot=totaisProdutosBackoffice(bo);
+  const nomeCons=(USERS[bo.consultor]&&USERS[bo.consultor].nome)||'';
+  const fonte={
+    razao:bo.razao,cnpj:bo.cnpj,responsavel:bo.responsavel,telefone:bo.telefone,
+    linhas:tot.qtd||'',receita:tot.valor||'',tipo:'novo',
+    checklist:checklistDoPedidoBO(docId)||(nomeCons?{consultor:nomeCons}:null)
+  };
+  fecharModal('modal-checklist-bo');
+  abrirChecklist(docId,fonte);
+  _ckBoDocId=docId;
+  const aviso=document.getElementById('ck-gate-aviso');
+  if(aviso)aviso.style.display='none';
+  document.getElementById('btn-checklist-confirmar').innerHTML='<i class="ti ti-check"></i> Salvar checklist';
+}
+window.editarChecklistBackoffice=editarChecklistBackoffice;
+function copiarChecklistBackoffice(){
+  if(!_ckBoTexto)return;
+  const ok=function(){showNotif('Checklist copiado!');};
+  navigator.clipboard.writeText(_ckBoTexto).then(ok).catch(function(){
+    const ta=document.createElement('textarea');ta.value=_ckBoTexto;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);ok();
+  });
+}
+window.copiarChecklistBackoffice=copiarChecklistBackoffice;
+
+function copiarChecklist(){
+  const docId=document.getElementById('ck-doc-id').value;
+  if(_checklistGateDocId===docId){
+    if(!document.getElementById('ck-razao').value.trim()||!document.getElementById('ck-cnpj').value.trim()){
+      showNotif('Preencha ao menos razão social e CNPJ no checklist.',true);return;
+    }
+  }
+  const tipo=document.getElementById('ck-tipo').value;
+  const operadora=document.getElementById('ck-operadora').value;
+  const plano=document.getElementById('ck-plano').value;
+  const valor=document.getElementById('ck-valor').value;
+  const consultor=document.getElementById('ck-consultor').value;
+  const razao=document.getElementById('ck-razao').value;
+  const cnpj=document.getElementById('ck-cnpj').value;
+  const linhasQtd=document.getElementById('ck-linhas').value;
+  const gestor=document.getElementById('ck-gestor').value;
+  const gestorCpf=document.getElementById('ck-gestor-cpf').value;
+  const gestorCel=document.getElementById('ck-gestor-cel').value;
+  const gestorFixo=document.getElementById('ck-gestor-fixo').value;
+  const rep=document.getElementById('ck-rep').value;
+  const repCpf=document.getElementById('ck-rep-cpf').value;
+  const repCel=document.getElementById('ck-rep-cel').value;
+  const repFixo=document.getElementById('ck-rep-fixo').value;
+  const email=document.getElementById('ck-email').value;
+  const tipoFatura=document.getElementById('ck-tipo-fatura').value;
+  const tipoVenda=document.getElementById('ck-tipo-venda').value;
+  const dataVencimento=document.getElementById('ck-data-vencimento').value;
+  const fastChip=document.getElementById('ck-fast-chip').checked;
+  const local=document.getElementById('ck-local').value;
+  const pontoReferencia=document.getElementById('ck-ponto-referencia').value;
+  const autNome=document.getElementById('ck-aut-nome').value;
+  const autTel=document.getElementById('ck-aut-tel').value;
+  const autRg=document.getElementById('ck-aut-rg').value;
+  const autCpf=document.getElementById('ck-aut-cpf').value;
 
   // Salvar dados do checklist no Firebase para preencher automaticamente na próxima vez
   const checklistData={
@@ -3903,6 +4002,18 @@ ${plano?'• Plano/linhas portabilidade: '+plano:''}
     tipoFatura:tipoFatura,tipoVenda:tipoVenda,dataVencimento:dataVencimento,fastChip:fastChip,
     local:local,pontoReferencia:pontoReferencia,autNome:autNome,autTel:autTel,autRg:autRg,autCpf:autCpf
   };
+  if(_ckBoDocId&&_ckBoDocId===docId){
+    const boAtual=backofficeLista.find(function(x){return x._docId===docId;});
+    db.collection('backoffice').doc(docId).update({checklist:checklistData,atualizadoEm:Date.now()}).then(function(){
+      if(boAtual)boAtual.checklist=checklistData;
+      _ckBoDocId=null;
+      fecharModal('modal-checklist');
+      showNotif('Checklist salvo!');
+      abrirChecklistBackoffice(docId);
+    }).catch(function(){showNotif('Erro ao salvar o checklist.',true);});
+    return;
+  }
+  const linhas=montarTextoChecklist(checklistData);
   if(docId){
     const pAtual=propostas.find(function(x){return x._docId===docId;});
     if(pAtual)pAtual.checklist=checklistData;
