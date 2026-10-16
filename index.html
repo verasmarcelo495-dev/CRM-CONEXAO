@@ -1865,9 +1865,10 @@ function renderPipeline(){
   }
 }
 
-function onDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
-function onDragOver(e,etapaId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));e.currentTarget.closest('.kanban-col').classList.add('drag-over');}
+function onDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',id);}catch(err){}}
+function onDragOver(e,etapaId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.kanban-col-dark,.kanban-col').forEach(c=>c.classList.remove('drag-over'));const col=e.currentTarget.closest('.kanban-col-dark,.kanban-col');if(col)col.classList.add('drag-over');}
 function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+document.addEventListener('dragend',function(){document.querySelectorAll('.dragging,.drag-over').forEach(function(el){el.classList.remove('dragging','drag-over');});});
 async function transferirParaBackoffice(docId,checklistOverride){
   const p=propostas.find(x=>x._docId===docId);
   if(!p||p.backofficeId)return; // idempotente: já transferido, não duplica
@@ -1907,13 +1908,13 @@ function fecharChecklistGate(){
 window.fecharChecklistGate=fecharChecklistGate;
 
 async function onDrop(e,etapaId){
-  e.preventDefault();document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));
+  e.preventDefault();document.querySelectorAll('.kanban-col-dark,.kanban-col').forEach(c=>c.classList.remove('drag-over'));
   if(!dragId)return;
   const p=propostas.find(x=>x._docId===dragId);
   if(!p||p.etapa===etapaId){dragId=null;return;}
   if(etapaId===3){const id=dragId;dragId=null;abrirChecklistParaTransferencia(id);return;}
   try{await db.collection('propostas').doc(dragId).update({etapa:etapaId,atualizadoEm:Date.now()});showNotif(`Movido para: ${ETAPAS[etapaId].nome}`);}
-  catch(err){showNotif('Erro ao mover.',true);}
+  catch(err){console.error('Erro ao mover proposta',err);showNotif('Erro ao mover'+(err&&err.code?' ('+err.code+')':'')+'.',true);}
   dragId=null;
 }
 window.onDragStart=onDragStart;window.onDragOver=onDragOver;window.onDragLeave=onDragLeave;window.onDrop=onDrop;
@@ -2237,7 +2238,7 @@ function renderBackoffice(){
           +'</div>'
         +'</div>';
     }).join('')||'<div style="font-size:11px;color:var(--ink-3);padding:.75rem 0;text-align:center;">Vazio</div>';
-    return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" '+(podeMover?'ondragover="onDragOverBo(event,\''+etapa.id+'\')" ondragleave="onDragLeaveBo(event)" ondrop="onDropBo(event,\''+etapa.id+'\')"':'')+'>'
+    return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" '+(podeMover?'ondragenter="event.preventDefault()" ondragover="onDragOverBo(event,\''+etapa.id+'\')" ondragleave="onDragLeaveBo(event)" ondrop="onDropBo(event,\''+etapa.id+'\')"':'')+'>'
       +'<div class="kanban-col-header-dark">'
       +'<div style="width:7px;height:7px;border-radius:50%;background:'+etapa.cor+';flex-shrink:0;"></div>'
       +'<div class="kanban-col-nome">'+etapa.nome+'</div>'
@@ -2312,17 +2313,17 @@ function renderBackoffice(){
 }
 window.renderBackoffice=renderBackoffice;
 
-function onDragStartBo(e,id){if(!podeMoverBackoffice())return;dragIdBo=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function onDragStartBo(e,id){if(!podeMoverBackoffice())return;dragIdBo=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',id);}catch(err){}}
 function onDragOverBo(e,statusId){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('#view-backoffice .kanban-col-dark').forEach(c=>c.classList.remove('drag-over'));e.currentTarget.classList.add('drag-over');}
 function onDragLeaveBo(e){e.currentTarget.classList.remove('drag-over');}
 async function onDropBo(e,statusId){
   e.preventDefault();document.querySelectorAll('#view-backoffice .kanban-col-dark').forEach(c=>c.classList.remove('drag-over'));
-  if(!dragIdBo||!podeMoverBackoffice())return;
+  if(!dragIdBo||!podeMoverBackoffice()){console.warn('Soltar ignorado: sem card arrastado ou sem permissão');return;}
   const p=backofficeLista.find(x=>x._docId===dragIdBo);
   if(!p||p.status===statusId){dragIdBo=null;return;}
   const texto='Moveu de "'+nomeEtapaBackoffice(p.status)+'" para "'+nomeEtapaBackoffice(statusId)+'"';
   try{await db.collection('backoffice').doc(dragIdBo).update({status:statusId,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(dragIdBo,texto)});showNotif('Movido para: '+ETAPAS_BACKOFFICE.find(e=>e.id===statusId).nome);}
-  catch(err){showNotif('Erro ao mover.',true);}
+  catch(err){console.error('Erro ao mover pedido',err);showNotif('Erro ao mover'+(err&&err.code?' ('+err.code+')':'')+'.',true);}
   dragIdBo=null;
 }
 window.onDragStartBo=onDragStartBo;window.onDragOverBo=onDragOverBo;window.onDragLeaveBo=onDragLeaveBo;window.onDropBo=onDropBo;
