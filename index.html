@@ -1676,11 +1676,13 @@ function renderPipeline(){
         +'</div>'
         +'<div class="kc-actions">'
         +(etapaEmAndamento(p.etapa)?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="'+p.etapa+'" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'')
+        +(precisaTransferir(p)?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="3" title="Enviar ao Backoffice (preencher checklist)"><i class="ti ti-send"></i></button>':'')
         +'<button class="kc-btn azul" data-action="detalhe" data-id2="'+p._docId+'" title="Detalhes"><i class="ti ti-eye"></i></button>'
         +'<button class="kc-btn" data-action="editar" data-id2="'+p._docId+'" title="Editar"><i class="ti ti-edit"></i></button>'
         +(etapaEmAndamento(p.etapa)?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')
         +(currentUser==='master'?'<button class="kc-btn red" data-action="excluir-proposta" data-id2="'+p._docId+'" title="Excluir"><i class="ti ti-trash"></i></button>':'')
-        +(p.backofficeId?'<span class="kc-tag" style="background:rgba(29,158,117,.2);color:#34d399;">Transferido ✓</span>':'')+'</div></div>';
+        +(p.backofficeId?'<span class="kc-tag" style="background:rgba(29,158,117,.2);color:#34d399;">Transferido ✓</span>':'')
+        +(precisaTransferir(p)?'<span class="kc-tag" style="background:rgba(239,159,39,.2);color:#fbbf24;">Falta enviar ao Backoffice</span>':'')+'</div></div>';
     }).join('')||'<div style="font-size:11px;color:rgba(255,255,255,.2);padding:.75rem 0;text-align:center;">Vazio</div>';
     return '<div class="kanban-col-dark" data-etapa="'+etapa.id+'" ondragover="onDragOver(event,'+etapa.id+')" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'+etapa.id+')">'
       +'<div class="kanban-col-header-dark">'
@@ -3492,16 +3494,37 @@ async function salvarProposta(){
   const etapa=etapaVal==='perdida'?'perdida':parseInt(etapaVal);
   const consultor=currentUser==='master'?document.getElementById('p-consultor').value:currentUser;
   const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),telefone:document.getElementById('p-telefone').value.trim(),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita:document.getElementById('p-receita').value.trim(),retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
+  // "Gerar contrato" nunca é gravado direto: precisa passar pelo checklist, que é quem cria o pedido no Backoffice.
+  let irParaGate=false;
+  if(etapa===3){
+    const existente=docId?propostas.find(function(x){return x._docId===docId;}):null;
+    if(!(existente&&existente.backofficeId)){
+      irParaGate=true;
+      dados.etapa=existente?existente.etapa:2;
+    }
+  }
   try{
     setSyncStatus('carregando');
+    let idFinal=docId;
     if(docId){await db.collection('propostas').doc(docId).update(dados);}
-    else{dados.criadoEm=Date.now();await db.collection('propostas').add(dados);}
-    fecharModal('modal-proposta');showNotif(docId?'Proposta atualizada!':'Proposta adicionada!');
+    else{dados.criadoEm=Date.now();const ref=await db.collection('propostas').add(dados);idFinal=ref.id;}
+    fecharModal('modal-proposta');
+    if(irParaGate){
+      showNotif('Proposta salva. Preencha o checklist para enviar ao Backoffice.');
+      for(let i=0;i<20&&!propostas.some(function(x){return x._docId===idFinal;});i++){await new Promise(function(r){setTimeout(r,150);});}
+      abrirChecklistParaTransferencia(idFinal);
+    }else showNotif(docId?'Proposta atualizada!':'Proposta adicionada!');
   }catch(e){showNotif('Erro ao salvar.',true);setSyncStatus('erro');}
 }
 window.salvarProposta=salvarProposta;
 
+function precisaTransferir(p){return !!p&&p.etapa===3&&!p.backofficeId;} // está em "Gerar contrato" mas nunca foi enviada ao Backoffice
 async function avancarEtapa(docId,etapaAtual){
+  if(etapaAtual===3){
+    const pp=propostas.find(function(x){return x._docId===docId;});
+    if(precisaTransferir(pp)){fecharModal('modal-detalhe');abrirChecklistParaTransferencia(docId);}
+    return;
+  }
   if(etapaAtual==='perdida'||!etapaEmAndamento(etapaAtual))return;
   const nova=etapaAtual+1;
   if(nova===3){fecharModal('modal-detalhe');abrirChecklistParaTransferencia(docId);return;}
@@ -3596,7 +3619,7 @@ function verDetalhe(docId){
   document.getElementById('det-acoes').innerHTML=
     (etapaEmAndamento(p.etapa)?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
     +`<button class="btn btn-purple" onclick="fecharModal('modal-detalhe');editarProposta('${p._docId}');"><i class="ti ti-edit"></i> Editar</button>`
-    +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');${etapaEmAndamento(p.etapa)?'abrirChecklistParaTransferencia':'abrirChecklist'}('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
+    +`<button class="btn btn-verde" onclick="fecharModal('modal-detalhe');${(etapaEmAndamento(p.etapa)||precisaTransferir(p))?'abrirChecklistParaTransferencia':'abrirChecklist'}('${p._docId}');"><i class="ti ti-clipboard-check"></i> Checklist</button>`
     +`<button class="btn btn-azul" onclick="fecharModal('modal-detalhe');abrirModalProposta('${p._docId}');"><i class="ti ti-presentation"></i> Proposta</button>`
     +`<button class="btn" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>`
     +`<button class="btn" onclick="fecharModal('modal-detalhe')">Fechar</button>`;
