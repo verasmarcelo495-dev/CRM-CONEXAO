@@ -1118,14 +1118,19 @@ function cleanTel(t){return t.replace(/\D/g,'');}
 function initials(n){return n.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();}
 function getPropostas(){return currentUser==='master'?propostas:propostas.filter(p=>p.consultor===currentUser);}
 function podeMoverBackoffice(){return currentUser==='master'||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
+function veTudoBackoffice(){return podeMoverBackoffice();} // master e usuários com acesso ao Backoffice veem todos os pedidos/renovações
 function tipoBadge(tipo){const t=TIPOS[tipo]||TIPOS.novo;return`<span class="badge ${t.cls}">${t.label}</span>`;}
 function telLinks(tel){if(!tel)return'';const d=cleanTel(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
 
 function iniciarSync(){
   if(_unsub)_unsub();setSyncStatus('carregando');
   try{
-    _unsub=db.collection('propostas').orderBy('criadoEm','desc').onSnapshot(function(snap){
+    // Consultor só consulta as próprias propostas (as regras do Firestore exigem esse filtro).
+    // Sem orderBy no filtro de consultor para não exigir índice composto; ordena aqui.
+    const q=currentUser==='master'?db.collection('propostas').orderBy('criadoEm','desc'):db.collection('propostas').where('consultor','==',currentUser);
+    _unsub=q.onSnapshot(function(snap){
       propostas=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
+      if(currentUser!=='master')propostas.sort(function(a,b){return(b.criadoEm||0)-(a.criadoEm||0);});
       setSyncStatus('ok');
       atualizarAlertaHeader();
       if(currentTab==='dashboard')renderDashboard();
@@ -1136,6 +1141,27 @@ function iniciarSync(){
       else if(currentTab==='usuarios')renderUsuarios();
     },function(err){console.error(err);setSyncStatus('erro');});
   }catch(e){setSyncStatus('erro');}
+}
+
+// Índice reverso uid -> chave dentro de config/uid_map (campo "_rev"). As regras do Firestore usam isso
+// para saber (1) se o UID logado é um usuário cadastrado e (2) qual a chave dele (para filtrar por consultor).
+function construirUidRev(map){
+  const rev={};
+  Object.keys(map).forEach(function(k){if(k!=='_rev'&&typeof map[k]==='string')rev[map[k]]=k;});
+  return rev;
+}
+async function sincronizarUidRev(){
+  try{
+    const ref=db.collection('config').doc('uid_map');
+    const snap=await ref.get();
+    if(!snap.exists)return;
+    const map=snap.data();
+    const rev=construirUidRev(map);
+    if(JSON.stringify(rev,Object.keys(rev).sort())!==JSON.stringify(map._rev||{},Object.keys(map._rev||{}).sort())){
+      map._rev=rev;
+      await ref.set(map);
+    }
+  }catch(e){console.error('Falha ao sincronizar índice de usuários',e);}
 }
 
 async function fazerLogin(){
@@ -1159,7 +1185,12 @@ async function fazerLogin(){
     const uid=cred.user.uid;
     
     // Buscar qual "chave" de usuário (master/karla/lucas/etc) corresponde a esse UID
-    const snap=await db.collection('config').doc('uid_map').get();
+    let snap;
+    try{snap=await db.collection('config').doc('uid_map').get();}
+    catch(eMap){
+      if(eMap.code==='permission-denied'){snap={exists:false};} // conta existe no Firebase Auth mas não foi cadastrada pelo gestor
+      else throw eMap;
+    }
     let userKey=null;
     if(snap.exists){
       const map=snap.data();
@@ -1169,6 +1200,7 @@ async function fazerLogin(){
     if(!userKey){
       msgEl.textContent='Usu\u00e1rio n\u00e3o vinculado a nenhum perfil. Fale com o gestor.';
       errEl.style.display='flex';
+      auth.signOut().catch(function(){});
       if(btnLoginEl){btnLoginEl.disabled=false;btnLoginEl.innerHTML='<i class="ti ti-login"></i> Entrar';}
       return;
     }
@@ -1208,10 +1240,17 @@ async function login(user){
   document.getElementById('login-senha').value='';
   document.getElementById('p-etapa').innerHTML=ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
-  loadUsersFirebase().then(function(){renderUsuarios();atualizarSelectsConsultor();});iniciarSync();iniciarSyncRenovacoes();iniciarSyncBackoffice();setTab('dashboard');
+  // Perfis precisam estar carregados antes dos listeners (a permissão de Backoffice define quais consultas são feitas)
+  await loadUsersFirebase();
+  renderUsuarios();atualizarSelectsConsultor();
+  if(user==='master')sincronizarUidRev();
+  iniciarSync();iniciarSyncRenovacoes();iniciarSyncBackoffice();setTab('dashboard');
 }
 function logout(){
   if(_unsub){_unsub();_unsub=null;}
+  if(_unsubRen){_unsubRen();_unsubRen=null;}
+  if(_unsubBo){_unsubBo();_unsubBo=null;}
+  propostas=[];renovacoes=[];backofficeLista=[];
   currentUser=null;
   auth.signOut().catch(function(e){});
   document.getElementById('view-login').style.display='flex';
@@ -1906,8 +1945,10 @@ function renderLinhasRenovacao(){
 function iniciarSyncRenovacoes(){
   if(_unsubRen)_unsubRen();
   try{
-    _unsubRen=db.collection('renovacoes').orderBy('criadoEm','desc').onSnapshot(function(snap){
+    const qr=veTudoBackoffice()?db.collection('renovacoes').orderBy('criadoEm','desc'):db.collection('renovacoes').where('consultor','==',currentUser);
+    _unsubRen=qr.onSnapshot(function(snap){
       renovacoes=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
+      if(!veTudoBackoffice())renovacoes.sort(function(a,b){return(b.criadoEm||0)-(a.criadoEm||0);});
       if(currentTab==='renovacoes')renderRenovacoes();
     },function(err){console.error(err);});
   }catch(e){}
@@ -1937,8 +1978,10 @@ let backofficeLista=[],_unsubBo=null,dragIdBo=null;
 function iniciarSyncBackoffice(){
   if(_unsubBo)_unsubBo();
   try{
-    _unsubBo=db.collection('backoffice').orderBy('criadoEm','desc').onSnapshot(function(snap){
+    const qb=veTudoBackoffice()?db.collection('backoffice').orderBy('criadoEm','desc'):db.collection('backoffice').where('consultor','==',currentUser);
+    _unsubBo=qb.onSnapshot(function(snap){
       backofficeLista=snap.docs.map(function(d){return Object.assign({},d.data(),{_docId:d.id});});
+      if(!veTudoBackoffice())backofficeLista.sort(function(a,b){return(b.criadoEm||0)-(a.criadoEm||0);});
       if(currentTab==='backoffice')renderBackoffice();
       else if(currentTab==='pipeline')renderPipeline();
     },function(err){console.error(err);});
@@ -4266,7 +4309,7 @@ function removerUsuario(key){
       const mapSnap=await db.collection('config').doc('uid_map').get();
       if(mapSnap.exists){
         const map=mapSnap.data();
-        if(map[key]){delete map[key];await db.collection('config').doc('uid_map').set(map);}
+        if(map[key]){delete map[key];map._rev=construirUidRev(map);await db.collection('config').doc('uid_map').set(map);}
       }
     }catch(e){}
     renderUsuarios();showNotif('Consultor removido.');
@@ -4328,6 +4371,7 @@ async function salvarUsuario(){
       const mapSnap=await db.collection('config').doc('uid_map').get();
       const map=mapSnap.exists?mapSnap.data():{};
       map[keyInput]=novoUid;
+      map._rev=construirUidRev(map);
       await db.collection('config').doc('uid_map').set(map);
       
       USERS[keyInput]={nome,role:'Consultor',bg:AVATAR_COLORS[idxColor].bg,c:AVATAR_COLORS[idxColor].c,nomeCompleto:nomeCompleto||nome,telProp,emailProp,meta,email:emailLogin,podeBackoffice};

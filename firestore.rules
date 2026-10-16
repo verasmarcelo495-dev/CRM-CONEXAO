@@ -6,43 +6,89 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function mapaUsuarios() {
+      return get(/databases/$(database)/documents/config/uid_map).data;
+    }
+
     // "master" é definido exatamente como o app já faz: o UID logado precisa
     // bater com o valor salvo em config/uid_map.master.
     function souMaster() {
-      return estaLogado()
-        && get(/databases/$(database)/documents/config/uid_map).data.master == request.auth.uid;
+      return estaLogado() && mapaUsuarios().master == request.auth.uid;
     }
 
-    // Propostas e Renovações: qualquer usuário logado pode ler/gravar,
-    // igual ao comportamento atual do CRM (todos os consultores veem tudo).
+    // Usuário REALMENTE cadastrado pelo gestor: o UID precisa estar no índice
+    // reverso config/uid_map._rev (uid -> chave). Quem criar uma conta no Firebase
+    // Auth por fora (a chave da API é pública) não entra aqui e não acessa nada.
+    function registrado() {
+      return souMaster()
+        || (estaLogado() && (request.auth.uid in mapaUsuarios().get('_rev', {})));
+    }
+
+    // Chave do usuário logado (master, karla, lucas, ...). Só usar depois de registrado().
+    function minhaChave() {
+      return mapaUsuarios()._rev[request.auth.uid];
+    }
+
+    // Consultor com a permissão "Acesso ao Backoffice" (config/usuarios.<chave>.podeBackoffice).
+    function souBackoffice() {
+      return registrado() && (
+        souMaster() ||
+        get(/databases/$(database)/documents/config/usuarios).data
+          .get(minhaChave(), {}).get('podeBackoffice', false) == true
+      );
+    }
+
+    // Propostas: master vê/edita tudo; consultor só as próprias (campo "consultor"
+    // = chave dele). O app já consulta com where('consultor','==',chave).
+    // Excluir: só o master.
     match /propostas/{docId} {
-      allow read, create, update: if estaLogado();
-      allow delete: if estaLogado();
+      allow read: if souMaster()
+        || (registrado() && resource.data.consultor == minhaChave());
+      allow create: if souMaster()
+        || (registrado() && request.resource.data.consultor == minhaChave());
+      allow update: if souMaster()
+        || (registrado()
+            && resource.data.consultor == minhaChave()
+            && request.resource.data.consultor == minhaChave());
+      allow delete: if souMaster();
     }
 
+    // Renovações: master e quem tem acesso ao Backoffice veem tudo (o Backoffice cria
+    // a renovação do consultor ao ativar um pedido); consultor só as próprias.
     match /renovacoes/{docId} {
-      allow read, create, update, delete: if estaLogado();
+      allow read, delete: if souBackoffice()
+        || (registrado() && resource.data.consultor == minhaChave());
+      allow create: if souBackoffice()
+        || (registrado() && request.resource.data.consultor == minhaChave());
+      allow update: if souBackoffice()
+        || (registrado()
+            && resource.data.consultor == minhaChave()
+            && request.resource.data.consultor == minhaChave());
     }
 
-    // Backoffice: leitura/criação para qualquer logado. Alterar ou excluir um
-    // pedido que já está "ativo" só pode o master (mesma regra já aplicada na tela).
+    // Backoffice: master e quem tem acesso ao Backoffice veem tudo; consultor vê só
+    // os pedidos dele (campo "consultor") e pode criar o pedido ao enviar do Pipeline
+    // para "Gerar contrato". Alterar/excluir: só quem tem acesso ao Backoffice, e um
+    // pedido já "ativo" só o master pode mexer (mesma regra da tela).
     match /backoffice/{docId} {
-      allow read, create: if estaLogado();
-      allow update, delete: if estaLogado()
-        && (resource.data.status != 'ativo' || souMaster());
+      allow read: if souBackoffice()
+        || (registrado() && resource.data.consultor == minhaChave());
+      allow create: if souBackoffice()
+        || (registrado() && request.resource.data.consultor == minhaChave());
+      allow update, delete: if souMaster()
+        || (souBackoffice() && resource.data.status != 'ativo');
     }
 
-    // Mapeamento de UID -> usuário: qualquer logado precisa poder ler (é usado
-    // no login para descobrir quem é quem). Só o master pode escrever aqui,
-    // porque é aqui que se decide quem é master.
+    // Mapeamento de UID -> usuário (e índice reverso "_rev"): só usuários cadastrados
+    // leem (é usado no login). Só o master escreve, porque é aqui que se decide quem é master.
     match /config/uid_map {
-      allow read: if estaLogado();
+      allow read: if registrado();
       allow write: if souMaster();
     }
 
-    // Perfis dos consultores: leitura liberada para logados, escrita só master.
+    // Perfis dos consultores: leitura para cadastrados, escrita só master.
     match /config/usuarios {
-      allow read: if estaLogado();
+      allow read: if registrado();
       allow write: if souMaster();
     }
 
@@ -51,21 +97,19 @@ service cloud.firestore {
       allow read, write: if souMaster();
     }
 
-    // Modelos de mensagem do disparo em massa: qualquer logado pode ver/editar
-    // (é só um rascunho compartilhado, não tem dado sensível).
+    // Modelos de mensagem do disparo em massa (rascunho compartilhado, sem dado sensível).
     match /config/disparo_templates {
-      allow read, write: if estaLogado();
+      allow read, write: if registrado();
     }
 
     // Disparo de WhatsApp: histórico de campanhas em massa. Só o backend
-    // (Admin SDK, que ignora estas regras) grava aqui; o CRM só lê, pra
-    // alimentar o dashboard e a tela de último disparo.
+    // (Admin SDK, que ignora estas regras) grava aqui; o CRM só lê.
     match /disparos_lote/{campanhaId} {
-      allow read: if estaLogado();
+      allow read: if registrado();
       allow write: if false;
 
       match /itens/{itemId} {
-        allow read: if estaLogado();
+        allow read: if registrado();
         allow write: if false;
       }
     }
