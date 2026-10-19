@@ -4091,15 +4091,24 @@ async function buscarDadosCNPJ(raw){
   raw=String(raw||'').replace(/\D/g,'');
   if(!validarCNPJ(raw)){var e0=new Error('CNPJ inválido');e0.motivo='invalido';throw e0;}
   if(_cnpjCache[raw])return _cnpjCache[raw];
-  var res;
-  try{
-    var ctrl=new AbortController();var t=setTimeout(function(){ctrl.abort();},15000);
-    res=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+raw,{signal:ctrl.signal});
-    clearTimeout(t);
-  }catch(err){var e1=new Error('Sem conexão com a consulta');e1.motivo='rede';throw e1;}
-  if(res.status===404||res.status===400){var e2=new Error('CNPJ não encontrado');e2.motivo='naoencontrado';throw e2;}
-  if(res.status===429){var e3=new Error('Muitas consultas');e3.motivo='limite';throw e3;}
-  if(!res.ok){var e4=new Error('Consulta indisponível');e4.motivo='rede';throw e4;}
+  // Fonte principal: BrasilAPI. Se estiver fora do ar/lenta, tenta a Minha Receita (mesmos campos).
+  var fontes=['https://brasilapi.com.br/api/cnpj/v1/','https://minhareceita.org/'];
+  var res=null,ultimoErro=null;
+  for(var i=0;i<fontes.length;i++){
+    try{
+      var ctrl=new AbortController();var t=setTimeout(function(){ctrl.abort();},10000);
+      var r=await fetch(fontes[i]+raw,{signal:ctrl.signal});
+      clearTimeout(t);
+      if(r.status===404||r.status===400){var e2=new Error('CNPJ não encontrado');e2.motivo='naoencontrado';throw e2;}
+      if(r.status===429){ultimoErro='limite';continue;}
+      if(!r.ok){ultimoErro='rede';continue;}
+      res=r;break;
+    }catch(err){
+      if(err&&err.motivo)throw err;
+      ultimoErro='rede';
+    }
+  }
+  if(!res){var e3=new Error('Consulta indisponível');e3.motivo=ultimoErro||'rede';throw e3;}
   var d=await res.json();
   var tels=[];
   [d.ddd_telefone_1,d.ddd_telefone_2].forEach(function(t){var n=String(t||'').replace(/\D/g,'');if(n.length>=10&&tels.indexOf(n)<0)tels.push(n);});
@@ -4174,7 +4183,7 @@ function renderHistoricoCNPJ(raw){
   if(h.pedidos.length){
     out+='<div class="cn-sub">Pedidos no Backoffice</div>'+h.pedidos.map(function(p){
       var tot=totaisProdutosBackoffice(p);
-      var prods=(p.produtos||[]).map(function(x){return escHtml(x.nome)+' ('+(x.quantidade||0)+'x)';}).join(', ')||'—';
+      var prods=(p.produtos||[]).filter(Boolean).map(function(x){return escHtml(x.nome)+' ('+(x.quantidade||0)+'x)';}).join(', ')||'—';
       return '<div class="cn-linha"><div><b>'+escHtml(nomeEtapaBackoffice(p.status))+'</b>'+(p.dataAtivacao?' · ativado em '+fmtDataBR(p.dataAtivacao):'')+'<div class="cn-mut">'+prods+'</div></div><div class="cn-dir">'+tot.qtd+' linhas<div class="cn-mut">'+escHtml(nomeConsultorCRM(p.consultor))+'</div></div></div>';
     }).join('');
   }
@@ -4191,6 +4200,10 @@ function renderHistoricoCNPJ(raw){
     }).join('');
   }
   return out;
+}
+function historicoSeguroCNPJ(raw){
+  try{return renderHistoricoCNPJ(raw);}
+  catch(e){console.error('Falha ao montar o histórico do CNPJ',e);return '<div class="empty">Não foi possível montar o histórico deste CNPJ.</div>';}
 }
 async function consultarCNPJTela(){
   var inp=document.getElementById('cn-input');var box=document.getElementById('cn-resultado');var btn=document.getElementById('cn-btn');
@@ -4220,9 +4233,10 @@ async function consultarCNPJTela(){
       +'<div class="cn-acoes"><button class="btn btn-primary" type="button" onclick="criarPropostaDaConsulta()"><i class="ti ti-file-plus"></i> Criar proposta com esses dados</button>'
       +'<button class="btn" type="button" onclick="copiarResumoConsulta()"><i class="ti ti-copy"></i> Copiar resumo</button></div>'
       +'</div>'
-      +'<div class="cn-card"><div class="cn-tit">Histórico no CRM</div>'+renderHistoricoCNPJ(d.cnpj)+'</div>';
+      +'<div class="cn-card"><div class="cn-tit">Histórico no CRM</div>'+historicoSeguroCNPJ(d.cnpj)+'</div>';
   }catch(e){
-    box.innerHTML='<div class="cnpj-err" style="display:block;">'+escHtml(msgErroCNPJ(e))+'</div>'+(e&&e.motivo==='naoencontrado'||e&&e.motivo==='invalido'?'':'');
+    if(!(e&&e.motivo))console.error('Erro na consulta de CNPJ',e);
+    box.innerHTML='<div class="cnpj-err" style="display:block;">'+escHtml(msgErroCNPJ(e))+(e&&!e.motivo?' (detalhe: '+escHtml(e.message)+')':'')+'</div>';
     _consultaAtual=null;
   }finally{btn.disabled=false;}
 }
