@@ -131,6 +131,10 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .lb-bot i{width:5px;height:5px;border-radius:50%;background:#1A64F5;display:inline-block;}
 .login-side{position:relative;display:flex;align-items:center;justify-content:center;padding:32px 20px;}
 .login-box{background:var(--surface);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);padding:2rem;width:100%;max-width:400px;}
+.login-ok{background:var(--green-bg);border:1px solid var(--ok);border-radius:var(--radius);padding:8px 12px;font-size:13px;color:var(--green-ink);margin-bottom:1rem;display:none;align-items:flex-start;gap:6px;line-height:1.4;}
+.link-btn{background:none;border:none;padding:0;color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
+.link-btn:hover{text-decoration:underline;}
+.link-btn:disabled{color:var(--ink-3);cursor:default;text-decoration:none;}
 .login-box h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px;}
 .login-box .sub{font-size:13px;color:var(--ink-2);margin-bottom:1.5rem;}
 .login-mini{display:none;align-items:center;gap:10px;margin-bottom:1.25rem;}
@@ -396,7 +400,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
           <button onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-3);padding:0;" id="btn-eye" aria-label="Mostrar ou ocultar senha"><i class="ti ti-eye"></i></button>
         </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;margin:-4px 0 14px;"><button type="button" class="link-btn" id="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button></div>
       <div class="login-err" id="login-err"><i class="ti ti-alert-circle"></i> <span id="login-err-msg">E-mail ou senha incorretos.</span></div>
+      <div class="login-ok" id="login-ok"><i class="ti ti-mail-check"></i> <span id="login-ok-msg"></span></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;height:42px;" id="btn-login"><i class="ti ti-login"></i> Entrar</button>
     </div>
   </div>
@@ -1323,6 +1329,38 @@ async function sincronizarUidRev(){
     }
   }catch(e){console.error('Falha ao sincronizar índice de usuários',e);}
 }
+
+
+// ===== ESQUECI MINHA SENHA =====
+var _esqueciAte=0;
+async function esqueciSenha(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('login-err'),msgEl=document.getElementById('login-err-msg');
+  const okEl=document.getElementById('login-ok'),okMsg=document.getElementById('login-ok-msg');
+  const btn=document.getElementById('btn-esqueci');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!email||email.indexOf('@')<1){msgEl.textContent='Digite seu e-mail no campo acima e clique em "Esqueci minha senha" de novo.';errEl.style.display='flex';return;}
+  if(Date.now()<_esqueciAte)return;
+  btn.disabled=true;btn.textContent='Enviando...';
+  let ok=true;
+  try{
+    auth.languageCode='pt-BR';
+    await auth.sendPasswordResetEmail(email,{url:location.origin+'/'});
+  }catch(e){
+    if(e.code==='auth/invalid-email'){ok=false;msgEl.textContent='E-mail inválido. Confira e tente de novo.';}
+    else if(e.code==='auth/too-many-requests'){ok=false;msgEl.textContent='Muitas tentativas. Aguarde alguns minutos e tente de novo.';}
+    else if(e.code==='auth/network-request-failed'){ok=false;msgEl.textContent='Sem conexão. Verifique a internet e tente de novo.';}
+    // e-mail não cadastrado: mesma resposta de sucesso, para não revelar quem tem conta
+  }
+  if(ok){
+    okMsg.textContent='Se esse e-mail estiver cadastrado, enviamos um link para criar uma nova senha. Confira também a caixa de spam.';
+    okEl.style.display='flex';
+  }else errEl.style.display='flex';
+  _esqueciAte=Date.now()+30000;
+  let seg=30;btn.textContent='Reenviar em '+seg+'s';
+  const t=setInterval(function(){seg--;if(seg<=0){clearInterval(t);btn.disabled=false;btn.textContent='Esqueci minha senha';}else btn.textContent='Reenviar em '+seg+'s';},1000);
+}
+window.esqueciSenha=esqueciSenha;
 
 async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim();
