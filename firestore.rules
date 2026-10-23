@@ -79,6 +79,42 @@ service cloud.firestore {
         || (souBackoffice() && resource.data.status != 'ativo');
     }
 
+    // Documentos anexados ao cliente (RG, contrato social etc.). "anexos" guarda os dados do arquivo e
+    // a subcoleção "partes" guarda o conteúdo em base64 (até 8 partes de ~700 KB). Mesma regra de acesso
+    // dos pedidos: master/Backoffice veem tudo; consultor só o que é dele (campo "consultor").
+    function anexoPai(aid) {
+      return get(/databases/$(database)/documents/anexos/$(aid)).data;
+    }
+
+    match /anexos/{aid} {
+      allow read: if souBackoffice()
+        || (registrado() && resource.data.consultor == minhaChave());
+      allow create: if (souBackoffice()
+        || (registrado() && request.resource.data.consultor == minhaChave()))
+        && request.resource.data.tamanho <= 4194304
+        && request.resource.data.partes <= 8;
+      allow update: if souBackoffice()
+        || (registrado()
+            && resource.data.consultor == minhaChave()
+            && request.resource.data.consultor == minhaChave());
+      allow delete: if souBackoffice()
+        || (registrado()
+            && resource.data.consultor == minhaChave()
+            && resource.data.autor == minhaChave());
+
+      match /partes/{pid} {
+        allow read: if souBackoffice()
+          || (registrado() && anexoPai(aid).consultor == minhaChave());
+        allow delete: if souBackoffice()
+          || (registrado()
+              && anexoPai(aid).consultor == minhaChave()
+              && anexoPai(aid).autor == minhaChave());
+        allow create: if (souBackoffice()
+          || (registrado() && anexoPai(aid).consultor == minhaChave()))
+          && request.resource.data.dados.size() <= 800000;
+      }
+    }
+
     // Mapeamento de UID -> usuário (e índice reverso "_rev"): só usuários cadastrados
     // leem (é usado no login). Só o master escreve, porque é aqui que se decide quem é master.
     match /config/uid_map {

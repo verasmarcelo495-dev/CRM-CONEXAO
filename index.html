@@ -814,6 +814,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <div style="text-align:right;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:1rem;">Total do pedido: <span id="bo-produtos-total">R$ 0,00</span></div>
     <div class="form-group" id="bo-wrap-consultor"><label class="form-label">Consultor responsável pela venda</label><select id="bo-consultor"><option value="">—</option></select></div>
     <div class="form-group"><label class="form-label">Observações / pendências</label><textarea id="bo-obs" placeholder="Ex: aguardando documento do cliente..."></textarea></div>
+    <div id="bo-anexos" style="margin-top:1rem;"></div>
     <div id="bo-historico-wrap" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
       <div style="font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Histórico de movimentação</div>
       <div id="bo-historico"></div>
@@ -2497,6 +2498,8 @@ function abrirModalBackoffice(docId,readOnly){
   if(footer)footer.style.display=isReadOnly?'none':'';
   titulo.innerHTML=isReadOnly?'<i class="ti ti-eye"></i> Detalhes do pedido':(docId?'<i class="ti ti-edit"></i> Editar pedido':'<i class="ti ti-truck-delivery"></i> Novo pedido');
   renderHistoricoBackoffice(p);
+  if(p)montarAnexos('bo-anexos',{cnpj:p.cnpj,consultor:p.consultor,origem:'backoffice:'+docId,razao:p.razao});
+  else{var boAx=document.getElementById('bo-anexos');if(boAx)boAx.innerHTML='';delete _anexosCtx['bo-anexos'];}
   document.getElementById('bo-checklist-wrap').style.display=docId?'':'none';
   document.getElementById('modal-backoffice').classList.add('open');
 }
@@ -3824,6 +3827,144 @@ async function reativar(docId){
 }
 window.reativar=reativar;
 
+
+// ========= DOCUMENTOS ANEXADOS (guardados no Firestore, em partes) =========
+// Cada anexo = 1 documento em "anexos" (dados do arquivo) + subcoleção "partes" com o conteúdo em base64.
+// Chave do cliente = CNPJ, então os documentos acompanham o cliente do Pipeline até o Backoffice.
+var ANEXO_MAX_BYTES=4*1024*1024, ANEXO_PARTE=700000, ANEXO_LADO_MAX=1600;
+var _anexosCtx={};
+function chaveCNPJ(c){return String(c||'').replace(/\D/g,'');}
+function fmtBytes(n){n=Number(n)||0;return n>=1048576?(n/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(n/1024))+' KB';}
+function veTodosAnexos(){return currentUser==='master'||podeMoverBackoffice();}
+function podeExcluirAnexo(a){return veTodosAnexos()||a.autor===currentUser;}
+
+function montarAnexos(elId,ctx){
+  var el=document.getElementById(elId);if(!el)return;
+  _anexosCtx[elId]=ctx;
+  var titulo='<div class="prop-section" style="margin-top:0;">Documentos do cliente</div>';
+  var cnpj=chaveCNPJ(ctx.cnpj);
+  if(cnpj.length!==14){
+    el.innerHTML=titulo+'<div class="empty">Preencha o CNPJ do cliente (botão Editar) para anexar documentos.</div>';return;
+  }
+  el.innerHTML=titulo
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
+    +'<button class="btn-sm" type="button" id="'+elId+'-btn" onclick="document.getElementById(\''+elId+'-file\').click()"><i class="ti ti-paperclip"></i> Anexar documento</button>'
+    +'<span style="font-size:11px;color:var(--ink-3);">PDF ou imagem (JPG, PNG), até 4 MB cada. Fotos são reduzidas automaticamente.</span>'
+    +'<input type="file" id="'+elId+'-file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" style="display:none;" onchange="anexarArquivos(\''+elId+'\',this.files);this.value=\'\';"/>'
+    +'</div><div id="'+elId+'-lista" style="font-size:13px;"><div class="empty">Carregando documentos...</div></div>';
+  listarAnexos(elId);
+}
+window.montarAnexos=montarAnexos;
+
+async function listarAnexos(elId){
+  var ctx=_anexosCtx[elId];var lista=document.getElementById(elId+'-lista');if(!ctx||!lista)return;
+  var cnpj=chaveCNPJ(ctx.cnpj);
+  try{
+    var q=db.collection('anexos').where('chave','==',cnpj);
+    if(!veTodosAnexos())q=q.where('consultor','==',currentUser);
+    var snap=await q.get();
+    if(_anexosCtx[elId]!==ctx)return;
+    var docs=snap.docs.map(function(d){return Object.assign({_id:d.id},d.data());}).filter(function(a){return a.completo;}).sort(function(a,b){return(b.criadoEm||0)-(a.criadoEm||0);});
+    if(!docs.length){lista.innerHTML='<div class="empty">Nenhum documento anexado ainda.</div>';return;}
+    lista.innerHTML=docs.map(function(a){
+      var ehPdf=a.tipo==='application/pdf';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);">'
+        +'<i class="ti '+(ehPdf?'ti-file-type-pdf':'ti-photo')+'" style="font-size:20px;color:var(--ink-3);flex-shrink:0;"></i>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a.nome)+'</div>'
+        +'<div style="font-size:11px;color:var(--ink-3);">'+fmtBytes(a.tamanho)+' · '+escHtml((USERS[a.autor]&&USERS[a.autor].nome)||a.autor||'—')+' · '+(a.criadoEm?new Date(a.criadoEm).toLocaleDateString('pt-BR'):'')+'</div></div>'
+        +'<button class="btn-sm" type="button" title="Abrir" onclick="baixarAnexo(\''+a._id+'\',true)"><i class="ti ti-eye"></i></button>'
+        +'<button class="btn-sm" type="button" title="Baixar" onclick="baixarAnexo(\''+a._id+'\',false)"><i class="ti ti-download"></i></button>'
+        +(podeExcluirAnexo(a)?'<button class="btn-sm btn-del" type="button" title="Excluir" onclick="excluirAnexo(\''+a._id+'\',\''+elId+'\')"><i class="ti ti-trash"></i></button>':'')
+        +'</div>';
+    }).join('');
+  }catch(e){
+    console.error('Erro ao listar anexos',e);
+    lista.innerHTML='<div class="empty">Não foi possível carregar os documentos'+(e&&e.code?' ('+escHtml(e.code)+')':'')+'.</div>';
+  }
+}
+
+function blobParaBase64(blob){
+  return new Promise(function(ok,erro){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'');};r.onerror=function(){erro(r.error);};r.readAsDataURL(blob);});
+}
+function reduzirImagem(file){
+  return new Promise(function(ok,erro){
+    var url=URL.createObjectURL(file);var img=new Image();
+    img.onload=function(){
+      var w=img.naturalWidth,h=img.naturalHeight,esc=Math.min(1,ANEXO_LADO_MAX/Math.max(w,h));
+      var c=document.createElement('canvas');c.width=Math.round(w*esc);c.height=Math.round(h*esc);
+      var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){b?ok(b):erro(new Error('Falha ao reduzir a imagem'));},'image/jpeg',0.8);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);erro(new Error('Imagem inválida'));};
+    img.src=url;
+  });
+}
+
+async function anexarArquivos(elId,files){
+  var ctx=_anexosCtx[elId];if(!ctx||!files||!files.length)return;
+  var cnpj=chaveCNPJ(ctx.cnpj);var btn=document.getElementById(elId+'-btn');
+  if(btn)btn.disabled=true;
+  var enviados=0;
+  for(var k=0;k<files.length;k++){
+    var f=files[k];var nome=f.name;var tipo=f.type;var blob=f;
+    try{
+      if(tipo!=='application/pdf'&&!/^image\/(jpeg|png|webp)$/.test(tipo)){showNotif('"'+nome+'": use PDF, JPG ou PNG.',true);continue;}
+      if(tipo!=='application/pdf'){blob=await reduzirImagem(f);tipo='image/jpeg';nome=nome.replace(/\.[^.]+$/,'')+'.jpg';}
+      if(blob.size>ANEXO_MAX_BYTES){showNotif('"'+nome+'" passa de 4 MB. Reduza ou divida o arquivo.',true);continue;}
+      showNotif('Enviando "'+nome+'"...');
+      var b64=await blobParaBase64(blob);
+      var partes=[];for(var i=0;i<b64.length;i+=ANEXO_PARTE)partes.push(b64.slice(i,i+ANEXO_PARTE));
+      var ref=db.collection('anexos').doc();
+      await ref.set({chave:cnpj,cnpj:cnpj,consultor:ctx.consultor||'',autor:currentUser,nome:nome,tipo:tipo,tamanho:blob.size,partes:partes.length,completo:false,origem:ctx.origem||'',razao:ctx.razao||'',criadoEm:Date.now()});
+      try{
+        for(var j=0;j<partes.length;j++){await ref.collection('partes').doc(String(j).padStart(3,'0')).set({i:j,dados:partes[j]});}
+        await ref.update({completo:true});
+        enviados++;
+      }catch(e2){
+        try{var ps=await ref.collection('partes').get();await Promise.all(ps.docs.map(function(d){return d.ref.delete();}));await ref.delete();}catch(e3){}
+        throw e2;
+      }
+    }catch(e){
+      console.error('Erro ao anexar',e);
+      showNotif('Não foi possível anexar "'+nome+'"'+(e&&e.code?' ('+e.code+')':'')+'.',true);
+    }
+  }
+  if(btn)btn.disabled=false;
+  if(enviados)showNotif(enviados===1?'Documento anexado.':enviados+' documentos anexados.');
+  listarAnexos(elId);
+}
+window.anexarArquivos=anexarArquivos;
+
+async function baixarAnexo(id,abrir){
+  try{
+    var snap=await db.collection('anexos').doc(id).get();
+    if(!snap.exists){showNotif('Documento não encontrado.',true);return;}
+    var a=snap.data();
+    var ps=await db.collection('anexos').doc(id).collection('partes').orderBy('i').get();
+    var b64=ps.docs.map(function(d){return d.data().dados;}).join('');
+    var bin=atob(b64);var bytes=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([bytes],{type:a.tipo||'application/octet-stream'}));
+    if(abrir){window.open(url,'_blank');}
+    else{var l=document.createElement('a');l.href=url;l.download=a.nome||'documento';document.body.appendChild(l);l.click();document.body.removeChild(l);}
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  }catch(e){console.error('Erro ao baixar anexo',e);showNotif('Não foi possível abrir o documento'+(e&&e.code?' ('+e.code+')':'')+'.',true);}
+}
+window.baixarAnexo=baixarAnexo;
+
+async function excluirAnexo(id,elId){
+  if(!confirm('Excluir este documento? Essa ação não pode ser desfeita.'))return;
+  try{
+    var ref=db.collection('anexos').doc(id);
+    var ps=await ref.collection('partes').get();
+    await Promise.all(ps.docs.map(function(d){return d.ref.delete();}));
+    await ref.delete();
+    showNotif('Documento excluído.');
+    listarAnexos(elId);
+  }catch(e){console.error('Erro ao excluir anexo',e);showNotif('Não foi possível excluir'+(e&&e.code?' ('+e.code+')':'')+'.',true);}
+}
+window.excluirAnexo=excluirAnexo;
+
 function verDetalhe(docId){
   const p=propostas.find(x=>x._docId===docId);if(!p)return;
   const e=infoEtapa(p.etapa);
@@ -3844,7 +3985,9 @@ function verDetalhe(docId){
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Qtd. linhas</div><div>${p.linhas||'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Receita mensal</div><div>${p.receita?fmtMoeda(p.receita):'—'}</div></div>
     </div>
-    ${p.obs?`<div style="font-size:13px;background:var(--surface-2);padding:8px 10px;border-radius:6px;color:var(--ink-2);">${p.obs}</div>`:''}`;
+    ${p.obs?`<div style="font-size:13px;background:var(--surface-2);padding:8px 10px;border-radius:6px;color:var(--ink-2);">${p.obs}</div>`:''}
+    <div id="det-anexos" style="margin-top:14px;"></div>`;
+  montarAnexos('det-anexos',{cnpj:p.cnpj,consultor:p.consultor,origem:'proposta:'+p._docId,razao:p.razao});
   renderHistorico(p);
   document.getElementById('det-acoes').innerHTML=
     (etapaEmAndamento(p.etapa)?`<button class="btn btn-verde" onclick="avancarEtapa('${p._docId}',${p.etapa});fecharModal('modal-detalhe');"><i class="ti ti-arrow-right"></i> Avançar</button>`:'')
