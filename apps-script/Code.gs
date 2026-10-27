@@ -15,6 +15,7 @@ var PROJETO_FIREBASE = 'crm-conex-4ceaf';
 var MAX_BYTES = 20 * 1024 * 1024;
 var TIPOS_OK = {
   'application/pdf': 1, 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1,
+  'application/zip': 1, 'application/vnd.rar': 1, 'application/x-7z-compressed': 1,
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 1,
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 1
 };

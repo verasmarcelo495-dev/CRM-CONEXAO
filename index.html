@@ -3856,7 +3856,15 @@ window.reativar=reativar;
 // Chave do cliente = CNPJ, então os documentos acompanham o cliente do Pipeline até o Backoffice.
 var DRIVE_ANEXOS_URL='https://script.google.com/macros/s/AKfycbw7TvgUEOIzu-CwxU5ETO1F_NwFXrRoYnw5zUTxlIEipmTKqdZkgsk2_L-cMaHH8SZD/exec';
 var ANEXO_MAX_BYTES=4*1024*1024, ANEXO_MAX_DRIVE=15*1024*1024, ANEXO_PARTE=700000;
-var TIPOS_DRIVE=/^(application\/pdf|image\/(jpeg|png|webp)|application\/vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet))$/;
+var TIPOS_DRIVE=/^(application\/pdf|application\/zip|application\/vnd\.rar|application\/x-7z-compressed|image\/(jpeg|png|webp)|application\/vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet))$/;
+// O Windows costuma informar o tipo de .zip/.rar/.7z de formas diferentes (ou vazio); a extensão manda.
+function tipoDoArquivo(f){
+  var ext=(/\.([a-z0-9]+)$/i.exec(f.name||'')||[])[1];ext=(ext||'').toLowerCase();
+  if(ext==='zip')return'application/zip';
+  if(ext==='rar')return'application/vnd.rar';
+  if(ext==='7z')return'application/x-7z-compressed';
+  return f.type;
+}
 var _anexosCtx={};
 function modoDrive(){return !!DRIVE_ANEXOS_URL;}
 function chaveCNPJ(c){return String(c||'').replace(/\D/g,'');}
@@ -3887,8 +3895,8 @@ function montarAnexos(elId,ctx){
   if(cnpj.length!==14){
     el.innerHTML=titulo+'<div class="empty">Preencha o CNPJ do cliente (botão Editar) para anexar documentos.</div>';return;
   }
-  var aceita=modoDrive()?'application/pdf,image/jpeg,image/png,image/webp,.docx,.xlsx':'application/pdf,image/jpeg,image/png,image/webp';
-  var dica=modoDrive()?'PDF, imagem (JPG, PNG), Word ou Excel, até 15 MB cada. Guardados no Google Drive.':'PDF ou imagem (JPG, PNG), até 4 MB cada. Fotos são reduzidas automaticamente.';
+  var aceita=modoDrive()?'application/pdf,image/jpeg,image/png,image/webp,.docx,.xlsx,.zip,.rar,.7z':'application/pdf,image/jpeg,image/png,image/webp';
+  var dica=modoDrive()?'PDF, imagem (JPG, PNG), Word, Excel ou ZIP, até 15 MB cada. Guardados no Google Drive.':'PDF ou imagem (JPG, PNG), até 4 MB cada. Fotos são reduzidas automaticamente.';
   el.innerHTML=titulo
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
     +'<button class="btn-sm" type="button" id="'+elId+'-btn" onclick="document.getElementById(\''+elId+'-file\').click()"><i class="ti ti-paperclip"></i> Anexar documento</button>'
@@ -3924,7 +3932,7 @@ async function listarAnexos(elId){
   if(!docs.length){lista.innerHTML=aviso+(avisos.length?'':'<div class="empty">Nenhum documento anexado ainda.</div>');return;}
   lista.innerHTML=aviso+docs.map(function(a){
     var ehPdf=a.tipo==='application/pdf';
-    var icone=ehPdf?'ti-file-type-pdf':/^image\//.test(a.tipo||'')?'ti-photo':/word/.test(a.tipo||'')?'ti-file-type-doc':/sheet/.test(a.tipo||'')?'ti-file-type-xls':'ti-file';
+    var icone=ehPdf?'ti-file-type-pdf':/^image\//.test(a.tipo||'')?'ti-photo':/word/.test(a.tipo||'')?'ti-file-type-doc':/sheet/.test(a.tipo||'')?'ti-file-type-xls':/zip|rar|7z/.test(a.tipo||'')?'ti-file-zip':'ti-file';
     var args=a._id+'\',';
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);">'
       +'<i class="ti '+icone+'" style="font-size:20px;color:var(--ink-3);flex-shrink:0;"></i>'
@@ -3962,7 +3970,7 @@ async function anexarArquivos(elId,files){
   if(btn)btn.disabled=true;
   var enviados=0;
   for(var k=0;k<files.length;k++){
-    var f=files[k];var nome=f.name;var tipo=f.type;var blob=f;
+    var f=files[k];var nome=f.name;var tipo=tipoDoArquivo(f);var blob=f;
     try{
       var ehImagem=/^image\/(jpeg|png|webp)$/.test(tipo);
       if(drive?!TIPOS_DRIVE.test(tipo):(tipo!=='application/pdf'&&!ehImagem)){showNotif('"'+nome+'": tipo de arquivo não permitido.',true);continue;}
