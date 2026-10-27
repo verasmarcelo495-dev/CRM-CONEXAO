@@ -828,6 +828,21 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL DOCUMENTOS (atalho direto do card) -->
+<div class="modal-bg" id="modal-docs">
+  <div class="modal" style="max-width:560px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:1rem;">
+      <div><h3 id="docs-titulo" style="margin:0;"></h3><div id="docs-sub" style="font-size:12px;color:var(--ink-3);margin-top:2px;"></div></div>
+      <button class="btn-sm" onclick="fecharModal('modal-docs')" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="docs-anexos"></div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="copiarLinkDocs()"><i class="ti ti-link"></i> Copiar link</button>
+      <button class="btn btn-primary" type="button" onclick="fecharModal('modal-docs')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DETALHE -->
 <div class="modal-bg" id="modal-detalhe">
   <div class="modal">
@@ -1476,6 +1491,7 @@ async function login(user){
   renderUsuarios();atualizarSelectsConsultor();
   if(user==='master')sincronizarUidRev();
   iniciarSync();iniciarSyncRenovacoes();iniciarSyncBackoffice();setTab('dashboard');
+  tratarLinkDocs();
 }
 function logout(){
   if(_unsub){_unsub();_unsub=null;}
@@ -1909,6 +1925,7 @@ function renderPipeline(){
         +'<div class="kc-actions">'
         +(etapaEmAndamento(p.etapa)?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="'+p.etapa+'" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'')
         +(precisaTransferir(p)?'<button class="kc-btn verde" data-action="avancar" data-id2="'+p._docId+'" data-etapa="3" title="Enviar ao Backoffice (preencher checklist)"><i class="ti ti-send"></i></button>':'')
+        +'<button class="kc-btn" data-action="docs" data-id2="'+p._docId+'" title="Documentos"><i class="ti ti-paperclip"></i></button>'
         +'<button class="kc-btn azul" data-action="detalhe" data-id2="'+p._docId+'" title="Detalhes"><i class="ti ti-eye"></i></button>'
         +'<button class="kc-btn" data-action="editar" data-id2="'+p._docId+'" title="Editar"><i class="ti ti-edit"></i></button>'
         +(etapaEmAndamento(p.etapa)?'<button class="kc-btn red" data-action="perdida" data-id2="'+p._docId+'" title="Perdida"><i class="ti ti-x"></i></button>':'')
@@ -2303,6 +2320,7 @@ function renderBackoffice(){
         +'</div>'
         +'<div class="kc-actions">'
           +'<button class="kc-btn" onclick="event.stopPropagation();abrirChecklistBackoffice(\''+p._docId+'\')" title="Ver checklist"><i class="ti ti-checklist"></i></button>'
+          +'<button class="kc-btn" onclick="event.stopPropagation();abrirDocumentos(\'backoffice:'+p._docId+'\')" title="Documentos"><i class="ti ti-paperclip"></i></button>'
           +(podeMover&&etapa.id==='gerar_contrato'?'<button class="kc-btn" onclick="event.stopPropagation();abrirModalGerarContrato(\''+p._docId+'\')" title="Gerar contrato"><i class="ti ti-file-text"></i></button>':'')
           +(!podeMover?'':(idx<ETAPAS_BACKOFFICE.length-1?'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Ativar"><i class="ti ti-circle-check"></i></button>')
           +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
@@ -2374,6 +2392,7 @@ function renderBackoffice(){
             +'</div>'
             +'<div class="kc-actions">'
               +'<button class="kc-btn" onclick="event.stopPropagation();abrirChecklistBackoffice(\''+p._docId+'\')" title="Ver checklist"><i class="ti ti-checklist"></i></button>'
+          +'<button class="kc-btn" onclick="event.stopPropagation();abrirDocumentos(\'backoffice:'+p._docId+'\')" title="Documentos"><i class="ti ti-paperclip"></i></button>'
               +(!podeEditarAtivo?'':'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
               +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>')
               +'</div>'
@@ -4020,6 +4039,40 @@ async function excluirAnexo(id,elId,fonte){
 }
 window.excluirAnexo=excluirAnexo;
 
+
+// ===== Documentos direto do card + link do pedido =====
+var _docsOrigem=null;
+function itemDaOrigem(origem){
+  var m=/^(proposta|backoffice):(.+)$/.exec(String(origem||''));if(!m)return null;
+  return m[1]==='proposta'?propostas.find(function(x){return x._docId===m[2];}):backofficeLista.find(function(x){return x._docId===m[2];});
+}
+function abrirDocumentos(origem){
+  var it=itemDaOrigem(origem);
+  if(!it){showNotif('Pedido não encontrado.',true);return;}
+  _docsOrigem=origem;
+  document.getElementById('docs-titulo').textContent=it.razao||'Documentos';
+  document.getElementById('docs-sub').textContent=(it.cnpj?'CNPJ '+it.cnpj+' · ':'')+(origem.indexOf('proposta:')===0?'Proposta':'Pedido no Backoffice');
+  document.getElementById('modal-docs').classList.add('open');
+  montarAnexos('docs-anexos',{cnpj:it.cnpj,consultor:it.consultor,origem:origem,razao:it.razao});
+}
+window.abrirDocumentos=abrirDocumentos;
+function copiarLinkDocs(){
+  if(!_docsOrigem)return;
+  var url=location.origin+location.pathname+'#docs='+_docsOrigem;
+  var ok=function(){showNotif('Link copiado. Quem abrir precisa estar logado no CRM e ter acesso a esse cliente.');};
+  navigator.clipboard.writeText(url).then(ok).catch(function(){var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);ok();});
+}
+window.copiarLinkDocs=copiarLinkDocs;
+async function tratarLinkDocs(){
+  var m=/^#docs=((?:proposta|backoffice):[A-Za-z0-9]{10,40})$/.exec(location.hash||'');
+  if(!m)return;
+  var origem=m[1];
+  for(var i=0;i<40&&!itemDaOrigem(origem);i++){await new Promise(function(r){setTimeout(r,250);});}
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  if(!itemDaOrigem(origem)){showNotif('Não encontrei esse pedido. Ele pode ser de outro consultor ou ter sido excluído.',true);return;}
+  abrirDocumentos(origem);
+}
+
 function verDetalhe(docId){
   const p=propostas.find(x=>x._docId===docId);if(!p)return;
   const e=infoEtapa(p.etapa);
@@ -5082,6 +5135,7 @@ document.addEventListener('click', function(e){
     const etapa = btn.dataset.etapa;
     e.stopPropagation();
     if(action==='avancar')avancarEtapa(id, parseInt(etapa));
+    else if(action==='docs')abrirDocumentos('proposta:'+id);
     else if(action==='detalhe')verDetalhe(id);
     else if(action==='editar')editarProposta(id);
     else if(action==='perdida')marcarPerdida(id);
