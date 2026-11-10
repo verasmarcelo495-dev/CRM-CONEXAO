@@ -59,7 +59,10 @@ service cloud.firestore {
         || (registrado()
             && !perfilBackoffice()
             && resource.data.consultor == minhaChave()
-            && request.resource.data.consultor == minhaChave());
+            && request.resource.data.consultor == minhaChave())
+        // Ao ativar um pedido o Backoffice marca a proposta como "ganha": só esses dois campos.
+        || (souBackoffice()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resultado', 'atualizadoEm']));
       allow delete: if souMaster();
     }
 

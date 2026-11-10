@@ -279,6 +279,10 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .cnpj-loading{font-size:12px;color:var(--ink-3);margin-top:4px;display:none;}
 .cnpj-ok{font-size:12px;color:var(--green-ink);margin-top:4px;display:none;}
 .cnpj-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
+.campo-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
+.input-erro{border-color:var(--bad)!important;}
+.aviso-dup{background:var(--amber-bg);color:var(--amber-ink);border-radius:var(--radius);padding:8px 10px;font-size:12px;margin-top:6px;display:none;}
+.aviso-dup .btn-sm{margin:6px 6px 0 0;}
 
 /* ===== USUÁRIOS ===== */
 .user-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
@@ -751,24 +755,30 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <h3 id="modal-titulo"><i class="ti ti-file-plus"></i> Nova proposta</h3>
     <input type="hidden" id="p-id"/>
     <div class="grid-2">
-      <div class="form-group"><label class="form-label">Razão social *</label><input type="text" id="p-razao" placeholder="Ex: Silva Ltda"/></div>
-      <div class="form-group"><label class="form-label">CNPJ</label><input type="text" id="p-cnpj" placeholder="00.000.000/0000-00" maxlength="18"/></div>
+      <div class="form-group"><label class="form-label">Razão social *</label><input type="text" id="p-razao" placeholder="Ex: Silva Ltda"/><div class="campo-err" id="err-p-razao"></div></div>
+      <div class="form-group"><label class="form-label">CNPJ *</label><input type="text" id="p-cnpj" placeholder="00.000.000/0000-00" maxlength="18"/><div class="campo-err" id="err-p-cnpj"></div><div class="aviso-dup" id="p-cnpj-dup"></div></div>
     </div>
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Responsável</label><input type="text" id="p-responsavel" placeholder="Nome do contato"/></div>
-      <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input type="tel" id="p-telefone" placeholder="Ex: 61999990000"/></div>
+      <div class="form-group"><label class="form-label">Telefone / WhatsApp *</label><input type="tel" id="p-telefone" placeholder="Ex: 61999990000"/><div class="campo-err" id="err-p-telefone"></div></div>
     </div>
     <div class="grid-4">
       <div class="form-group"><label class="form-label">Tipo de cliente</label>
         <select id="p-tipo"><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
       </div>
-      <div class="form-group"><label class="form-label">Qtd. de linhas</label><input type="number" id="p-linhas" placeholder="Ex: 10" min="1"/></div>
-      <div class="form-group"><label class="form-label">Receita (R$/mês)</label><input type="text" id="p-receita" placeholder="Ex: 1.500,00"/></div>
-      <div class="form-group"><label class="form-label">Data do retorno</label><input type="date" id="p-retorno"/></div>
+      <div class="form-group"><label class="form-label">Qtd. de linhas *</label><input type="number" id="p-linhas" placeholder="Ex: 10" min="1"/><div class="campo-err" id="err-p-linhas"></div></div>
+      <div class="form-group"><label class="form-label">Receita (R$/mês) *</label><input type="text" id="p-receita" placeholder="Ex: 1.500,00"/><div class="campo-err" id="err-p-receita"></div></div>
+      <div class="form-group"><label class="form-label">Data do retorno *</label><input type="date" id="p-retorno"/><div class="campo-err" id="err-p-retorno"></div></div>
     </div>
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Etapa</label><select id="p-etapa"></select></div>
-      <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor</label><select id="p-consultor"><option value="">Selecione</option></select></div>
+      <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor *</label><select id="p-consultor"><option value="">Selecione</option></select><div class="campo-err" id="err-p-consultor"></div></div>
+    </div>
+    <div id="p-wrap-motivo" style="display:none;">
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Motivo da perda *</label><select id="p-motivo"></select><div class="campo-err" id="err-p-motivo"></div></div>
+        <div class="form-group"><label class="form-label">Detalhes</label><input type="text" id="p-motivo-det" placeholder="Descreva (obrigatório em Outro)"/><div class="campo-err" id="err-p-motivo-det"></div></div>
+      </div>
     </div>
     <div class="form-group"><label class="form-label">Observação inicial (opcional)</label><textarea id="p-obs" placeholder="Informações relevantes..."></textarea></div>
     <div class="modal-footer">
@@ -1201,15 +1211,10 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <input type="hidden" id="mp-doc-id"/>
     <div class="form-group">
       <label class="form-label">Por que essa proposta foi perdida?</label>
-      <select id="mp-motivo">
-        <option value="Preço alto">Preço alto</option>
-        <option value="Concorrência">Concorrência</option>
-        <option value="Desistiu">Desistiu</option>
-        <option value="Sem retorno">Sem retorno</option>
-        <option value="Outro">Outro</option>
-      </select>
+      <select id="mp-motivo"></select>
+      <div class="campo-err" id="err-mp-motivo"></div>
     </div>
-    <div class="form-group"><label class="form-label">Detalhes (opcional)</label><textarea id="mp-detalhes" placeholder="Mais informações sobre a perda..."></textarea></div>
+    <div class="form-group"><label class="form-label">Detalhes <span id="mp-det-obrig" style="display:none;">*</span></label><textarea id="mp-detalhes" placeholder="Mais informações sobre a perda..."></textarea><div class="campo-err" id="err-mp-detalhes"></div></div>
     <div class="modal-footer">
       <button class="btn" onclick="fecharModal('modal-motivo-perda')">Cancelar</button>
       <button class="btn btn-del" onclick="confirmarPerda()"><i class="ti ti-check"></i> Confirmar perda</button>
@@ -1275,6 +1280,14 @@ function infoEtapa(etapa){
   return ETAPAS[etapa]||ETAPAS_ARQUIVADAS[etapa]||{nome:'Etapa '+etapa,cor:'#888',bg:'var(--surface-2)',tc:'var(--ink-2)'};
 }
 function etapaEmAndamento(etapa){return etapa===0||etapa===1||etapa===2;}
+// resultado: 'aberta' | 'ganha' (pedido ativado no Backoffice) | 'perdida'. Registros antigos sem o campo: perdida pela etapa, o resto aberta.
+function resultadoDe(p){return p.resultado||(p.etapa==='perdida'?'perdida':'aberta');}
+function badgeResultado(p,e){
+  const r=resultadoDe(p);
+  if(r==='ganha')return'<span class="badge" style="background:var(--green-bg);color:var(--green-ink);">Ganha</span>';
+  if(r==='perdida')return'<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">Perdida</span>';
+  return'<span class="badge" style="background:'+e.bg+';color:'+e.tc+';">'+e.nome+'</span>';
+}
 const TIPOS={novo:{label:'Novo',cls:'tipo-novo'},portado:{label:'Portado',cls:'tipo-portado'},renovacao:{label:'Renovação',cls:'tipo-renovacao'}};
 const USERS={master:{nome:'Marcelo',role:'Gestor master',bg:'#FCEBEB',c:'#791F1F'},karla:{nome:'Karla',role:'Consultora',bg:'#EEEDFE',c:'#3C3489'},lucas:{nome:'Lucas',role:'Consultor',bg:'#E1F5EE',c:'#085041'}};
 // Senhas em texto puro (legado) não existem mais: o login é só Firebase Auth. Limpa o resto que ficou no navegador.
@@ -2056,7 +2069,7 @@ async function transferirParaBackoffice(docId,checklistOverride){
   try{
     const boDoc=await db.collection('backoffice').add({
       razao:p.razao||'', cnpj:p.cnpj||'', responsavel:p.responsavel||'', telefone:p.telefone||'',
-      consultor:p.consultor||'', protocolo:'',
+      consultor:p.consultor||'', protocolo:'', propostaId:docId,
       produtos:[{nome:(TIPOS[p.tipo]&&TIPOS[p.tipo].label)||'Plano',quantidade:linhas||'',valor:valorUnit}],
       checklist:checklistOverride||p.checklist||null,
       status:ETAPAS_BACKOFFICE[0].id,
@@ -2683,6 +2696,12 @@ async function confirmarAtivacaoBackoffice(){
   const texto='Ativado em '+new Date(dataAtivacao+'T12:00').toLocaleDateString('pt-BR');
   try{
     await db.collection('backoffice').doc(docId).update({status:'ativo',dataAtivacao,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});
+
+    // A proposta só vira "Ganha" quando o pedido é ativado.
+    try{
+      const pid=p.propostaId||(propostas.find(function(x){return x.backofficeId===docId;})||{})._docId;
+      if(pid)await db.collection('propostas').doc(pid).update({resultado:'ganha',atualizadoEm:Date.now()});
+    }catch(eRes){console.warn('Não foi possível marcar a proposta como ganha',eRes);}
 
     const jaExiste=renovacoes.find(function(r){return r.origemBackofficeId===docId;});
     if(!jaExiste){
@@ -3704,7 +3723,7 @@ function renderLista(){
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-size:15px;font-weight:500;">${p.razao}</span>
-            <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
+            ${badgeResultado(p,e)}
             <span class="badge ${t.cls}">${t.label}</span>
             ${urgenciaBadge}
             ${veTudoPropostas()?`<span class="badge" style="background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
@@ -3740,9 +3759,11 @@ function renderMetricas(){
   const totalLinhas=fechadas.reduce((s,p)=>s+(+p.linhas||0),0);
   const ticketMedio=fechadas.length?totalReceita/fechadas.length:0;
   const taxaConv=lista.length?Math.round(fechadas.length/lista.length*100):0;
+  const ganhas=lista.filter(function(p){return resultadoDe(p)==='ganha';});
   document.getElementById('met-stats').innerHTML=
     `<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Total</div><div style="font-size:20px;font-weight:500;">${lista.length}</div></div>`
-    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Fechadas</div><div style="font-size:20px;font-weight:500;">${fechadas.length}</div></div>`
+    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Fechadas (contrato)</div><div style="font-size:20px;font-weight:500;">${fechadas.length}</div></div>`
+    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Ganhas (ativadas)</div><div style="font-size:20px;font-weight:500;">${ganhas.length}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Receita</div><div style="font-size:15px;font-weight:500;">${fmtMoeda(totalReceita)}</div><div style="font-size:11px;color:var(--ink-3);">/mês</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Ticket médio</div><div style="font-size:15px;font-weight:500;">${fmtMoeda(ticketMedio)}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Conversão</div><div style="font-size:20px;font-weight:500;">${taxaConv}%</div></div>`;
@@ -3822,6 +3843,8 @@ function abrirModalNova(){
   document.getElementById('p-etapa').value='0';
   document.getElementById('p-tipo').value='novo';
   document.getElementById('p-consultor').value=currentUser!=='master'?currentUser:'';
+  document.getElementById('p-retorno').min=TODAY_STR;
+  limparErrosProposta();
   document.getElementById('modal-proposta').classList.add('open');
 }
 window.abrirModalNova=abrirModalNova;
@@ -3838,25 +3861,118 @@ function editarProposta(docId){
   document.getElementById('p-tipo').value=p.tipo||'novo';
   document.getElementById('p-consultor').value=p.consultor||'';
   document.getElementById('p-obs').value=p.obs||'';
+  document.getElementById('p-retorno').removeAttribute('min');
+  limparErrosProposta();
   document.getElementById('modal-proposta').classList.add('open');
 }
 window.editarProposta=editarProposta;
 
+// ===== Validação inline, CNPJ duplicado e motivo de perda =====
+const MOTIVOS_PERDA=['Preço / proposta da concorrência melhor','Ficou com a operadora atual','Fidelidade / multa alta','Sem retorno após 3+ tentativas','Empresa sem interesse no momento','Problema de crédito / documentação','Outro (descrever)'];
+function opcoesMotivoPerda(){return '<option value="">Selecione o motivo</option>'+MOTIVOS_PERDA.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');}
+function textoMotivoPerda(motivo,detalhes){return(motivo.indexOf('Outro')===0?'Outro':motivo)+(detalhes?' – '+detalhes:'');}
+function errCampo(id,msg){
+  const el=document.getElementById('err-'+id),inp=document.getElementById(id);
+  if(el){el.textContent=msg||'';el.style.display=msg?'block':'none';}
+  if(inp)inp.classList.toggle('input-erro',!!msg);
+  return !msg;
+}
+// Confere motivo (e detalhe, mínimo 10 caracteres em "Outro"). Devolve true se está tudo certo.
+function validarMotivoPerda(motivoId,detId){
+  const motivo=document.getElementById(motivoId).value,det=document.getElementById(detId).value.trim();
+  let ok=errCampo(motivoId,motivo?'':'Escolha o motivo da perda.');
+  const outro=motivo.indexOf('Outro')===0;
+  ok=errCampo(detId,(outro&&det.length<10)?'Descreva o motivo (mínimo 10 caracteres).':'')&&ok;
+  return ok;
+}
+let _cnpjDupAceito=false;
+function acharDuplicadoCNPJ(cnpj,ignorarId){
+  const d=String(cnpj||'').replace(/\D/g,'');
+  if(d.length!==14)return null;
+  return propostas.find(function(x){return x._docId!==ignorarId&&String(x.cnpj||'').replace(/\D/g,'')===d;})||null;
+}
+function verificarCnpjDuplicado(){
+  const box=document.getElementById('p-cnpj-dup');if(!box)return null;
+  const docId=document.getElementById('p-id').value;
+  const ex=acharDuplicadoCNPJ(document.getElementById('p-cnpj').value,docId);
+  if(!ex||_cnpjDupAceito){box.style.display='none';box.innerHTML='';return ex;}
+  const u=USERS[ex.consultor];
+  box.innerHTML='Já existe proposta para este CNPJ: <strong>'+escHtml(ex.razao||'')+'</strong> · '+escHtml(infoEtapa(ex.etapa).nome)+' · '+escHtml(u?u.nome:(ex.consultor||'sem consultor'))+' · '+(ex.criadoEm?new Date(ex.criadoEm).toLocaleDateString('pt-BR'):'—')
+    +'<br><button class="btn-sm btn-azul" type="button" onclick="abrirPropostaExistente(\''+ex._docId+'\')">Abrir proposta existente</button><button class="btn-sm" type="button" onclick="aceitarCnpjDuplicado()">Criar mesmo assim</button>';
+  box.style.display='block';
+  return ex;
+}
+function abrirPropostaExistente(id){fecharModal('modal-proposta');verDetalhe(id);}
+function aceitarCnpjDuplicado(){
+  _cnpjDupAceito=true;errCampo('p-cnpj','');
+  const box=document.getElementById('p-cnpj-dup');box.innerHTML='Ok: a proposta será salva mesmo com o CNPJ repetido (isso ficará registrado na observação).';
+}
+window.abrirPropostaExistente=abrirPropostaExistente;window.aceitarCnpjDuplicado=aceitarCnpjDuplicado;
+function atualizarMotivoForm(){
+  const docId=document.getElementById('p-id').value;
+  const ex=docId?propostas.find(function(x){return x._docId===docId;}):null;
+  const mostrar=document.getElementById('p-etapa').value==='perdida'&&!(ex&&ex.etapa==='perdida');
+  document.getElementById('p-wrap-motivo').style.display=mostrar?'':'none';
+  return mostrar;
+}
+function limparErrosProposta(){
+  ['p-razao','p-cnpj','p-telefone','p-linhas','p-receita','p-retorno','p-consultor','p-motivo','p-motivo-det'].forEach(function(id){errCampo(id,'');});
+  _cnpjDupAceito=false;
+  const box=document.getElementById('p-cnpj-dup');if(box){box.style.display='none';box.innerHTML='';}
+  document.getElementById('p-motivo').value='';document.getElementById('p-motivo-det').value='';
+  atualizarMotivoForm();
+}
+
 async function salvarProposta(){
   if(bloquearPerfilLeitura())return;
-  const razao=document.getElementById('p-razao').value.trim();
-  if(!razao){showNotif('Preencha a razão social.',true);return;}
   const docId=document.getElementById('p-id').value;
+  const existente=docId?propostas.find(function(x){return x._docId===docId;}):null;
+  const razao=document.getElementById('p-razao').value.trim();
+  const cnpjTexto=document.getElementById('p-cnpj').value.trim();
+  const cnpjDig=cnpjTexto.replace(/\D/g,'');
   const etapaVal=document.getElementById('p-etapa').value;
   const etapa=etapaVal==='perdida'?'perdida':parseInt(etapaVal);
   const consultor=currentUser==='master'?document.getElementById('p-consultor').value:currentUser;
   const receita=parseMoedaBR(document.getElementById('p-receita').value);
-  if(isNaN(receita)){showNotif('Receita inválida. Use só números, ex.: 1.155,00.',true);return;}
-  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),...camposTelefone(document.getElementById('p-telefone').value),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita,retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
+  const linhas=parseInt(document.getElementById('p-linhas').value,10);
+  const retorno=document.getElementById('p-retorno').value;
+  const tel=camposTelefone(document.getElementById('p-telefone').value);
+
+  let ok=errCampo('p-razao',razao?'':'Informe a razão social.');
+  ok=errCampo('p-cnpj',!cnpjDig?'Informe o CNPJ.':(validarCNPJ(cnpjDig)?'':'CNPJ inválido. Confira os números.'))&&ok;
+  ok=errCampo('p-telefone',extrairTelefones(document.getElementById('p-telefone').value).length?'':'Informe um telefone válido com DDD.')&&ok;
+  ok=errCampo('p-linhas',linhas>=1?'':'Informe a quantidade de linhas (mínimo 1).')&&ok;
+  ok=errCampo('p-receita',isNaN(receita)?'Valor inválido. Use só números, ex.: 1.155,00.':(receita>0?'':'Informe a receita mensal (maior que zero).'))&&ok;
+  ok=errCampo('p-retorno',!retorno?'Informe a data de retorno.':((!docId&&retorno<TODAY_STR)?'A data de retorno não pode estar no passado.':''))&&ok;
+  ok=errCampo('p-consultor',consultor?'':'Selecione o consultor.')&&ok;
+  if(atualizarMotivoForm())ok=validarMotivoPerda('p-motivo','p-motivo-det')&&ok;
+  if(!ok){
+    showNotif('Corrija os campos destacados.',true);
+    const primeiro=document.querySelector('#modal-proposta .input-erro');if(primeiro)primeiro.focus();
+    return;
+  }
+  // CNPJ já usado em outra proposta: só segue se a pessoa confirmar.
+  const mudouCnpj=!existente||String(existente.cnpj||'').replace(/\D/g,'')!==cnpjDig;
+  const dup=acharDuplicadoCNPJ(cnpjDig,docId);
+  if(dup&&mudouCnpj&&!_cnpjDupAceito){
+    verificarCnpjDuplicado();
+    errCampo('p-cnpj','Esse CNPJ já tem proposta. Abra a existente ou clique em "Criar mesmo assim".');
+    return;
+  }
+  let obs=document.getElementById('p-obs').value.trim();
+  if(dup&&mudouCnpj&&_cnpjDupAceito){
+    obs+=(obs?'\n':'')+'[Criada ciente de duplicidade: já existia proposta deste CNPJ ("'+(dup.razao||'')+'", '+(dup.criadoEm?new Date(dup.criadoEm).toLocaleDateString('pt-BR'):'sem data')+')]';
+  }
+  const dados={razao,cnpj:cnpjTexto,responsavel:document.getElementById('p-responsavel').value.trim(),...tel,tipo:document.getElementById('p-tipo').value,linhas,receita,retorno,etapa,obs,consultor,atualizadoEm:Date.now()};
+  if(etapa==='perdida'){
+    dados.resultado='perdida';
+    if(atualizarMotivoForm())dados.motivoPerda=textoMotivoPerda(document.getElementById('p-motivo').value,document.getElementById('p-motivo-det').value.trim());
+  }else{
+    dados.resultado=(existente&&existente.resultado==='ganha')?'ganha':'aberta';
+  }
   // "Gerar contrato" nunca é gravado direto: precisa passar pelo checklist, que é quem cria o pedido no Backoffice.
   let irParaGate=false;
   if(etapa===3){
-    const existente=docId?propostas.find(function(x){return x._docId===docId;}):null;
     if(!(existente&&existente.backofficeId)){
       irParaGate=true;
       dados.etapa=existente?existente.etapa:2;
@@ -3899,7 +4015,9 @@ window.avancarEtapa=avancarEtapa;
 function marcarPerdida(docId){
   if(bloquearPerfilLeitura())return;
   document.getElementById('mp-doc-id').value=docId;
-  document.getElementById('mp-motivo').value='Pre\u00e7o alto';
+  document.getElementById('mp-motivo').value='';
+  errCampo('mp-motivo','');errCampo('mp-detalhes','');
+  document.getElementById('mp-det-obrig').style.display='none';
   document.getElementById('mp-detalhes').value='';
   document.getElementById('modal-motivo-perda').classList.add('open');
 }
@@ -3919,11 +4037,12 @@ window.excluirProposta=excluirProposta;
 async function confirmarPerda(){
   if(bloquearPerfilLeitura())return;
   const docId=document.getElementById('mp-doc-id').value;
+  if(!validarMotivoPerda('mp-motivo','mp-detalhes'))return;
   const motivo=document.getElementById('mp-motivo').value;
   const detalhes=document.getElementById('mp-detalhes').value.trim();
-  const motivoCompleto=motivo+(detalhes?' \u2013 '+detalhes:'');
+  const motivoCompleto=textoMotivoPerda(motivo,detalhes);
   try{
-    await db.collection('propostas').doc(docId).update({etapa:'perdida',motivoPerda:motivoCompleto,atualizadoEm:Date.now()});
+    await db.collection('propostas').doc(docId).update({etapa:'perdida',resultado:'perdida',motivoPerda:motivoCompleto,atualizadoEm:Date.now()});
     showNotif('Marcada como perdida.');
     fecharModal('modal-motivo-perda');
   }catch(e){showNotif('Erro.',true);}
@@ -3939,6 +4058,8 @@ async function duplicarProposta(docId){
   delete novosDados._docId;
   novosDados.razao=p.razao+' (c\u00f3pia)';
   novosDados.etapa=0;
+  novosDados.resultado='aberta';
+  delete novosDados.backofficeId;delete novosDados.motivoPerda;
   novosDados.historico=[];
   novosDados.criadoEm=Date.now();
   novosDados.atualizadoEm=Date.now();
@@ -3954,7 +4075,7 @@ window.duplicarProposta=duplicarProposta;
 
 async function reativar(docId){
   if(bloquearPerfilLeitura())return;
-  try{await db.collection('propostas').doc(docId).update({etapa:0,atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
+  try{await db.collection('propostas').doc(docId).update({etapa:0,resultado:'aberta',atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
   catch(e){showNotif('Erro.',true);}
 }
 window.reativar=reativar;
@@ -5000,6 +5121,98 @@ window.migracoes.telefones=async function(opts){
   return r;
 };
 
+// resultado nas propostas (perdida / ganha se o pedido ligado está ativo / aberta) e propostaId nos pedidos do Backoffice.
+window.migracoes.resultado=async function(opts){
+  if(currentUser!=='master'){console.warn('Migração: entre como master.');return null;}
+  const bos=await db.collection('backoffice').get();
+  const boPorId={};bos.docs.forEach(function(d){boPorId[d.id]=d.data();});
+  const propPorBo={};
+  const props=await db.collection('propostas').get();
+  props.docs.forEach(function(d){const x=d.data();if(x.backofficeId)propPorBo[x.backofficeId]=d.id;});
+  const a=await _migrarColecao('resultado','propostas',function(d){
+    let r='aberta';
+    if(d.etapa==='perdida')r='perdida';
+    else if(d.backofficeId&&boPorId[d.backofficeId]&&boPorId[d.backofficeId].status==='ativo')r='ganha';
+    return d.resultado===r?null:{novo:{resultado:r}};
+  },opts);
+  const b=await _migrarColecao('resultado','backoffice',function(d,id){
+    return(!d.propostaId&&propPorBo[id])?{novo:{propostaId:propPorBo[id]}}:null;
+  },opts);
+  return{propostas:a,backoffice:b};
+};
+
+function _baixarJSON(nome,obj){
+  try{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));
+    a.download=nome;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){console.warn('Não foi possível baixar o backup',e);}
+}
+// Passa tudo do consultor duplicado (padrão "marceloconsultor") para o master. Com {gravar:true} só reatribui;
+// para também tirar o consultor da lista de usuários: {gravar:true, removerUsuario:true} (baixa um backup .json antes).
+// A conta de login dele no Firebase Authentication continua existindo: apague no console do Firebase.
+window.migracoes.unificarMarcelo=async function(opts){
+  if(currentUser!=='master'){console.warn('Migração: entre como master.');return null;}
+  const chave=(opts&&opts.chave)||'marceloconsultor';
+  if(!USERS[chave]){console.warn('Não existe o consultor "'+chave+'" em Usuários. Passe {chave:"..."} com a chave certa.');return null;}
+  const decide=function(d){return d.consultor===chave?{novo:{consultor:'master'}}:null;};
+  const r={};
+  for(const col of ['propostas','backoffice','renovacoes','anexos'])r[col]=await _migrarColecao('unificarMarcelo',col,decide,opts);
+  const remover=!!(opts&&opts.removerUsuario);
+  console.log('[unificarMarcelo] usuário "'+chave+'" '+(remover&&opts.gravar?'será REMOVIDO da lista de usuários e do uid_map':'permanece (use {gravar:true, removerUsuario:true} para remover)'));
+  if(remover&&opts.gravar){
+    const mapRef=db.collection('config').doc('uid_map');
+    const mapSnap=await mapRef.get();
+    _baixarJSON('backup-usuario-'+chave+'.json',{usuario:USERS[chave],uid:(mapSnap.exists?mapSnap.data()[chave]:null)});
+    delete USERS[chave];
+    await saveUsers();
+    if(mapSnap.exists){const m=mapSnap.data();if(m[chave]){delete m[chave];m._rev=construirUidRev(m);await mapRef.set(m);}}
+    renderUsuarios();
+    console.log('[unificarMarcelo] usuário removido. Falta apagar a conta de login dele no Firebase Authentication.');
+  }
+  return r;
+};
+
+// Procura (sem alterar nada) o registro de teste: razão "1", responsável "1", obs "teste", 1 linha, R$ 1, perdida, Lucas.
+window.migracoes.acharRegistroTeste=async function(){
+  if(currentUser!=='master'){console.warn('Entre como master.');return null;}
+  const snap=await db.collection('propostas').get();
+  const achados=snap.docs.filter(function(d){
+    const x=d.data();
+    return String(x.razao).trim()==='1'&&String(x.responsavel||'').trim()==='1'&&/teste/i.test(x.obs||'')
+      &&valorNum(x.linhas)===1&&valorNum(x.receita)===1&&x.etapa==='perdida'&&x.consultor==='lucas';
+  }).map(function(d){return Object.assign({id:d.id},d.data());});
+  console.log('Registro(s) de teste encontrados: '+achados.length);
+  if(achados.length)console.table(achados.map(function(x){return{id:x.id,razao:x.razao,responsavel:x.responsavel,obs:x.obs,linhas:x.linhas,receita:x.receita,etapa:x.etapa,consultor:x.consultor};}));
+  if(achados.length)console.log('Para excluir (depois de confirmar): migracoes.excluirRegistroTeste("<id>",{confirmar:true})');
+  return achados;
+};
+// Exclui UM registro de teste, só se ele ainda bater com todos os campos acima. Baixa um backup .json antes.
+window.migracoes.excluirRegistroTeste=async function(id,opts){
+  if(currentUser!=='master'){console.warn('Entre como master.');return null;}
+  const ref=db.collection('propostas').doc(id);
+  const snap=await ref.get();
+  if(!snap.exists){console.warn('Documento não encontrado.');return null;}
+  const x=snap.data();
+  const confere=String(x.razao).trim()==='1'&&String(x.responsavel||'').trim()==='1'&&/teste/i.test(x.obs||'')&&valorNum(x.linhas)===1&&valorNum(x.receita)===1&&x.etapa==='perdida'&&x.consultor==='lucas';
+  if(!confere){console.warn('Este documento não é o registro de teste esperado. Nada foi excluído.');return null;}
+  if(!(opts&&opts.confirmar)){console.log('Dry-run: excluiria '+id+' ('+x.razao+'). Para excluir: migracoes.excluirRegistroTeste("'+id+'",{confirmar:true})');return x;}
+  _baixarJSON('backup-proposta-'+id+'.json',Object.assign({id:id},x));
+  await ref.delete();
+  console.log('Registro de teste excluído.');
+  return true;
+};
+window.migracoes.ajuda=function(){
+  console.log([
+    'migracoes.receitasString()      → receita/valor em texto vira número (suspeitos só listados)',
+    'migracoes.telefones()           → telefone no formato (61) 99999-9999 + telefonesExtras',
+    'migracoes.resultado()           → campo resultado nas propostas e propostaId nos pedidos',
+    'migracoes.unificarMarcelo()     → passa o consultor duplicado para o master',
+    'migracoes.acharRegistroTeste()  → localiza o registro de teste (não altera nada)',
+    'Todas rodam em dry-run. Para gravar: migracoes.<nome>({gravar:true}). Só como master.'
+  ].join('\n'));
+};
+
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
   try{
@@ -5348,6 +5561,15 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
 });
 
 ['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
+document.getElementById('mp-motivo').innerHTML=opcoesMotivoPerda();
+document.getElementById('p-motivo').innerHTML=opcoesMotivoPerda();
+document.getElementById('mp-motivo').addEventListener('change',function(){document.getElementById('mp-det-obrig').style.display=this.value.indexOf('Outro')===0?'inline':'none';});
+document.getElementById('p-etapa').addEventListener('change',atualizarMotivoForm);
+document.getElementById('p-cnpj').addEventListener('blur',verificarCnpjDuplicado);
+document.getElementById('p-cnpj').addEventListener('input',function(){_cnpjDupAceito=false;errCampo('p-cnpj','');});
+['p-razao','p-telefone','p-linhas','p-receita','p-retorno','p-consultor'].forEach(function(id){
+  const el=document.getElementById(id);if(el)el.addEventListener('input',function(){errCampo(id,'');});
+});
 ['p-telefone','bo-telefone','ren-telefone'].forEach(ligarTelefone);
 ligarBuscaCNPJ('ren-cnpj',{razao:'ren-razao',responsavel:'ren-responsavel',telefone:'ren-telefone',email:'ren-email'});
 const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
