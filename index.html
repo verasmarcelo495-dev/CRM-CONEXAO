@@ -1322,6 +1322,40 @@ function fmtCNPJ(v){v=v.replace(/\D/g,'').slice(0,14);if(v.length>12)v=v.slice(0
 function fmtTel(t){const d=t.replace(/\D/g,'');if(d.length===11)return`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return t;}
 function cleanTel(t){return t.replace(/\D/g,'');}
 
+// ===== Telefones =====
+// Um número válido tem 10 ou 11 dígitos (DDD + número); "55" na frente é removido. Vários números no mesmo campo
+// (separados por / , ; "ou" "e", ou colados) viram uma lista: o primeiro é o principal.
+function _formatarTel(d){return d.length===11?'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7):'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);}
+function _semPais(d){
+  d=d.replace(/^0+/,'');
+  while(d.length>11&&d.indexOf('55')===0)d=d.slice(2);
+  return d;
+}
+function extrairTelefones(str){
+  const out=[];
+  String(str==null?'':str).split(/[\/,;|]|\bou\b|\be\b/i).forEach(function(parte){
+    let d=_semPais(parte.replace(/\D/g,''));
+    while(d.length>=10){
+      const n=(d.length>=11&&d.charAt(2)==='9')?11:10;
+      out.push(_formatarTel(d.slice(0,n)));
+      d=_semPais(d.slice(n));
+    }
+  });
+  return out;
+}
+function normalizarTelefone(str){const l=extrairTelefones(str);return l.length?l[0]:'';}
+function camposTelefone(str){
+  const l=extrairTelefones(str);
+  return l.length?{telefone:l[0],telefonesExtras:l.slice(1)}:{telefone:String(str||'').trim(),telefonesExtras:[]};
+}
+function telefonesParaInput(o){return o?[o.telefone].concat(o.telefonesExtras||[]).filter(Boolean).join(' / '):'';}
+// Dígitos do telefone principal, sem o 55 (os links acrescentam 55 + dígitos).
+function telPrincipal(t){const l=extrairTelefones(t);return l.length?l[0].replace(/\D/g,''):_semPais(String(t||'').replace(/\D/g,''));}
+function ligarTelefone(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.addEventListener('blur',function(){const l=extrairTelefones(el.value);if(l.length)el.value=l.join(' / ');});
+}
+
 // ===== Valores em reais (pt-BR) =====
 // parseMoedaBR: texto digitado/colado -> number (2 casas). Aceita "1.155,00", "1155", "1155.00", "R$ 1.155,00", "1.155" (=1155).
 // Vazio -> 0; texto inválido -> NaN (quem chama decide a mensagem).
@@ -1382,7 +1416,7 @@ function getPropostas(){return veTudoPropostas()?propostas:propostas.filter(p=>p
 function podeMoverBackoffice(){return currentUser==='master'||ehPerfilBackoffice()||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
 function veTudoBackoffice(){return podeMoverBackoffice();} // master e usuários com acesso ao Backoffice veem todos os pedidos/renovações
 function tipoBadge(tipo){const t=TIPOS[tipo]||TIPOS.novo;return`<span class="badge ${t.cls}">${t.label}</span>`;}
-function telLinks(tel){if(!tel)return'';const d=cleanTel(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
+function telLinks(tel){if(!tel)return'';const d=telPrincipal(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
 
 function iniciarSync(){
   if(_unsub)_unsub();setSyncStatus('carregando');
@@ -2211,7 +2245,7 @@ function renderLinhasRenovacao(){
       else if(fid.comFidelidade)fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--green-bg);color:var(--green-ink);white-space:nowrap;">Com fidelidade ('+fid.meses+'m)</span>';
       else fidBadge='<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--blue-bg);color:var(--blue-ink);white-space:nowrap;">Sem fidelidade ('+fid.meses+'m)</span>';
     }
-    const telNum=l.telefone?cleanTel(l.telefone):'';
+    const telNum=l.telefone?telPrincipal(l.telefone):'';
     html+='<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;">';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr 30px;gap:6px;align-items:end;margin-bottom:6px;">';
     html+='<div>'+(i===0?'<label class="form-label">Número da linha</label>':'')+'<div style="display:flex;gap:4px;align-items:center;">';
@@ -2565,7 +2599,7 @@ function abrirModalBackoffice(docId,readOnly){
   document.getElementById('bo-razao').value=p?p.razao||'':'';
   document.getElementById('bo-cnpj').value=p?p.cnpj||'':'';
   document.getElementById('bo-responsavel').value=p?p.responsavel||'':'';
-  document.getElementById('bo-telefone').value=p?p.telefone||'':'';
+  document.getElementById('bo-telefone').value=p?telefonesParaInput(p):'';
   document.getElementById('bo-protocolo').value=p?p.protocolo||'':'';
   selConsultor.value=p?p.consultor||'':'';
   document.getElementById('bo-obs').value=p?p.obs||'':'';
@@ -2598,7 +2632,7 @@ async function salvarBackoffice(){
     razao,
     cnpj:document.getElementById('bo-cnpj').value.trim(),
     responsavel:document.getElementById('bo-responsavel').value.trim(),
-    telefone:document.getElementById('bo-telefone').value.trim(),
+    ...camposTelefone(document.getElementById('bo-telefone').value),
     protocolo:document.getElementById('bo-protocolo').value.trim(),
     consultor:document.getElementById('bo-consultor').value,
     obs:document.getElementById('bo-obs').value.trim(),
@@ -2993,10 +3027,10 @@ function abrirModalRenovacao(docId){
     document.getElementById('ren-cnpj').value=r.cnpj||'';
     document.getElementById('ren-responsavel').value=r.responsavel||'';
     document.getElementById('ren-cpf').value=r.cpf||'';
-    document.getElementById('ren-telefone').value=r.telefone||'';
+    document.getElementById('ren-telefone').value=telefonesParaInput(r);
     document.getElementById('ren-email').value=r.email||'';
     const wppLinkEdit=document.getElementById('ren-telefone-wpp');
-    const telNumEdit=cleanTel(r.telefone||'');
+    const telNumEdit=telPrincipal(r.telefone||'');
     if(telNumEdit.length>=10){wppLinkEdit.href='https://wa.me/55'+telNumEdit;wppLinkEdit.style.display='block';}
     else{wppLinkEdit.style.display='none';}
     document.getElementById('ren-status').value=r.status||'nao_atribuido';
@@ -3036,7 +3070,7 @@ async function salvarRenovacao(){
     cnpj:document.getElementById('ren-cnpj').value.trim(),
     responsavel:document.getElementById('ren-responsavel').value.trim(),
     cpf:document.getElementById('ren-cpf').value.trim(),
-    telefone:document.getElementById('ren-telefone').value.trim(),
+    ...camposTelefone(document.getElementById('ren-telefone').value),
     email:document.getElementById('ren-email').value.trim(),
     linhas:String(_linhasRenovacao.length),
     valor:valorTotal,
@@ -3326,7 +3360,7 @@ function renderRenovacoes(){
         else if(f.comFidelidade){cor='var(--green-ink)';fidTexto=f.meses+'m';}
         else{cor='var(--blue-ink)';fidTexto=f.meses+'m';}
       }
-      const telNum=l.telefone?cleanTel(l.telefone):'';
+      const telNum=l.telefone?telPrincipal(l.telefone):'';
       return '<div style="font-size:11px;color:var(--ink-2);padding:3px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">'
         +'<span><span style="font-weight:500;">'+(l.plano||'Linha '+(idx+1))+'</span>'
         +(l.telefone?' · '+fmtTel(l.telefone):'')
@@ -3499,7 +3533,7 @@ function showCalDetalhe(ds){
     cards.innerHTML=lista.map(p=>{
       const u=USERS[p.consultor]||USERS.karla;
       const t=TIPOS[p.tipo]||TIPOS.novo;
-      const telNum=p.telefone?cleanTel(p.telefone):'';
+      const telNum=p.telefone?telPrincipal(p.telefone):'';
       return`<div class="cal-evento-card">
         <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
         <div style="flex:1;min-width:0;">
@@ -3541,7 +3575,7 @@ function renderFollowup(){
   function fuCard(p){
     const u=USERS[p.consultor]||USERS.karla;
     const t=TIPOS[p.tipo]||TIPOS.novo;
-    const telNum=p.telefone?cleanTel(p.telefone):'';
+    const telNum=p.telefone?telPrincipal(p.telefone):'';
     return`<div class="fu-item">
       <div class="avatar" style="background:${u.bg};color:${u.c};width:32px;height:32px;font-size:11px;">${initials((USERS[p.consultor]||{nome:'?'}).nome)}</div>
       <div style="flex:1;min-width:0;">
@@ -3796,7 +3830,7 @@ function editarProposta(docId){
   document.getElementById('modal-titulo').innerHTML='<i class="ti ti-edit"></i> Editar proposta';
   document.getElementById('p-id').value=docId;
   document.getElementById('p-razao').value=p.razao||'';document.getElementById('p-cnpj').value=p.cnpj||'';
-  document.getElementById('p-responsavel').value=p.responsavel||'';document.getElementById('p-telefone').value=p.telefone||'';
+  document.getElementById('p-responsavel').value=p.responsavel||'';document.getElementById('p-telefone').value=telefonesParaInput(p);
   document.getElementById('p-linhas').value=p.linhas||'';document.getElementById('p-receita').value=valorParaInput(p.receita);
   document.getElementById('p-retorno').value=p.retorno||'';document.getElementById('p-etapa').value=p.etapa;
   document.getElementById('p-tipo').value=p.tipo||'novo';
@@ -3816,7 +3850,7 @@ async function salvarProposta(){
   const consultor=currentUser==='master'?document.getElementById('p-consultor').value:currentUser;
   const receita=parseMoedaBR(document.getElementById('p-receita').value);
   if(isNaN(receita)){showNotif('Receita inválida. Use só números, ex.: 1.155,00.',true);return;}
-  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),telefone:document.getElementById('p-telefone').value.trim(),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita,retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
+  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),...camposTelefone(document.getElementById('p-telefone').value),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita,retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
   // "Gerar contrato" nunca é gravado direto: precisa passar pelo checklist, que é quem cria o pedido no Backoffice.
   let irParaGate=false;
   if(etapa===3){
@@ -4171,7 +4205,7 @@ function verDetalhe(docId){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:10px;">
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">CNPJ</div><div>${p.cnpj||'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Responsável</div><div>${p.responsavel||'—'}</div></div>
-      <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Telefone</div><div>${p.telefone?`<a href="tel:+55${cleanTel(p.telefone)}" style="color:var(--accent);text-decoration:none;">${fmtTel(p.telefone)}</a> · <a href="https://wa.me/55${cleanTel(p.telefone)}" target="_blank" style="color:var(--green-ink);text-decoration:none;">WhatsApp</a>`:'—'}</div></div>
+      <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Telefone</div><div>${p.telefone?`<a href="tel:+55${telPrincipal(p.telefone)}" style="color:var(--accent);text-decoration:none;">${fmtTel(p.telefone)}</a> · <a href="https://wa.me/55${telPrincipal(p.telefone)}" target="_blank" style="color:var(--green-ink);text-decoration:none;">WhatsApp</a>`:'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Retorno</div><div>${p.retorno?new Date(p.retorno+'T12:00').toLocaleDateString('pt-BR'):'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Qtd. linhas</div><div>${p.linhas||'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Receita mensal</div><div>${p.receita?fmtMoeda(p.receita):'—'}</div></div>
@@ -4947,6 +4981,23 @@ window.migracoes.receitasString=async function(opts){
   return{propostas:a,renovacoes:b};
 };
 
+// telefone -> formato (61) 99999-9999; números a mais vão para telefonesExtras. Sem número válido: só listado.
+window.migracoes.telefones=async function(opts){
+  const decide=function(d){
+    if(!d.telefone)return null;
+    if(!extrairTelefones(d.telefone).length)return{revisar:{razao:d.razao||'',telefone:d.telefone,motivo:'sem número válido (10 ou 11 dígitos)'}};
+    const c=camposTelefone(d.telefone);
+    const extrasAtuais=JSON.stringify(d.telefonesExtras||[]);
+    if(c.telefone===d.telefone&&(c.telefonesExtras.length===0||extrasAtuais===JSON.stringify(c.telefonesExtras)))return null;
+    const novo={telefone:c.telefone};
+    if(c.telefonesExtras.length)novo.telefonesExtras=c.telefonesExtras;
+    return{novo:novo};
+  };
+  const r={};
+  for(const col of ['propostas','renovacoes','backoffice'])r[col]=await _migrarColecao('telefones',col,decide,opts);
+  return r;
+};
+
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
   try{
@@ -5285,7 +5336,7 @@ if(renCpf)renCpf.addEventListener('input',function(){this.value=fmtCPF(this.valu
 const renTelefone=document.getElementById('ren-telefone');
 if(renTelefone)renTelefone.addEventListener('input',function(){
   const wppLink=document.getElementById('ren-telefone-wpp');
-  const telNum=cleanTel(this.value);
+  const telNum=telPrincipal(this.value);
   if(telNum.length>=10){
     wppLink.href='https://wa.me/55'+telNum;
     wppLink.style.display='block';
@@ -5295,6 +5346,7 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
 });
 
 ['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
+['p-telefone','bo-telefone','ren-telefone'].forEach(ligarTelefone);
 ligarBuscaCNPJ('ren-cnpj',{razao:'ren-razao',responsavel:'ren-responsavel',telefone:'ren-telefone',email:'ren-email'});
 const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
 if(pipeFiltroConsultor)pipeFiltroConsultor.addEventListener('change',function(){renderPipeline();});
