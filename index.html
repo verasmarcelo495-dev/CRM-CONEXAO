@@ -279,6 +279,14 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .cnpj-loading{font-size:12px;color:var(--ink-3);margin-top:4px;display:none;}
 .cnpj-ok{font-size:12px;color:var(--green-ink);margin-top:4px;display:none;}
 .cnpj-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
+.busca-global{position:relative;}
+.busca-global input{width:250px;padding:7px 10px;font-size:13px;}
+.busca-global-res{position:absolute;top:calc(100% + 4px);left:0;width:360px;max-height:400px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:none;z-index:150;}
+.bg-grupo{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);padding:8px 12px 4px;}
+.bg-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:8px 12px;cursor:pointer;color:var(--ink);font:inherit;font-size:13px;}
+.bg-item:hover,.bg-item:focus{background:var(--surface-2);outline:none;}
+.bg-item small{display:block;color:var(--ink-3);font-size:11px;}
+.notif button.btn-sm{vertical-align:middle;}
 .kanban-col-recolhida{cursor:pointer;width:46px;padding:.6rem .3rem;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .kanban-col-recolhida .kcr-nome{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;}
 .kanban-col-enc{width:260px;}
@@ -514,6 +522,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   <div class="main-content">
     <div class="topbar">
       <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="busca-global"><input type="search" id="busca-global" placeholder="Buscar CNPJ ou razão social..." aria-label="Busca global: propostas, pedidos e renovações" autocomplete="off"/><div class="busca-global-res" id="busca-global-res" role="listbox"></div></div>
       <div id="alerta-followup" style="display:none;cursor:pointer;" onclick="setTab('followup')"></div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-primary" onclick="abrirModalNova()"><i class="ti ti-plus"></i> Nova proposta</button>
@@ -1284,6 +1293,18 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL CONFIRMAR (substitui o confirm() do navegador) -->
+<div class="modal-bg" id="modal-confirmar" style="z-index:400;">
+  <div class="modal" style="max-width:420px;" role="dialog" aria-modal="true" aria-labelledby="cf-titulo">
+    <h3 id="cf-titulo" style="margin-top:0;"></h3>
+    <div id="cf-texto" style="font-size:14px;color:var(--ink-2);line-height:1.5;"></div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="fecharModal('modal-confirmar')">Cancelar</button>
+      <span id="cf-botoes" style="display:contents;"></span>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL COR -->
 <div class="modal-bg" id="modal-cor">
   <div class="modal" style="max-width:360px;">
@@ -1364,6 +1385,7 @@ function linkWhatsApp(p){
 // resultado: 'aberta' | 'ganha' (pedido ativado no Backoffice) | 'perdida'. Registros antigos sem o campo: perdida pela etapa, o resto aberta.
 function resultadoDe(p){return p.resultado||(p.etapa==='perdida'?'perdida':'aberta');}
 function badgeResultado(p,e){
+  if(p.arquivada)return'<span class="badge" style="background:var(--gray-bg);color:var(--gray-ink);">Arquivada</span>';
   const r=resultadoDe(p);
   if(r==='ganha')return'<span class="badge" style="background:var(--green-bg);color:var(--green-ink);">Ganha</span>';
   if(r==='perdida')return'<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">Perdida</span>';
@@ -1506,7 +1528,7 @@ function bloquearPerfilLeitura(oque){
   showNotif('O perfil Backoffice só visualiza '+(oque||'propostas')+'.',true);return true;
 }
 function getListaConsultores(){return Object.keys(USERS).filter(function(k){return k!=='master'&&USERS[k].perfil!=='backoffice';});}
-function getPropostas(){return veTudoPropostas()?propostas:propostas.filter(p=>p.consultor===currentUser);}
+function getPropostas(incluirArquivadas){const base=veTudoPropostas()?propostas:propostas.filter(p=>p.consultor===currentUser);return incluirArquivadas?base:base.filter(p=>!p.arquivada);}
 function podeMoverBackoffice(){return currentUser==='master'||ehPerfilBackoffice()||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
 function veTudoBackoffice(){return podeMoverBackoffice();} // master e usuários com acesso ao Backoffice veem todos os pedidos/renovações
 function tipoBadge(tipo){const t=TIPOS[tipo]||TIPOS.novo;return`<span class="badge ${t.cls}">${t.label}</span>`;}
@@ -1724,6 +1746,7 @@ const TAB_TITULOS={dashboard:'Dashboard',pipeline:'Pipeline',lista:'Lista de pro
 function setTab(tab){
   if(!abaPermitida(tab))tab='dashboard';
   currentTab=tab;
+  window.scrollTo(0,0);
   ['dashboard','pipeline','followup','lista','metricas','consulta','renovacoes','backoffice','disparo','usuarios'].forEach(function(t){
     const viewEl=document.getElementById('view-'+t);
     const tabEl=document.getElementById('tab-'+t);
@@ -2910,9 +2933,14 @@ async function excluirBackoffice(docId){
   if(!podeMoverBackoffice())return;
   const p=backofficeLista.find(function(x){return x._docId===docId;});
   if(p&&p.status==='ativo'&&currentUser!=='master'){showNotif('Só o master pode excluir um pedido já ativo.',true);return;}
-  if(!confirm('Excluir este pedido do Backoffice?'))return;
-  try{await db.collection('backoffice').doc(docId).delete();showNotif('Pedido excluído.');}
-  catch(e){showNotif('Erro ao excluir.',true);}
+  if(!p)return;
+  const r=await confirmarAcao({titulo:'Excluir pedido',html:'<strong>'+escHtml(p.razao||'')+'</strong><br>O pedido sai do Acompanhamento de pedidos. Você poderá desfazer por alguns segundos.',botoes:[{id:'ok',rotulo:'Excluir',classe:'btn-del'}]});
+  if(r!=='ok')return;
+  const copia=Object.assign({},p);delete copia._docId;
+  try{
+    await db.collection('backoffice').doc(docId).delete();
+    showNotifAcao('Pedido excluído.','Desfazer',async function(){await db.collection('backoffice').doc(docId).set(copia);showNotif('Pedido restaurado.');});
+  }catch(e){showNotif('Erro ao excluir.',true);}
 }
 window.excluirBackoffice=excluirBackoffice;
 
@@ -3303,10 +3331,14 @@ window.salvarRenovacao=salvarRenovacao;
 
 async function removerRenovacao(docId){
   if(!podeEditarRenovacoes()){showNotif('O perfil Backoffice só visualiza a base de renovação.',true);return;}
-  if(!confirm('Remover este cliente da lista de renovação?'))return;
+  const rn=renovacoes.find(function(x){return x._docId===docId;});
+  if(!rn)return;
+  const r=await confirmarAcao({titulo:'Remover da renovação',html:'<strong>'+escHtml(rn.razao||'')+'</strong><br>O cliente sai da base de renovação. Você poderá desfazer por alguns segundos.',botoes:[{id:'ok',rotulo:'Remover',classe:'btn-del'}]});
+  if(r!=='ok')return;
+  const copia=Object.assign({},rn);delete copia._docId;
   try{
     await db.collection('renovacoes').doc(docId).delete();
-    showNotif('Cliente removido.');
+    showNotifAcao('Cliente removido.','Desfazer',async function(){await db.collection('renovacoes').doc(docId).set(copia);showNotif('Cliente restaurado.');});
   }catch(e){
     showNotif('Erro ao remover.',true);
   }
@@ -3917,7 +3949,7 @@ function listaFiltrar(){_listaPagina=1;renderLista();}
 function listaPagina(n){_listaPagina=n;renderLista();const el=document.getElementById('view-lista');if(el)el.scrollIntoView({block:'start'});}
 window.listaModo=listaModo;window.listaFiltrar=listaFiltrar;window.listaPagina=listaPagina;
 // Encerrada = ganha, perdida ou etapa antiga arquivada.
-function propostaEncerrada(p){return resultadoDe(p)!=='aberta'||(p.etapa!=='perdida'&&!ETAPAS[p.etapa]);}
+function propostaEncerrada(p){return !!p.arquivada||resultadoDe(p)!=='aberta'||(p.etapa!=='perdida'&&!ETAPAS[p.etapa]);}
 // Urgência: mais dias de atraso primeiro, depois retorno hoje, depois o retorno mais próximo; sem retorno e encerradas vão para o fim.
 function urgenciaChave(p){
   if(propostaEncerrada(p))return[3,0];
@@ -3946,14 +3978,14 @@ function htmlTabelaLista(ps){
       +'<td class="tl-acoes">'
       +'<button class="btn-sm" type="button" title="Ver detalhes" aria-label="Ver detalhes" onclick="verDetalhe(\''+p._docId+'\')"><i class="ti ti-eye"></i></button> '
       +(wa?'<a class="btn-sm" href="'+wa+'" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a> ':'')
-      +(podeEditarPropostas()?'<button class="btn-sm btn-purple" type="button" title="Editar" aria-label="Editar proposta" onclick="editarProposta(\''+p._docId+'\')"><i class="ti ti-edit"></i></button>':'')
+      +(podeEditarPropostas()?'<button class="btn-sm btn-purple" type="button" title="Editar" aria-label="Editar proposta" onclick="editarProposta(\''+p._docId+'\')"><i class="ti ti-edit"></i></button> <button class="btn-sm" type="button" title="'+(p.arquivada?'Desarquivar':'Arquivar')+'" aria-label="'+(p.arquivada?'Desarquivar':'Arquivar')+' proposta" onclick="arquivarProposta(\''+p._docId+'\','+(p.arquivada?'true':'false')+')"><i class="ti ti-archive"></i></button>':'')
       +'</td></tr>';
   }).join('');
   return '<div class="tabela-wrap"><table class="tabela-lista"><thead><tr><th>Razão social</th><th>CNPJ</th><th>Consultor</th><th>Tipo</th><th>Linhas</th><th>Receita</th><th>Etapa</th><th>Retorno</th><th></th></tr></thead><tbody>'+linhas+'</tbody></table></div>';
 }
 
 function renderLista(){
-  let lista=getPropostas();
+  let lista=getPropostas(true);
   
   // Popular filtro consultor dinamicamente (só master)
   const fcEl=document.getElementById('filtro-consultor');
@@ -4054,6 +4086,7 @@ function renderLista(){
         <button class="btn-sm" onclick="duplicarProposta('${p._docId}')"><i class="ti ti-copy"></i> Duplicar</button>`:''}
         ${podeEditarPropostas()&&etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-del" onclick="marcarPerdida('${p._docId}')"><i class="ti ti-x"></i> Perdida</button>`:''}
         ${podeEditarPropostas()&&p.etapa==='perdida'?`<button class="btn-sm btn-azul" onclick="reativar('${p._docId}')"><i class="ti ti-arrow-back"></i> Reativar</button>`:''}
+        ${podeEditarPropostas()?`<button class="btn-sm" onclick="arquivarProposta('${p._docId}',${p.arquivada?'true':'false'})" title="${p.arquivada?'Desarquivar':'Arquivar'}" aria-label="${p.arquivada?'Desarquivar':'Arquivar'} proposta"><i class="ti ti-archive"></i> ${p.arquivada?'Desarquivar':'Arquivar'}</button>`:''}
         ${currentUser==='master'?`<button class="btn-sm btn-del" onclick="excluirProposta('${p._docId}')"><i class="ti ti-trash"></i> Excluir</button>`:''}
       </div>
     </div>`;
@@ -4359,10 +4392,18 @@ async function excluirProposta(docId){
   if(bloquearPerfilLeitura())return;
   if(currentUser!=='master'){showNotif('Só o master pode excluir propostas.',true);return;}
   const p=propostas.find(function(x){return x._docId===docId;});
-  const aviso=p&&p.backofficeId?' Essa proposta já foi transferida para o Backoffice; o pedido lá continua existindo normalmente.':'';
-  if(!confirm('Excluir esta proposta definitivamente?'+aviso))return;
-  try{await db.collection('propostas').doc(docId).delete();showNotif('Proposta excluída.');}
-  catch(e){showNotif('Erro ao excluir.',true);}
+  if(!p)return;
+  const temHist=!!(p.historico&&p.historico.length);
+  const aviso=p.backofficeId?'<br>Ela já foi transferida para o Backoffice; o pedido lá continua existindo.':'';
+  const botoes=temHist?[{id:'arquivar',rotulo:'Arquivar (recomendado)',classe:'btn-primary'},{id:'excluir',rotulo:'Excluir mesmo assim',classe:'btn-del'}]:[{id:'excluir',rotulo:'Excluir',classe:'btn-del'}];
+  const r=await confirmarAcao({titulo:'Excluir proposta',html:'<strong>'+escHtml(p.razao||'')+'</strong>'+aviso+(temHist?'<br>Ela tem histórico de anotações. Arquivar mantém tudo guardado e tira a proposta das telas.':'<br>Você poderá desfazer por alguns segundos.'),botoes:botoes});
+  if(r==='arquivar'){arquivarProposta(docId,false);return;}
+  if(r!=='excluir')return;
+  const copia=Object.assign({},p);delete copia._docId;
+  try{
+    await db.collection('propostas').doc(docId).delete();
+    showNotifAcao('Proposta excluída.','Desfazer',async function(){await db.collection('propostas').doc(docId).set(copia);showNotif('Proposta restaurada.');});
+  }catch(e){showNotif('Erro ao excluir.',true);}
 }
 window.excluirProposta=excluirProposta;
 
@@ -4385,7 +4426,8 @@ async function duplicarProposta(docId){
   if(bloquearPerfilLeitura())return;
   const p=propostas.find(function(x){return x._docId===docId;});
   if(!p)return;
-  if(!confirm('Duplicar a proposta de "'+p.razao+'"? Ser\u00e1 criada uma c\u00f3pia na etapa "Proposta enviada".'))return;
+  const rdup=await confirmarAcao({titulo:'Duplicar proposta',html:'Criar uma cópia de <strong>'+escHtml(p.razao||'')+'</strong> na etapa "Proposta enviada"?',botoes:[{id:'ok',rotulo:'Duplicar',classe:'btn-primary'}]});
+  if(rdup!=='ok')return;
   const novosDados=Object.assign({},p);
   delete novosDados._docId;
   novosDados.razao=p.razao+' (c\u00f3pia)';
@@ -4596,7 +4638,8 @@ async function baixarAnexo(id,abrir,fonte,elId){
 window.baixarAnexo=baixarAnexo;
 
 async function excluirAnexo(id,elId,fonte){
-  if(!confirm('Excluir este documento? '+(fonte==='drive'?'Ele vai para a lixeira do Drive.':'Essa ação não pode ser desfeita.')))return;
+  const rd=await confirmarAcao({titulo:'Excluir documento',html:fonte==='drive'?'O documento vai para a lixeira do Drive (dá para recuperar por lá).':'Essa ação não pode ser desfeita.',botoes:[{id:'ok',rotulo:'Excluir',classe:'btn-del'}]});
+  if(rd!=='ok')return;
   try{
     if(fonte==='drive'){
       await driveChamar('excluir',{origem:_anexosCtx[elId].origem,id:id});
@@ -5546,6 +5589,146 @@ window.migracoes.ajuda=function(){
   ].join('\n'));
 };
 
+// ===== Confirmação própria (substitui confirm()) e toast com "Desfazer" =====
+let _confirmarResolve=null;
+function confirmarAcao(o){
+  return new Promise(function(resolve){
+    if(_confirmarResolve)_confirmarResolve(null);
+    _confirmarResolve=resolve;
+    document.getElementById('cf-titulo').textContent=o.titulo||'Confirmar';
+    document.getElementById('cf-texto').innerHTML=o.html||'';
+    document.getElementById('cf-botoes').innerHTML=(o.botoes||[]).map(function(b){return '<button class="btn '+(b.classe||'btn-primary')+'" type="button" data-cf="'+b.id+'">'+b.rotulo+'</button>';}).join('');
+    document.getElementById('modal-confirmar').classList.add('open');
+    const ult=document.querySelector('#cf-botoes button:last-child');if(ult)ult.focus();
+  });
+}
+function responderConfirmar(v){
+  const r=_confirmarResolve;_confirmarResolve=null;
+  document.getElementById('modal-confirmar').classList.remove('open');
+  if(r)r(v);
+}
+let _notifFn=null;
+function showNotifAcao(msg,rotulo,fn){
+  const a=document.getElementById('notif-area');
+  _notifFn=fn;
+  a.innerHTML='<div class="notif notif-ok"><i class="ti ti-bell-ringing"></i> '+escHtml(msg)+' <button class="btn-sm" type="button" onclick="executarNotifAcao()" style="margin-left:8px;">'+rotulo+'</button></div>';
+  if(_nt)clearTimeout(_nt);
+  _nt=setTimeout(function(){a.innerHTML='';_notifFn=null;},8000);
+}
+async function executarNotifAcao(){
+  const f=_notifFn;_notifFn=null;document.getElementById('notif-area').innerHTML='';
+  if(f){try{await f();}catch(e){console.error(e);showNotif('Não foi possível desfazer'+(e&&e.code?' ('+e.code+')':'')+'.',true);}}
+}
+async function arquivarProposta(docId,desarquivar){
+  if(bloquearPerfilLeitura())return;
+  const p=propostas.find(function(x){return x._docId===docId;});if(!p)return;
+  try{
+    await db.collection('propostas').doc(docId).update(desarquivar?{arquivada:false,atualizadoEm:Date.now()}:{arquivada:true,arquivadaEm:Date.now(),atualizadoEm:Date.now()});
+    showNotifAcao(desarquivar?'Proposta desarquivada.':'Proposta arquivada.','Desfazer',function(){return arquivarProposta(docId,!desarquivar);});
+  }catch(e){console.error(e);showNotif('Erro ao arquivar'+(e&&e.code?' ('+e.code+')':'')+'.',true);}
+}
+
+// ===== Navegação: Esc, clique fora do modal (com aviso de alterações) e busca global =====
+const _snapModal=new WeakMap();
+function snapshotModal(m){
+  return Array.prototype.map.call(m.querySelectorAll('input:not([type=file]):not([type=hidden]),select,textarea'),function(e){return(e.type==='checkbox'||e.type==='radio')?e.checked:e.value;}).join('\u0001');
+}
+new MutationObserver(function(muts){
+  muts.forEach(function(mu){
+    const m=mu.target;
+    if(!m.classList||!m.classList.contains('modal-bg'))return;
+    if(m.classList.contains('open')){if(!_snapModal.has(m))setTimeout(function(){if(m.classList.contains('open'))_snapModal.set(m,snapshotModal(m));},60);}
+    else _snapModal.delete(m);
+  });
+}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+function modalAbertoTopo(){const ab=document.querySelectorAll('.modal-bg.open');return ab.length?ab[ab.length-1]:null;}
+async function tentarFecharModal(m){
+  if(m.id==='modal-confirmar'){fecharModal(m.id);return;}
+  const antes=_snapModal.get(m);
+  if(antes!==undefined&&antes!==snapshotModal(m)){
+    const r=await confirmarAcao({titulo:'Descartar alterações?',html:'Você alterou campos que ainda não foram salvos. Se fechar agora, essas alterações serão perdidas.',botoes:[{id:'descartar',rotulo:'Descartar e fechar',classe:'btn-del'}]});
+    if(r!=='descartar')return;
+  }
+  if(m.id==='modal-checklist'&&typeof fecharChecklistGate==='function')fecharChecklistGate();
+  else fecharModal(m.id);
+}
+let _mdAlvo=null;
+document.addEventListener('mousedown',function(e){_mdAlvo=e.target;});
+document.addEventListener('click',function(e){
+  const bg=e.target;
+  if(bg.classList&&bg.classList.contains('modal-bg')&&bg.classList.contains('open')&&_mdAlvo===bg)tentarFecharModal(bg);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  const bgI=document.getElementById('busca-global');
+  if(document.activeElement===bgI){bgI.value='';renderBuscaGlobal();bgI.blur();return;}
+  fecharPopFu();
+  const m=modalAbertoTopo();
+  if(m){e.preventDefault();tentarFecharModal(m);}
+});
+function renderBuscaGlobal(){
+  const inp=document.getElementById('busca-global'),box=document.getElementById('busca-global-res');
+  if(!inp||!box)return;
+  const q=inp.value.trim().toLowerCase(),dig=q.replace(/\D/g,'');
+  if(q.length<2){box.style.display='none';box.innerHTML='';return;}
+  const casa=function(x){return String(x.razao||'').toLowerCase().indexOf(q)>=0||(dig.length>=3&&String(x.cnpj||'').replace(/\D/g,'').indexOf(dig)>=0);};
+  const statusRen={nao_atribuido:'Renovação: sem responsável',negociacao:'Em negociação',renovado:'Renovado',perdido:'Perdido'};
+  const grupos=[
+    {t:'proposta',rot:'Propostas',ic:'ti-file-text',itens:getPropostas(true).filter(casa),sub:function(x){return p_sub(x);}},
+    {t:'backoffice',rot:'Pedidos',ic:'ti-truck-delivery',itens:getBackoffice().filter(casa),sub:function(x){return nomeEtapaBackoffice(x.status);}},
+    {t:'renovacao',rot:'Renovação',ic:'ti-refresh',itens:getRenovacoes().filter(casa),sub:function(x){return statusRen[x.status]||'';}}
+  ];
+  function p_sub(x){return x.arquivada?'Arquivada':(resultadoDe(x)==='ganha'?'Ganha':(resultadoDe(x)==='perdida'?'Perdida':infoEtapa(x.etapa).nome));}
+  let html='',total=0;
+  grupos.forEach(function(g){
+    if(!g.itens.length)return;
+    html+='<div class="bg-grupo">'+g.rot+' ('+g.itens.length+')</div>';
+    g.itens.slice(0,6).forEach(function(x){
+      total++;
+      html+='<button type="button" class="bg-item" onclick="abrirResultadoBusca(\''+g.t+'\',\''+x._docId+'\')"><i class="ti '+g.ic+'" aria-hidden="true"></i><span><strong>'+escHtml(x.razao||'')+'</strong><small>'+escHtml((x.cnpj||'sem CNPJ')+' · '+g.sub(x))+'</small></span></button>';
+    });
+  });
+  box.innerHTML=html||'<div style="padding:12px;font-size:13px;color:var(--ink-3);">Nada encontrado.</div>';
+  box.style.display='block';
+}
+function abrirResultadoBusca(tipo,id){
+  const inp=document.getElementById('busca-global');inp.value='';renderBuscaGlobal();
+  if(tipo==='proposta')verDetalhe(id);
+  else if(tipo==='backoffice'){
+    const b=backofficeLista.find(function(x){return x._docId===id;});
+    abrirModalBackoffice(id,!podeMoverBackoffice()||!!(b&&b.status==='ativo'&&currentUser!=='master'));
+  }else{
+    if(podeEditarRenovacoes())abrirModalRenovacao(id);
+    else{
+      const r=renovacoes.find(function(x){return x._docId===id;});
+      setTab('renovacoes');
+      const rb=document.getElementById('ren-busca');if(rb&&r){rb.value=r.razao||'';renderRenovacoes();}
+    }
+  }
+}
+document.addEventListener('click',function(e){if(!e.target.closest('.busca-global')){const b=document.getElementById('busca-global-res');if(b)b.style.display='none';}});
+
+// ===== Acessibilidade: nome acessível em botões só com ícone e labels ligados aos campos =====
+const ROTULO_ICONE={'ti-lock':'Alterar senha','ti-key':'Alterar senha','ti-trash':'Excluir','ti-edit':'Editar','ti-x':'Fechar','ti-minus':'Remover linha','ti-eye':'Ver detalhes','ti-eye-off':'Mostrar ou ocultar','ti-plus':'Adicionar','ti-palette':'Trocar cor','ti-moon':'Alternar tema','ti-sun':'Alternar tema','ti-logout':'Sair','ti-arrow-right':'Avançar','ti-paperclip':'Documentos','ti-checklist':'Ver checklist','ti-file-text':'Gerar contrato','ti-chevron-left':'Anterior','ti-chevron-right':'Próximo','ti-refresh':'Atualizar','ti-copy':'Copiar','ti-download':'Baixar','ti-brand-whatsapp':'WhatsApp','ti-phone':'Ligar','ti-archive':'Arquivar','ti-send':'Enviar','ti-ban':'Cancelar'};
+function acessibilizar(raiz){
+  (raiz||document).querySelectorAll('button:not([aria-label]),a[href]:not([aria-label])').forEach(function(b){
+    if(b.textContent.trim())return;
+    let rot=b.getAttribute('title')||'';
+    if(!rot){
+      const ic=b.querySelector('i[class*="ti-"]');
+      if(ic){const c=Array.prototype.find.call(ic.classList,function(k){return ROTULO_ICONE[k];});if(c)rot=ROTULO_ICONE[c];}
+    }
+    if(rot){b.setAttribute('aria-label',rot);if(!b.getAttribute('title'))b.setAttribute('title',rot);}
+  });
+  (raiz||document).querySelectorAll('.form-group').forEach(function(g){
+    const lb=g.querySelector('label.form-label:not([for])');if(!lb)return;
+    const campo=g.querySelector('input[id],select[id],textarea[id]');
+    if(campo)lb.setAttribute('for',campo.id);
+  });
+}
+let _acessTimer=null;
+new MutationObserver(function(){if(_acessTimer)return;_acessTimer=setTimeout(function(){_acessTimer=null;acessibilizar();},150);}).observe(document.body,{childList:true,subtree:true});
+
 // ===== Configurações (master) =====
 function preencherPrefs(){
   const t=document.getElementById('cfg-msg-whatsapp');if(!t||currentUser!=='master')return;
@@ -5766,8 +5949,9 @@ function editarUsuario(key){
 }
 window.editarUsuario=editarUsuario;
 
-function removerUsuario(key){
-  if(!confirm(`Remover o consultor ${USERS[key].nome}? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).`))return;
+async function removerUsuario(key){
+  const ru=await confirmarAcao({titulo:'Remover consultor',html:'Remover <strong>'+escHtml(USERS[key].nome)+'</strong>? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).',botoes:[{id:'ok',rotulo:'Remover',classe:'btn-del'}]});
+  if(ru!=='ok')return;
   delete USERS[key];
   saveUsers().then(async function(){
     try{
@@ -5860,6 +6044,7 @@ async function salvarUsuario(){
 window.salvarUsuario=salvarUsuario;
 
 function fecharModal(id){
+  if(id==='modal-confirmar'){responderConfirmar(null);return;}
   document.getElementById(id).classList.remove('open');
   if(id==='modal-senha'){['s-atual','s-nova','s-confirmar'].forEach(x=>document.getElementById(x).value='');document.getElementById('senha-err').style.display='none';}
 }
@@ -5939,6 +6124,10 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
 
 ['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
 document.getElementById('cfg-msg-whatsapp').addEventListener('input',previaMsgWhatsApp);
+document.getElementById('busca-global').addEventListener('input',renderBuscaGlobal);
+document.getElementById('busca-global').addEventListener('keydown',function(e){if(e.key==='Enter'){const b=document.querySelector('#busca-global-res .bg-item');if(b)b.click();}});
+document.getElementById('cf-botoes').addEventListener('click',function(e){const b=e.target.closest('[data-cf]');if(b)responderConfirmar(b.dataset.cf);});
+acessibilizar();
 document.getElementById('mp-motivo').innerHTML=opcoesMotivoPerda();
 document.getElementById('p-motivo').innerHTML=opcoesMotivoPerda();
 document.getElementById('cb-motivo').addEventListener('change',function(){document.getElementById('cb-det-obrig').style.display=this.value.indexOf('Outro')===0?'inline':'none';});
