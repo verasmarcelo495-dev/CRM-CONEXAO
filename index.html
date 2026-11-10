@@ -763,7 +763,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <select id="p-tipo"><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
       </div>
       <div class="form-group"><label class="form-label">Qtd. de linhas</label><input type="number" id="p-linhas" placeholder="Ex: 10" min="1"/></div>
-      <div class="form-group"><label class="form-label">Receita (R$/mês)</label><input type="number" id="p-receita" placeholder="Ex: 1500" min="0"/></div>
+      <div class="form-group"><label class="form-label">Receita (R$/mês)</label><input type="text" id="p-receita" placeholder="Ex: 1.500,00"/></div>
       <div class="form-group"><label class="form-label">Data do retorno</label><input type="date" id="p-retorno"/></div>
     </div>
     <div class="grid-2">
@@ -872,7 +872,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <div class="form-group"><label class="form-label">Telefone</label><input type="tel" id="u-telefone-prop" placeholder="Ex: (61) 9 9999-0000"/></div>
         <div class="form-group"><label class="form-label">E-mail</label><input type="text" id="u-email-prop" placeholder="Ex: joao@conexaoco.com.br"/></div>
       </div>
-      <div class="form-group"><label class="form-label">Meta mensal de receita (R$)</label><input type="number" id="u-meta" placeholder="Ex: 5000" min="0"/></div>
+      <div class="form-group"><label class="form-label">Meta mensal de receita (R$)</label><input type="text" id="u-meta" placeholder="Ex: 5.000,00"/></div>
     </div>
     <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
       <div class="form-group"><label class="form-label" for="u-perfil">Perfil</label><select id="u-perfil"><option value="consultor">Consultor</option><option value="backoffice">Backoffice (vê todas as propostas em leitura e trabalha nos pedidos)</option></select></div>
@@ -947,7 +947,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <div class="prop-section">Linhas do contrato</div>
     <div id="ren-linhas-lista"></div>
     <button class="btn-sm btn-verde" onclick="adicionarLinhaRenovacao()" style="margin-bottom:1rem;"><i class="ti ti-plus"></i> Adicionar linha</button>
-    <div class="form-group"><label class="form-label">Valor atual pago (R$/mês)</label><input type="number" id="ren-valor-total" min="0" step="0.01" placeholder="Ex: 779.82"/></div>
+    <div class="form-group"><label class="form-label">Valor atual pago (R$/mês)</label><input type="text" id="ren-valor-total" placeholder="Ex: 779,82"/></div>
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Status</label>
         <select id="ren-status">
@@ -1023,7 +1023,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <div class="form-group"><label class="form-label">Qtd. de linhas</label><input type="number" id="ck-linhas" min="1"/></div>
       </div>
       <div class="form-group"><label class="form-label">Plano e linhas para portabilidade</label><textarea id="ck-plano" style="height:56px;" placeholder="Ex: Plano Empresarial 15GB — Linhas: 61999990000, 61988880000..."></textarea></div>
-      <div class="form-group"><label class="form-label">Valor mensal (R$)</label><input type="number" id="ck-valor" placeholder="Ex: 1500"/></div>
+      <div class="form-group"><label class="form-label">Valor mensal (R$)</label><input type="text" id="ck-valor" placeholder="Ex: 1.500,00"/></div>
 
       <div class="checklist-section">Dados do Contrato</div>
       <div class="grid-2">
@@ -1321,6 +1321,45 @@ function fmtMoeda(v){return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFracti
 function fmtCNPJ(v){v=v.replace(/\D/g,'').slice(0,14);if(v.length>12)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8,12)+'-'+v.slice(12);else if(v.length>8)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8);else if(v.length>5)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5);else if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);return v;}
 function fmtTel(t){const d=t.replace(/\D/g,'');if(d.length===11)return`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return t;}
 function cleanTel(t){return t.replace(/\D/g,'');}
+
+// ===== Valores em reais (pt-BR) =====
+// parseMoedaBR: texto digitado/colado -> number (2 casas). Aceita "1.155,00", "1155", "1155.00", "R$ 1.155,00", "1.155" (=1155).
+// Vazio -> 0; texto inválido -> NaN (quem chama decide a mensagem).
+function parseMoedaBR(v){
+  if(typeof v==='number')return isFinite(v)?Math.round(v*100)/100:NaN;
+  let s=String(v==null?'':v).replace(/R\$|\s/g,'');
+  if(!s)return 0;
+  if(!/^[\d.,]+$/.test(s))return NaN;
+  const ultV=s.lastIndexOf(','),ultP=s.lastIndexOf('.');
+  if(ultV>=0&&ultP>=0){
+    s=ultV>ultP?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
+  }else if(ultV>=0){
+    s=(s.match(/,/g).length>1)?s.replace(/,/g,''):s.replace(',','.');
+  }else if(ultP>=0){
+    if(s.match(/\./g).length>1||/^\d{1,3}\.\d{3}$/.test(s))s=s.replace(/\./g,'');
+  }
+  const n=parseFloat(s);
+  return isFinite(n)?Math.round(n*100)/100:NaN;
+}
+function fmtMoedaInput(n){n=Number(n);return isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';}
+// Valor já gravado no banco: number, ou string legada vinda de <input type="number"> (ponto = decimal).
+function valorNum(v){return typeof v==='number'?v:(parseFloat(v)||0);}
+function valorParaInput(v){const n=valorNum(v);return n?fmtMoedaInput(n):'';}
+// Máscara: digitando 115500 aparece 1.155,00; ao colar, o texto é interpretado por parseMoedaBR.
+function ligarMoeda(el){
+  if(!el||el._moeda)return;el._moeda=true;
+  el.setAttribute('inputmode','decimal');el.setAttribute('autocomplete','off');
+  el.addEventListener('paste',function(e){
+    e.preventDefault();
+    const n=parseMoedaBR((e.clipboardData||window.clipboardData).getData('text'));
+    el.value=isNaN(n)||!n?'':fmtMoedaInput(n);
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  el.addEventListener('input',function(){
+    const d=el.value.replace(/\D/g,'').replace(/^0+/,'');
+    el.value=d?fmtMoedaInput(parseInt(d,10)/100):'';
+  });
+}
 function initials(n){return n.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();}
 // Perfis: master (tudo), consultor (só o que é dele; com podeBackoffice também move pedidos) e backoffice
 // (perfil:'backoffice' em config/usuarios): lê todas as propostas e renovações, só escreve em Pedidos.
@@ -2490,7 +2529,7 @@ function renderProdutosBackoffice(){
     html+='<div style="display:grid;grid-template-columns:2fr 1fr 1fr 30px;gap:6px;align-items:end;">';
     html+='<div>'+(i===0?'<label class="form-label">Plano/produto</label>':'')+'<input type="text" '+dis+' value="'+(p.nome||'')+'" placeholder="Ex: TIM Empresas 10GB" data-id="'+p.id+'" data-campo="nome" class="bo-produto-input"/></div>';
     html+='<div>'+(i===0?'<label class="form-label">Quantidade</label>':'')+'<input type="number" '+dis+' min="0" value="'+(p.quantidade||'')+'" placeholder="Ex: 10" data-id="'+p.id+'" data-campo="quantidade" class="bo-produto-input"/></div>';
-    html+='<div>'+(i===0?'<label class="form-label">Valor unit. (R$)</label>':'')+'<input type="number" '+dis+' min="0" step="0.01" value="'+(p.valor||'')+'" placeholder="Ex: 39.99" data-id="'+p.id+'" data-campo="valor" class="bo-produto-input"/></div>';
+    html+='<div>'+(i===0?'<label class="form-label">Valor unit. (R$)</label>':'')+'<input type="text" '+dis+' value="'+valorParaInput(p.valor)+'" placeholder="Ex: 39,99" data-id="'+p.id+'" data-campo="valor" class="bo-produto-input"/></div>';
     html+='<div style="padding-bottom:1px;">'+(podeRemover?'<button class="btn-sm btn-del" type="button" style="width:30px;padding:0;justify-content:center;" data-remove-produto="'+p.id+'"><i class="ti ti-minus"></i></button>':'')+'</div>';
     html+='</div>';
     html+='<div id="bo-prod-total-'+p.id+'" style="font-size:12px;color:var(--ink-2);margin-top:4px;text-align:right;">Total: R$ '+totalLinha.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div>';
@@ -2501,7 +2540,9 @@ function renderProdutosBackoffice(){
   if(addBtn)addBtn.style.display=_boProdutosReadOnly?'none':'';
   atualizarTotaisProdutos();
   container.querySelectorAll('.bo-produto-input').forEach(function(inp){
-    inp.addEventListener('input',function(){updateProdutoBackoffice(parseFloat(this.dataset.id),this.dataset.campo,this.value);});
+    const ehValor=inp.dataset.campo==='valor';
+    if(ehValor)ligarMoeda(inp);
+    inp.addEventListener('input',function(){updateProdutoBackoffice(parseFloat(this.dataset.id),this.dataset.campo,ehValor?parseMoedaBR(this.value):this.value);});
   });
   container.querySelectorAll('[data-remove-produto]').forEach(function(btn){
     btn.addEventListener('click',function(){removerProdutoBackoffice(parseFloat(this.dataset.removeProduto));});
@@ -2531,7 +2572,7 @@ function abrirModalBackoffice(docId,readOnly){
 
   const isReadOnly=!!readOnly;
   _boProdutosReadOnly=isReadOnly;
-  _produtosBackoffice=(p&&p.produtos&&p.produtos.length)?p.produtos.map(function(x){return Object.assign({id:Date.now()+Math.random()},x);}):[{id:Date.now()+Math.random(),nome:'',quantidade:'',valor:''}];
+  _produtosBackoffice=(p&&p.produtos&&p.produtos.length)?p.produtos.map(function(x){return Object.assign({id:Date.now()+Math.random()},x,{valor:valorNum(x.valor)});}):[{id:Date.now()+Math.random(),nome:'',quantidade:'',valor:''}];
   renderProdutosBackoffice();
 
   campos.forEach(function(id){document.getElementById(id).disabled=isReadOnly;});
@@ -2961,7 +3002,7 @@ function abrirModalRenovacao(docId){
     document.getElementById('ren-status').value=r.status||'nao_atribuido';
     document.getElementById('ren-consultor').value=r.consultor||(currentUser!=='master'?currentUser:'');
     document.getElementById('ren-obs').value=r.obs||'';
-    document.getElementById('ren-valor-total').value=r.valor||'';
+    document.getElementById('ren-valor-total').value=valorParaInput(r.valor);
     if(r.linhasDetalhe&&r.linhasDetalhe.length){
       r.linhasDetalhe.forEach(function(l){adicionarLinhaRenovacao(l.telefone||'',l.plano||'',l.dataInicio||'',l.semFidelidade||false);});
     }else{
@@ -2987,7 +3028,8 @@ async function salvarRenovacao(){
   if(!_linhasRenovacao.length||!_linhasRenovacao[0].plano){showNotif('Adicione pelo menos uma linha com plano preenchido.',true);return;}
   const docId=document.getElementById('ren-id').value;
   const consultor=currentUser==='master'?document.getElementById('ren-consultor').value:currentUser;
-  const valorTotal=document.getElementById('ren-valor-total').value.trim();
+  const valorTotal=parseMoedaBR(document.getElementById('ren-valor-total').value);
+  if(isNaN(valorTotal)){showNotif('Valor inválido. Use só números, ex.: 779,82.',true);return;}
   const linhasDetalhe=_linhasRenovacao.map(function(l){return{telefone:l.telefone,plano:l.plano,dataInicio:l.dataInicio,semFidelidade:l.semFidelidade||false};});
   const dados={
     razao:razao,
@@ -3755,7 +3797,7 @@ function editarProposta(docId){
   document.getElementById('p-id').value=docId;
   document.getElementById('p-razao').value=p.razao||'';document.getElementById('p-cnpj').value=p.cnpj||'';
   document.getElementById('p-responsavel').value=p.responsavel||'';document.getElementById('p-telefone').value=p.telefone||'';
-  document.getElementById('p-linhas').value=p.linhas||'';document.getElementById('p-receita').value=p.receita||'';
+  document.getElementById('p-linhas').value=p.linhas||'';document.getElementById('p-receita').value=valorParaInput(p.receita);
   document.getElementById('p-retorno').value=p.retorno||'';document.getElementById('p-etapa').value=p.etapa;
   document.getElementById('p-tipo').value=p.tipo||'novo';
   document.getElementById('p-consultor').value=p.consultor||'karla';
@@ -3772,7 +3814,9 @@ async function salvarProposta(){
   const etapaVal=document.getElementById('p-etapa').value;
   const etapa=etapaVal==='perdida'?'perdida':parseInt(etapaVal);
   const consultor=currentUser==='master'?document.getElementById('p-consultor').value:currentUser;
-  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),telefone:document.getElementById('p-telefone').value.trim(),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita:document.getElementById('p-receita').value.trim(),retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
+  const receita=parseMoedaBR(document.getElementById('p-receita').value);
+  if(isNaN(receita)){showNotif('Receita inválida. Use só números, ex.: 1.155,00.',true);return;}
+  const dados={razao,cnpj:document.getElementById('p-cnpj').value.trim(),responsavel:document.getElementById('p-responsavel').value.trim(),telefone:document.getElementById('p-telefone').value.trim(),tipo:document.getElementById('p-tipo').value,linhas:document.getElementById('p-linhas').value.trim(),receita,retorno:document.getElementById('p-retorno').value,etapa,obs:document.getElementById('p-obs').value.trim(),consultor,atualizadoEm:Date.now()};
   // "Gerar contrato" nunca é gravado direto: precisa passar pelo checklist, que é quem cria o pedido no Backoffice.
   let irParaGate=false;
   if(etapa===3){
@@ -4183,15 +4227,17 @@ function renderLinhasProposta(){
     html+='<div>'+(i===0?'<label class="form-label">Qtd.</label>':'');
     html+='<input type="number" value="'+l.qtd+'" min="1" placeholder="10" data-id="'+l.id+'" data-campo="qtd" class="linha-input"/></div>';
     html+='<div>'+(i===0?'<label class="form-label">Unit. R$</label>':'');
-    html+='<input type="number" value="'+l.unit+'" min="0" step="0.01" placeholder="0.00" data-id="'+l.id+'" data-campo="unit" class="linha-input"/></div>';
+    html+='<input type="text" value="'+valorParaInput(l.unit)+'" placeholder="0,00" data-id="'+l.id+'" data-campo="unit" class="linha-input"/></div>';
     html+='<div style="padding-bottom:1px;"><button class="btn-sm btn-del" '+dis+' style="width:30px;padding:0;justify-content:center;" data-remove="'+l.id+'"><i class="ti ti-minus"></i></button></div>';
     html+='</div>';
   }
   container.innerHTML=html;
   // Adicionar listeners
   container.querySelectorAll('.linha-input').forEach(function(inp){
+    const ehValor=inp.dataset.campo==='unit';
+    if(ehValor)ligarMoeda(inp);
     inp.addEventListener('input',function(){
-      updateLinha(parseFloat(this.dataset.id),this.dataset.campo,this.value);
+      updateLinha(parseFloat(this.dataset.id),this.dataset.campo,ehValor?parseMoedaBR(this.value):this.value);
     });
   });
   container.querySelectorAll('[data-remove]').forEach(function(btn){
@@ -4573,7 +4619,7 @@ function abrirChecklist(docId,fonte){
   document.getElementById('ck-razao').value=salvo.razao||p.razao||'';
   document.getElementById('ck-cnpj').value=salvo.cnpj||p.cnpj||'';
   document.getElementById('ck-linhas').value=salvo.linhas||p.linhas||'';
-  document.getElementById('ck-valor').value=salvo.valor||p.receita||'';
+  document.getElementById('ck-valor').value=valorParaInput(salvo.valor||p.receita);
   document.getElementById('ck-tipo').value=salvo.tipo||(p.tipo==='portado'?'PORTABILIDADE':p.tipo==='renovacao'?'RENOVAÇÃO':'NOVO');
   document.getElementById('ck-gestor').value=salvo.gestor||p.responsavel||'';
   document.getElementById('ck-gestor-cpf').value=salvo.gestorCpf||'';
@@ -4735,7 +4781,8 @@ function copiarChecklist(){
   const tipo=document.getElementById('ck-tipo').value;
   const operadora=document.getElementById('ck-operadora').value;
   const plano=document.getElementById('ck-plano').value;
-  const valor=document.getElementById('ck-valor').value;
+  const valor=parseMoedaBR(document.getElementById('ck-valor').value);
+  if(isNaN(valor)){showNotif('Valor mensal inválido. Use só números, ex.: 1.500,00.',true);return;}
   const consultor=document.getElementById('ck-consultor').value;
   const razao=document.getElementById('ck-razao').value;
   const cnpj=document.getElementById('ck-cnpj').value;
@@ -4850,6 +4897,55 @@ async function adicionarHistorico(docId){
   }
 }
 window.adicionarHistorico=adicionarHistorico;
+
+// ========= MIGRAÇÕES DE DADOS (rodar no console, logado como master) =========
+// Todas rodam em dry-run por padrão: só listam o que mudaria. Para gravar: migracoes.<nome>({gravar:true}).
+// Cada documento alterado guarda o valor antigo em _migracao_<nome>_valorAnterior.
+window.migracoes=window.migracoes||{};
+async function _migrarColecao(nome,colecao,decide,opts){
+  if(currentUser!=='master'){console.warn('Migração: entre como master.');return null;}
+  const gravar=!!(opts&&opts.gravar);
+  const snap=await db.collection(colecao).get();
+  const mudancas=[],revisar=[];
+  snap.docs.forEach(function(d){
+    const r=decide(d.data(),d.id);
+    if(!r)return;
+    if(r.revisar)revisar.push(Object.assign({id:d.id},r.revisar));
+    if(r.novo){
+      const upd={};const antigo={};
+      Object.keys(r.novo).forEach(function(k){upd[k]=r.novo[k];antigo[k]=d.data()[k]===undefined?null:d.data()[k];});
+      upd['_migracao_'+nome+'_valorAnterior']=antigo;
+      mudancas.push({id:d.id,razao:d.data().razao||'',antes:JSON.stringify(antigo),depois:JSON.stringify(r.novo),_upd:upd});
+    }
+  });
+  console.log('['+nome+'] '+colecao+': '+mudancas.length+' alteração(ões)'+(gravar?' — GRAVANDO':' — dry-run (nada foi gravado)'));
+  if(mudancas.length)console.table(mudancas.map(function(m){return{id:m.id,razao:m.razao,antes:m.antes,depois:m.depois};}));
+  if(revisar.length){console.log('['+nome+'] para revisar manualmente ('+revisar.length+'):');console.table(revisar);}
+  if(gravar){
+    for(let i=0;i<mudancas.length;i+=400){
+      const batch=db.batch();
+      mudancas.slice(i,i+400).forEach(function(m){batch.update(db.collection(colecao).doc(m.id),m._upd);});
+      await batch.commit();
+    }
+    console.log('['+nome+'] concluído.');
+  }else if(mudancas.length)console.log('Para gravar: migracoes.'+nome+'({gravar:true})');
+  return{mudancas:mudancas.length,revisar:revisar};
+}
+// receita/valor gravados como texto -> número. Receita < 20 com 3+ linhas é "suspeita" (provável 1.155 gravado como 1,155): só listada.
+window.migracoes.receitasString=async function(opts){
+  const a=await _migrarColecao('receitasString','propostas',function(d){
+    if(d.receita===undefined||d.receita===null||d.receita==='')return null;
+    const n=valorNum(d.receita);
+    if(n<20&&(parseFloat(d.linhas)||0)>=3)return{revisar:{razao:d.razao||'',consultor:d.consultor||'',linhas:d.linhas,receita:d.receita}};
+    if(typeof d.receita==='string')return{novo:{receita:Math.round(n*100)/100}};
+    return null;
+  },opts);
+  const b=await _migrarColecao('receitasString','renovacoes',function(d){
+    if(typeof d.valor!=='string'||d.valor==='')return null;
+    return{novo:{valor:Math.round(valorNum(d.valor)*100)/100}};
+  },opts);
+  return{propostas:a,renovacoes:b};
+};
 
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
@@ -5022,7 +5118,7 @@ function editarUsuario(key){
     document.getElementById('u-nome-completo').value=u.nomeCompleto||u.nome||'';
     document.getElementById('u-telefone-prop').value=u.telProp||'';
     document.getElementById('u-email-prop').value=u.emailProp||'';
-    document.getElementById('u-meta').value=u.meta||'';
+    document.getElementById('u-meta').value=valorParaInput(u.meta);
   }
 }
 window.editarUsuario=editarUsuario;
@@ -5065,7 +5161,8 @@ async function salvarUsuario(){
   const nomeCompleto=document.getElementById('u-nome-completo').value.trim();
   const telProp=document.getElementById('u-telefone-prop').value.trim();
   const emailProp=document.getElementById('u-email-prop').value.trim();
-  const meta=parseFloat(document.getElementById('u-meta').value)||0;
+  const meta=parseMoedaBR(document.getElementById('u-meta').value);
+  if(isNaN(meta)){msgEl.textContent='Meta inválida. Use só números, ex.: 5.000,00.';errEl.style.display='flex';return;}
   const perfil=document.getElementById('u-perfil').value==='backoffice'?'backoffice':'consultor';
   const podeBackoffice=document.getElementById('u-backoffice').checked||perfil==='backoffice';
 
@@ -5197,6 +5294,7 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
   }
 });
 
+['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
 ligarBuscaCNPJ('ren-cnpj',{razao:'ren-razao',responsavel:'ren-responsavel',telefone:'ren-telefone',email:'ren-email'});
 const pipeFiltroConsultor=document.getElementById('pipe-filtro-consultor');
 if(pipeFiltroConsultor)pipeFiltroConsultor.addEventListener('change',function(){renderPipeline();});
