@@ -587,7 +587,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
           <input type="text" id="ren-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:260px;"/>
           <select id="ren-filtro-status" style="max-width:170px;">
             <option value="">Todos os status</option>
-            <option value="nao_atribuido">Não atribuído</option>
+            <option value="nao_atribuido">Renovação: sem responsável</option>
             <option value="negociacao">Em negociação</option>
             <option value="renovado">Renovado</option>
             <option value="perdido">Perdido</option>
@@ -762,7 +762,20 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 
     <!-- MÉTRICAS -->
     <div id="view-metricas" style="display:none;">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1rem;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label class="form-label" for="met-periodo" style="margin:0;">Período</label>
+          <select id="met-periodo" onchange="renderMetricas()" style="max-width:200px;">
+            <option value="mes">Mês atual</option>
+            <option value="mes_anterior">Mês anterior</option>
+            <option value="3m">Últimos 3 meses</option>
+            <option value="ano">Ano</option>
+            <option value="todo" selected>Todo o período</option>
+            <option value="custom">Intervalo personalizado</option>
+          </select>
+          <span id="met-custom" style="display:none;gap:6px;align-items:center;"><input type="date" id="met-de" onchange="renderMetricas()" aria-label="Data inicial"/> <span>até</span> <input type="date" id="met-ate" onchange="renderMetricas()" aria-label="Data final"/></span>
+          <span style="font-size:11px;color:var(--ink-3);">Considera as propostas criadas no período.</span>
+        </div>
         <button class="btn btn-azul" onclick="exportarRelatorioExcel()"><i class="ti ti-file-spreadsheet"></i> Exportar Excel</button>
       </div>
       <div class="grid-5" style="margin-bottom:1.5rem;" id="met-stats"></div>
@@ -996,14 +1009,14 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Status</label>
         <select id="ren-status">
-          <option value="nao_atribuido">Não atribuído</option>
+          <option value="nao_atribuido">Renovação: sem responsável</option>
           <option value="negociacao">Em negociação</option>
           <option value="renovado">Renovado</option>
           <option value="perdido">Perdido</option>
         </select>
       </div>
-      <div class="form-group" id="ren-wrap-consultor"><label class="form-label">Consultor responsável</label>
-        <select id="ren-consultor"><option value="">Não atribuído</option></select>
+      <div class="form-group" id="ren-wrap-consultor"><label class="form-label" for="ren-consultor">Vendido por (consultor)</label>
+        <select id="ren-consultor"><option value="">Sem consultor definido</option></select>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Observações</label><textarea id="ren-obs" placeholder="Informações relevantes..."></textarea></div>
@@ -3204,7 +3217,7 @@ function abrirModalRenovacao(docId){
   
   const consultores=getListaConsultores();
   const selConsultor=document.getElementById('ren-consultor');
-  selConsultor.innerHTML='<option value="">Não atribuído</option>'+consultores.map(function(k){
+  selConsultor.innerHTML='<option value="">Sem consultor definido</option>'+consultores.map(function(k){
     return '<option value="'+k+'">'+USERS[k].nome+'</option>';
   }).join('');
   
@@ -3489,7 +3502,7 @@ function renderRenovacoes(){
     return f&&f.semFidelidade;
   }).length;
   document.getElementById('ren-stats').innerHTML=
-    '<div class="fu-stat"><div class="num" style="color:var(--ink-3);">'+naoAtribuidos+'</div><div class="lbl">Não atribuídos</div></div>'
+    '<div class="fu-stat"><div class="num" style="color:var(--ink-3);">'+naoAtribuidos+'</div><div class="lbl">Sem responsável</div></div>'
     +'<div class="fu-stat"><div class="num" style="color:#BA7517;">'+emNegociacao+'</div><div class="lbl">Em negociação</div></div>'
     +'<div class="fu-stat"><div class="num" style="color:var(--amber-ink);">'+elegiveis+'</div><div class="lbl">Aptos (18+)</div></div>'
     +'<div class="fu-stat"><div class="num" style="color:var(--blue-ink);">'+semFid+'</div><div class="lbl">Sem fidelidade (24+)</div></div>'
@@ -3519,23 +3532,24 @@ function renderRenovacoes(){
     let fidBadges='';
     if(linhasDet.length===1&&fidsCalculadas.length===1){
       const f=fidsCalculadas[0];
-      if(!f.elegivel)fidBadges='<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">Não elegível ('+f.meses+'m)</span>';
+      if(!f.elegivel)fidBadges=f.meses>=12?'<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">Não elegível ('+f.meses+'m)</span>':'';
       else if(f.comFidelidade)fidBadges='<span class="badge badge-fidelidade-com">Com fidelidade ('+f.meses+'m)</span>';
       else fidBadges='<span class="badge badge-fidelidade-sem">Sem fidelidade ('+f.meses+'m)</span>';
     }else if(fidsCalculadas.length>0){
       if(qtdSemFid>0)fidBadges+='<span class="badge badge-fidelidade-sem">'+qtdSemFid+' sem fidelidade</span>';
       if(qtdComFid>0)fidBadges+='<span class="badge badge-fidelidade-com">'+qtdComFid+' com fidelidade</span>';
-      if(qtdNaoEleg>0)fidBadges+='<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">'+qtdNaoEleg+' não elegível</span>';
+      const qtdNaoElegProx=fidsCalculadas.filter(function(f){return !f.elegivel&&f.meses>=12;}).length;
+      if(qtdNaoElegProx>0)fidBadges+='<span class="badge" style="background:var(--red-bg);color:var(--red-ink);">'+qtdNaoElegProx+' não elegível</span>';
     }
     
-    const statusLabels={nao_atribuido:'Não atribuído',negociacao:'Em negociação',renovado:'Renovado',perdido:'Perdido'};
-    const statusBadge='<span class="badge badge-status-'+r.status+'">'+(statusLabels[r.status]||'Não atribuído')+'</span>';
+    const statusLabels={nao_atribuido:'Renovação: sem responsável',negociacao:'Em negociação',renovado:'Renovado',perdido:'Perdido'};
+    const statusBadge='<span class="badge badge-status-'+r.status+'">'+(statusLabels[r.status]||'Renovação: sem responsável')+'</span>';
     
     // Badge de mês do contrato (baseado em dataInicio principal)
     let mesBadge='';
     if(r.dataInicio){
       const fidP=calcularFidelidade(r.dataInicio);
-      if(fidP&&fidP.meses!=null){
+      if(fidP&&fidP.meses!=null&&fidP.meses>=12){
         let mesCor='var(--ink-2)',mesBg='var(--surface-2)';
         if(fidP.meses>=24){mesCor='var(--blue-ink)';mesBg='var(--blue-bg)';}
         else if(fidP.meses>=18){mesCor='var(--amber-ink)';mesBg='var(--amber-bg)';}
@@ -3572,7 +3586,7 @@ function renderRenovacoes(){
       +statusBadge
       +mesBadge
       +fidBadges
-      +(u?'<span class="badge" style="background:'+u.bg+';color:'+u.c+';">'+u.nome+'</span>':'')
+      +(u?'<span class="badge" style="background:'+u.bg+';color:'+u.c+';" title="Consultor que vendeu originalmente">Vendido por: '+u.nome+'</span>':'')
       +'</div>'
       +'<div style="font-size:13px;color:var(--ink-2);">'+(r.responsavel||'')+(r.cnpj?' · '+r.cnpj:'')+(r.cpf?' · CPF '+r.cpf:'')+'</div>'
       +(r.email?'<div style="font-size:12px;color:var(--ink-3);"><i class="ti ti-mail" style="font-size:12px;"></i> '+r.email+'</div>':'')
@@ -4046,8 +4060,30 @@ function renderLista(){
   }).join('')+htmlPaginacao(totalLista,paginasLista);
 }
 
+// Período das métricas: propostas criadas dentro dele. "meses" escala a meta mensal dos consultores.
+function periodoMetricas(todas){
+  const v=(document.getElementById('met-periodo')||{}).value||'todo';
+  const hoje=new Date(),y=hoje.getFullYear(),m=hoje.getMonth();
+  let ini=null,fim=null,meses=1;
+  if(v==='mes'){ini=new Date(y,m,1);fim=new Date(y,m+1,1);}
+  else if(v==='mes_anterior'){ini=new Date(y,m-1,1);fim=new Date(y,m,1);}
+  else if(v==='3m'){ini=new Date(y,m-2,1);fim=new Date(y,m+1,1);meses=3;}
+  else if(v==='ano'){ini=new Date(y,0,1);fim=new Date(y+1,0,1);meses=m+1;}
+  else if(v==='custom'){
+    const de=document.getElementById('met-de').value,ate=document.getElementById('met-ate').value;
+    ini=de?toDate(de):null;fim=ate?new Date(toDate(ate).getTime()+86400000):null;
+    meses=(ini&&fim)?Math.max(1,Math.round((fim-ini)/(30.44*86400000))):1;
+  }else{
+    const prim=todas.reduce(function(mn,p){return p.criadoEm&&p.criadoEm<mn?p.criadoEm:mn;},Date.now());
+    const d0=new Date(prim);meses=Math.max(1,(y-d0.getFullYear())*12+(m-d0.getMonth())+1);
+  }
+  return{ini:ini?+ini:null,fim:fim?+fim:null,meses:meses};
+}
 function renderMetricas(){
-  const lista=getPropostas();
+  const todasProp=getPropostas();
+  const per=periodoMetricas(todasProp);
+  document.getElementById('met-custom').style.display=document.getElementById('met-periodo').value==='custom'?'inline-flex':'none';
+  const lista=todasProp.filter(function(p){const t=p.criadoEm||0;return(per.ini===null||t>=per.ini)&&(per.fim===null||t<per.fim);});
   const fechadas=lista.filter(p=>p.etapa===3);
   const totalReceita=fechadas.reduce((s,p)=>s+(+p.receita||0),0);
   const totalLinhas=fechadas.reduce((s,p)=>s+(+p.linhas||0),0);
@@ -4058,7 +4094,8 @@ function renderMetricas(){
     `<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Total</div><div style="font-size:20px;font-weight:500;">${lista.length}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Fechadas (contrato)</div><div style="font-size:20px;font-weight:500;">${fechadas.length}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Ganhas (ativadas)</div><div style="font-size:20px;font-weight:500;">${ganhas.length}</div></div>`
-    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Receita</div><div style="font-size:15px;font-weight:500;">${fmtMoeda(totalReceita)}</div><div style="font-size:11px;color:var(--ink-3);">/mês</div></div>`
+    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">MRR fechado</div><div style="font-size:15px;font-weight:500;">${fmtMoeda(totalReceita)}</div><div style="font-size:11px;color:var(--ink-3);">/mês</div></div>`
+    +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Linhas fechadas</div><div style="font-size:20px;font-weight:500;">${totalLinhas}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Ticket médio</div><div style="font-size:15px;font-weight:500;">${fmtMoeda(ticketMedio)}</div></div>`
     +`<div style="background:var(--surface);border-radius:8px;padding:.85rem 1rem;border:1px solid var(--border);"><div style="font-size:11px;color:var(--ink-3);">Conversão</div><div style="font-size:20px;font-weight:500;">${taxaConv}%</div></div>`;
 
@@ -4073,7 +4110,7 @@ function renderMetricas(){
   if(currentUser==='master'){
     consDiv.innerHTML=todosConsultores.map(function(c){
       const u=USERS[c];const cl=lista.filter(function(p){return p.consultor===c;});const cf=cl.filter(function(p){return p.etapa===3;});const cr=cf.reduce(function(s,p){return s+(+p.receita||0);},0);
-      const meta=u.meta||0;
+      const meta=(u.meta||0)*per.meses;
       const pctMeta=meta>0?Math.min(100,Math.round(cr/meta*100)):0;
       return'<div style="padding:10px 0;border-bottom:1px solid var(--line);">'
         +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:'+(meta>0?'6px':'0')+';">'
@@ -4081,19 +4118,19 @@ function renderMetricas(){
         +'<div style="flex:1;"><div style="font-size:13px;font-weight:500;">'+u.nome+'</div><div style="font-size:12px;color:var(--ink-2);">'+cl.length+' propostas · '+cf.length+' fechadas</div></div>'
         +'<div style="font-size:13px;font-weight:500;">'+fmtMoeda(cr)+'</div>'
         +'</div>'
-        +(meta>0?'<div style="padding-left:44px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-bottom:2px;"><span>Meta: '+fmtMoeda(meta)+'</span><span style="font-weight:600;color:'+(pctMeta>=100?'var(--green-ink)':'var(--ink)')+';">'+pctMeta+'%</span></div><div class="funil-bar"><div class="funil-fill" style="width:'+pctMeta+'%;background:'+(pctMeta>=100?'#639922':'#378ADD')+';"></div></div></div>':'')
+        +(meta>0?'<div style="padding-left:44px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-bottom:2px;"><span>Meta: '+fmtMoeda(meta)+(per.meses>1?' ('+per.meses+' meses)':'')+'</span><span style="font-weight:600;color:'+(pctMeta>=100?'var(--green-ink)':'var(--ink)')+';">'+pctMeta+'%</span></div><div class="funil-bar"><div class="funil-fill" style="width:'+pctMeta+'%;background:'+(pctMeta>=100?'#639922':'#378ADD')+';"></div></div></div>':'<div style="padding-left:44px;font-size:11px;color:var(--ink-3);">Sem meta definida (Usuários \u2192 Editar)</div>')
         +'</div>';
     }).join('');
   }else{
     const mr=fechadas.reduce(function(s,p){return s+(+p.receita||0);},0);
     const uAtual=USERS[currentUser]||{};
-    const metaAtual=uAtual.meta||0;
+    const metaAtual=(uAtual.meta||0)*per.meses;
     const pctMetaAtual=metaAtual>0?Math.min(100,Math.round(mr/metaAtual*100)):0;
     consDiv.innerHTML='<div style="text-align:center;padding:1rem 0;">'
       +'<div style="font-size:26px;font-weight:500;">'+fmtMoeda(mr)+'</div>'
       +'<div style="font-size:13px;color:var(--ink-2);margin-top:4px;">Sua receita fechada/mês</div>'
       +'<div style="font-size:13px;color:var(--ink-2);">'+fechadas.length+' contratos · '+totalLinhas+' linhas</div>'
-      +(metaAtual>0?'<div style="margin-top:16px;padding:0 20px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-bottom:4px;"><span>Meta: '+fmtMoeda(metaAtual)+'</span><span style="font-weight:600;color:'+(pctMetaAtual>=100?'var(--green-ink)':'var(--ink)')+';">'+pctMetaAtual+'%</span></div><div class="funil-bar" style="height:10px;"><div class="funil-fill" style="width:'+pctMetaAtual+'%;background:'+(pctMetaAtual>=100?'#639922':'#378ADD')+';"></div></div></div>':'')
+      +(metaAtual>0?'<div style="margin-top:16px;padding:0 20px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-bottom:4px;"><span>Meta: '+fmtMoeda(metaAtual)+(per.meses>1?' ('+per.meses+' meses)':'')+'</span><span style="font-weight:600;color:'+(pctMetaAtual>=100?'var(--green-ink)':'var(--ink)')+';">'+pctMetaAtual+'%</span></div><div class="funil-bar" style="height:10px;"><div class="funil-fill" style="width:'+pctMetaAtual+'%;background:'+(pctMetaAtual>=100?'#639922':'#378ADD')+';"></div></div></div>':'')
       +'</div>';
   }
 
