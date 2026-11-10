@@ -279,6 +279,9 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .cnpj-loading{font-size:12px;color:var(--ink-3);margin-top:4px;display:none;}
 .cnpj-ok{font-size:12px;color:var(--green-ink);margin-top:4px;display:none;}
 .cnpj-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
+.kanban-col-recolhida{cursor:pointer;width:46px;padding:.6rem .3rem;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.kanban-col-recolhida .kcr-nome{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;}
+.kanban-col-enc{width:260px;}
 .pop-fu{position:absolute;z-index:300;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;width:270px;display:none;}
 .pop-fu textarea{min-height:64px;}
 .pop-fu .pf-rapidos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
@@ -544,7 +547,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <select id="pipe-filtro-consultor" style="display:none;"><option value="">Todos os consultores</option></select>
         <select id="pipe-filtro-mes"><option value="">Todos os meses</option></select>
       </div>
-      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,1fr);" id="kanban-row1"></div>
+      <div class="kanban-wrapper-dark" style="grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;" id="kanban-row1"></div>
     </div>
 
     <!-- CONSULTAR CNPJ -->
@@ -1250,6 +1253,20 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     <div class="modal-footer">
       <button class="btn" onclick="fecharModal('modal-motivo-perda')">Cancelar</button>
       <button class="btn btn-del" onclick="confirmarPerda()"><i class="ti ti-check"></i> Confirmar perda</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANCELAR PEDIDO (Backoffice) -->
+<div class="modal-bg" id="modal-cancelar-bo">
+  <div class="modal" style="max-width:420px;">
+    <h3><i class="ti ti-ban"></i> Cancelar / reprovar pedido</h3>
+    <input type="hidden" id="cb-doc-id"/>
+    <div class="form-group"><label class="form-label" for="cb-motivo">Motivo *</label><select id="cb-motivo"></select><div class="campo-err" id="err-cb-motivo"></div></div>
+    <div class="form-group"><label class="form-label" for="cb-detalhes">Detalhes <span id="cb-det-obrig" style="display:none;">*</span></label><textarea id="cb-detalhes" placeholder="Mais informações..."></textarea><div class="campo-err" id="err-cb-detalhes"></div></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-cancelar-bo')">Voltar</button>
+      <button class="btn btn-del" onclick="confirmarCancelamentoBO()"><i class="ti ti-check"></i> Confirmar</button>
     </div>
   </div>
 </div>
@@ -1986,6 +2003,40 @@ window.selecionarClienteDisparo=selecionarClienteDisparo;
 window.enviarMensagemDisparo=enviarMensagemDisparo;
 
 // ========= KANBAN COM DRAG & DROP =========
+// Dias desde que a proposta/pedido entrou na etapa atual (etapaDesde; antes dele existir, usa a última atualização).
+function diasNaEtapa(p){
+  const base=p.etapaDesde||p.atualizadoEm||p.criadoEm||Date.now();
+  return Math.max(0,Math.floor((Date.now()-base)/86400000));
+}
+let _pipeEnc={ganha:false,perdida:false};
+function togglePipeEnc(t){_pipeEnc[t]=!_pipeEnc[t];renderPipeline();}
+window.togglePipeEnc=togglePipeEnc;
+function colEncerradaPipeline(tipo,lista,filtroMes){
+  const ps=lista.filter(function(p){return resultadoDe(p)===tipo;}).sort(function(a,b){return(b.atualizadoEm||0)-(a.atualizadoEm||0);});
+  const nome=(tipo==='ganha'?'Ganhas':'Perdidas')+(filtroMes?' (mês)':' (todas)');
+  const cor=tipo==='ganha'?'var(--ok)':'var(--bad)';
+  if(!_pipeEnc[tipo]){
+    return '<div class="kanban-col-dark kanban-col-recolhida" role="button" tabindex="0" title="Mostrar '+nome+'" aria-label="Mostrar '+nome+'" onclick="togglePipeEnc(\''+tipo+'\')" onkeydown="if(event.key===\'Enter\')togglePipeEnc(\''+tipo+'\')">'
+      +'<div style="width:7px;height:7px;border-radius:50%;background:'+cor+';"></div><span class="kanban-col-count">'+ps.length+'</span><div class="kcr-nome">'+nome+'</div></div>';
+  }
+  const cards=ps.slice(0,60).map(function(p){
+    const u=USERS[p.consultor];
+    return '<div class="kanban-card-dark" data-action-card="detalhe" data-id2="'+p._docId+'" style="cursor:pointer;">'
+      +'<div class="kc-razao">'+escHtml(p.razao||'')+'</div>'
+      +'<div class="kc-resp">'+escHtml(p.responsavel||'\u2014')+'</div>'
+      +'<div class="kc-tags">'
+      +(p.receita?'<span class="kc-tag" style="background:var(--green-bg);color:var(--green-ink);">'+fmtMoeda(valorNum(p.receita))+'</span>':'')
+      +(veTudoPropostas()&&u?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+escHtml(u.nome)+'</span>':'')
+      +'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+new Date(p.atualizadoEm||p.criadoEm||0).toLocaleDateString('pt-BR')+'</span>'
+      +(tipo==='perdida'&&p.motivoPerda?'<span class="kc-tag" style="background:var(--red-bg);color:var(--red-ink);" title="'+escHtml(p.motivoPerda)+'">'+escHtml(String(p.motivoPerda).split(' \u2013 ')[0].slice(0,28))+'</span>':'')
+      +'</div></div>';
+  }).join('')||'<div style="font-size:11px;color:var(--ink-3);padding:.75rem 0;text-align:center;">Vazio</div>';
+  return '<div class="kanban-col-dark kanban-col-enc"><div class="kanban-col-header-dark">'
+    +'<div style="width:7px;height:7px;border-radius:50%;background:'+cor+';flex-shrink:0;"></div><div class="kanban-col-nome">'+nome+'</div><span class="kanban-col-count">'+ps.length+'</span>'
+    +'<button class="kc-btn" type="button" title="Recolher" aria-label="Recolher coluna" onclick="togglePipeEnc(\''+tipo+'\')"><i class="ti ti-chevron-right"></i></button></div>'
+    +'<div class="kanban-col-body-dark">'+cards+'</div></div>';
+}
+
 function renderPipeline(){
   let lista=getPropostas();
   
@@ -2062,10 +2113,12 @@ function renderPipeline(){
       let retornoBadge='';
       if(p.retorno&&etapaEmAndamento(p.etapa)){
         const diff=diffDays(p.retorno);
-        if(diff<0)retornoBadge='<span class="kc-tag" style="background:var(--red-bg);color:var(--red-ink);">'+Math.abs(diff)+'d atraso</span>';
-        else if(diff===0)retornoBadge='<span class="kc-tag" style="background:var(--amber-bg);color:var(--amber-ink);">Hoje</span>';
-        else if(diff<=3)retornoBadge='<span class="kc-tag" style="background:var(--green-bg);color:var(--green-ink);">em '+diff+'d</span>';
+        const dm=p.retorno.split('-').reverse().slice(0,2).join('/');
+        if(diff<0)retornoBadge='<span class="kc-tag" style="background:var(--red-bg);color:var(--red-ink);" title="Retorno atrasado">'+dm+' \u00b7 '+Math.abs(diff)+'d atraso</span>';
+        else if(diff===0)retornoBadge='<span class="kc-tag" style="background:var(--amber-bg);color:var(--amber-ink);" title="Retorno hoje">Retorno hoje</span>';
+        else retornoBadge='<span class="kc-tag" style="background:var(--surface-2);color:var(--ink-2);" title="Próximo retorno">Retorno '+dm+'</span>';
       }
+      retornoBadge+='<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);" title="Tempo nesta etapa">'+diasNaEtapa(p)+'d na etapa</span>';
       return '<div class="kanban-card-dark" draggable="true" data-id="'+p._docId+'" data-id2="'+p._docId+'" data-action-card="detalhe" ondragstart="onDragStart(event,this.dataset.id)" style="cursor:pointer;">'
         +'<div class="kc-razao">'+(p.razao||'')+'</div>'
         +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
@@ -2094,7 +2147,7 @@ function renderPipeline(){
       +'<span class="kanban-col-count">'+ps.length+(totalLn?' · '+totalLn+'ln':'')+'</span>'
       +'</div><div class="kanban-col-body-dark">'+cards+'</div></div>';
   }
-  document.getElementById('kanban-row1').innerHTML=ETAPAS.map(buildCol).join('');
+  document.getElementById('kanban-row1').innerHTML=ETAPAS.map(buildCol).join('')+colEncerradaPipeline('ganha',lista,filtroMes)+colEncerradaPipeline('perdida',lista,filtroMes);
 
   // Popular filtro de consultor (só master)
   if(currentUser==='master'&&filtroEl){
@@ -2126,9 +2179,9 @@ async function transferirParaBackoffice(docId,checklistOverride){
       checklist:checklistOverride||p.checklist||null,
       status:ETAPAS_BACKOFFICE[0].id,
       historico:[{data:Date.now(),autor:currentUser,texto:'Transferido do Pipeline (proposta)'}],
-      criadoEm:Date.now(),atualizadoEm:Date.now()
+      etapaDesde:Date.now(),criadoEm:Date.now(),atualizadoEm:Date.now()
     });
-    await db.collection('propostas').doc(docId).update({etapa:3,backofficeId:boDoc.id,atualizadoEm:Date.now()});
+    await db.collection('propostas').doc(docId).update({etapa:3,backofficeId:boDoc.id,etapaDesde:Date.now(),atualizadoEm:Date.now()});
     showNotif('Cliente transferido para Acompanhamento de pedidos!');
   }catch(e){showNotif('Erro ao transferir para o Backoffice.',true);}
 }
@@ -2159,7 +2212,7 @@ async function onDrop(e,etapaId){
   const p=propostas.find(x=>x._docId===dragId);
   if(!p||p.etapa===etapaId){dragId=null;return;}
   if(etapaId===3){const id=dragId;dragId=null;abrirChecklistParaTransferencia(id);return;}
-  try{await db.collection('propostas').doc(dragId).update({etapa:etapaId,atualizadoEm:Date.now()});showNotif(`Movido para: ${ETAPAS[etapaId].nome}`);}
+  try{await db.collection('propostas').doc(dragId).update({etapa:etapaId,etapaDesde:Date.now(),atualizadoEm:Date.now()});showNotif(`Movido para: ${ETAPAS[etapaId].nome}`);}
   catch(err){console.error('Erro ao mover proposta',err);showNotif('Erro ao mover'+(err&&err.code?' ('+err.code+')':'')+'.',true);}
   dragId=null;
 }
@@ -2382,6 +2435,9 @@ const ETAPAS_BACKOFFICE=[
 ];
 // 'ativo' não é uma coluna do kanban: é um estado terminal separado (ver ETAPA_ATIVO_BACKOFFICE), agrupado por mês de ativação.
 const ETAPA_ATIVO_BACKOFFICE={id:'ativo',nome:'Ativo',cor:'#1D9E75'};
+// Estado terminal para pedidos que não vão adiante (motivo obrigatório).
+const ETAPA_CANCELADO_BACKOFFICE={id:'cancelado',nome:'Cancelado / Reprovado',cor:'#E24B4A'};
+const MOTIVOS_CANCELAMENTO_BO=['Reprovado na análise antifraude','Reprovado na análise de crédito','Cliente desistiu','Documentação não entregue','Problema de viabilidade / cobertura','Outro (descrever)'];
 let backofficeLista=[],_unsubBo=null,dragIdBo=null;
 
 function iniciarSyncBackoffice(){
@@ -2414,6 +2470,7 @@ function totaisProdutosBackoffice(p){
 
 function nomeEtapaBackoffice(id){
   if(id==='ativo')return ETAPA_ATIVO_BACKOFFICE.nome;
+  if(id==='cancelado')return ETAPA_CANCELADO_BACKOFFICE.nome;
   const e=ETAPAS_BACKOFFICE.find(function(x){return x.id===id;});
   return e?e.nome:id;
 }
@@ -2439,6 +2496,50 @@ function renderHistoricoBackoffice(p){
     return '<div class="hist-item"><div class="hist-data">'+data+' – '+autor+'</div>'+h.texto+'</div>';
   }).join('');
 }
+
+// SLA da etapa: dias no mesmo status; verde até PREFS.slaVerde, amarelo até PREFS.slaAmarelo, depois vermelho.
+function slaBadgeBO(p){
+  const d=diasNaEtapa(p);
+  const ok=d<=PREFS.slaVerde,aviso=d<=PREFS.slaAmarelo;
+  const cor=ok?['var(--green-bg)','var(--green-ink)']:(aviso?['var(--amber-bg)','var(--amber-ink)']:['var(--red-bg)','var(--red-ink)']);
+  return '<span class="kc-tag" style="background:'+cor[0]+';color:'+cor[1]+';" title="Tempo nesta etapa (SLA: verde até '+PREFS.slaVerde+'d, amarelo até '+PREFS.slaAmarelo+'d)">'+(d===0?'hoje':d+'d nesta etapa')+'</span>';
+}
+function numeroPedidoBO(p){
+  return p.protocolo?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);" title="Número do pedido">#'+escHtml(p.protocolo)+'</span>'
+    :'<span class="kc-tag" style="background:var(--chip);color:var(--ink-3);" title="Pedido ainda sem número">sem nº</span>';
+}
+function abrirCancelamentoBO(docId){
+  if(!podeMoverBackoffice())return;
+  const p=backofficeLista.find(function(x){return x._docId===docId;});
+  if(!p)return;
+  if(p.status==='ativo'){showNotif('Pedido já ativo não pode ser cancelado por aqui.',true);return;}
+  document.getElementById('cb-doc-id').value=docId;
+  document.getElementById('cb-motivo').innerHTML='<option value="">Selecione o motivo</option>'+MOTIVOS_CANCELAMENTO_BO.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
+  document.getElementById('cb-detalhes').value='';
+  errCampo('cb-motivo','');errCampo('cb-detalhes','');
+  document.getElementById('cb-det-obrig').style.display='none';
+  document.getElementById('modal-cancelar-bo').classList.add('open');
+}
+async function confirmarCancelamentoBO(){
+  if(!podeMoverBackoffice())return;
+  if(!validarMotivoPerda('cb-motivo','cb-detalhes'))return;
+  const docId=document.getElementById('cb-doc-id').value;
+  const p=backofficeLista.find(function(x){return x._docId===docId;});
+  if(!p)return;
+  const motivo=textoMotivoPerda(document.getElementById('cb-motivo').value,document.getElementById('cb-detalhes').value.trim());
+  try{
+    await db.collection('backoffice').doc(docId).update({status:'cancelado',motivoCancelamento:motivo,etapaDesde:Date.now(),atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,'Cancelado/Reprovado ('+nomeEtapaBackoffice(p.status)+'): '+motivo)});
+    fecharModal('modal-cancelar-bo');showNotif('Pedido movido para Cancelado / Reprovado.');
+  }catch(e){console.error(e);showNotif('Erro ao cancelar'+(e&&e.code?' ('+e.code+')':'')+'.',true);}
+}
+async function reabrirPedidoBO(docId){
+  if(!podeMoverBackoffice())return;
+  try{
+    await db.collection('backoffice').doc(docId).update({status:ETAPAS_BACKOFFICE[0].id,etapaDesde:Date.now(),atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,'Pedido reaberto (voltou para "'+ETAPAS_BACKOFFICE[0].nome+'")')});
+    showNotif('Pedido reaberto.');
+  }catch(e){console.error(e);showNotif('Erro ao reabrir'+(e&&e.code?' ('+e.code+')':'')+'.',true);}
+}
+window.abrirCancelamentoBO=abrirCancelamentoBO;window.confirmarCancelamentoBO=confirmarCancelamentoBO;window.reabrirPedidoBO=reabrirPedidoBO;
 
 function renderBackoffice(){
   let lista=getBackoffice();
@@ -2472,7 +2573,8 @@ function renderBackoffice(){
         +'<div class="kc-tags">'
         +(tot.qtd?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+tot.qtd+'ln</span>':'')
         +(tot.valor?'<span class="kc-tag" style="background:var(--green-bg);color:var(--green-ink);">R$'+tot.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>':'')
-        +(p.protocolo?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">#'+p.protocolo+'</span>':'')
+        +numeroPedidoBO(p)
+        +slaBadgeBO(p)
         +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+nomeConsultor(p)+'</span>':'')
         +'</div>'
         +'<div class="kc-actions">'
@@ -2481,6 +2583,7 @@ function renderBackoffice(){
           +(podeMover&&etapa.id==='gerar_contrato'?'<button class="kc-btn" onclick="event.stopPropagation();abrirModalGerarContrato(\''+p._docId+'\')" title="Gerar contrato"><i class="ti ti-file-text"></i></button>':'')
           +(!podeMover?'':(idx<ETAPAS_BACKOFFICE.length-1?'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Avançar"><i class="ti ti-arrow-right"></i></button>':'<button class="kc-btn verde" onclick="event.stopPropagation();avancarBackoffice(\''+p._docId+'\',\''+etapa.id+'\')" title="Ativar"><i class="ti ti-circle-check"></i></button>')
           +'<button class="kc-btn" onclick="event.stopPropagation();abrirModalBackoffice(\''+p._docId+'\')" title="Editar"><i class="ti ti-edit"></i></button>'
+          +'<button class="kc-btn red" onclick="event.stopPropagation();abrirCancelamentoBO(\''+p._docId+'\')" title="Cancelar / reprovar" aria-label="Cancelar ou reprovar pedido"><i class="ti ti-ban"></i></button>'
           +'<button class="kc-btn red" onclick="event.stopPropagation();excluirBackoffice(\''+p._docId+'\')" title="Excluir"><i class="ti ti-trash"></i></button>')
           +'</div>'
         +'</div>';
@@ -2494,6 +2597,20 @@ function renderBackoffice(){
   }
   document.getElementById('backoffice-row1').innerHTML=ETAPAS_BACKOFFICE.slice(0,5).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
   document.getElementById('backoffice-row2').innerHTML=ETAPAS_BACKOFFICE.slice(5,10).map(function(e){return buildColBo(e,ETAPAS_BACKOFFICE.indexOf(e));}).join('');
+  // Cancelado / Reprovado: último estado do fluxo
+  const canc=lista.filter(function(p){return p.status==='cancelado';});
+  const cardsCanc=canc.map(function(p){
+    return '<div class="kanban-card-dark" style="cursor:pointer;" onclick="abrirModalBackoffice(\''+p._docId+'\','+(!podeMover)+')">'
+      +'<div class="kc-razao">'+escHtml(p.razao||'')+'</div><div class="kc-resp">'+escHtml(p.responsavel||'\u2014')+'</div>'
+      +'<div class="kc-tags">'+numeroPedidoBO(p)
+      +(p.motivoCancelamento?'<span class="kc-tag" style="background:var(--red-bg);color:var(--red-ink);" title="'+escHtml(p.motivoCancelamento)+'">'+escHtml(String(p.motivoCancelamento).split(' \u2013 ')[0].slice(0,30))+'</span>':'')
+      +'</div>'
+      +(podeMover?'<div class="kc-actions"><button class="kc-btn" onclick="event.stopPropagation();reabrirPedidoBO(\''+p._docId+'\')" title="Reabrir pedido" aria-label="Reabrir pedido"><i class="ti ti-arrow-back-up"></i></button></div>':'')
+      +'</div>';
+  }).join('')||'<div style="font-size:11px;color:var(--ink-3);padding:.75rem 0;text-align:center;">Vazio</div>';
+  document.getElementById('backoffice-row2').innerHTML+='<div class="kanban-col-dark" data-etapa="cancelado" '+(podeMover?'ondragenter="event.preventDefault()" ondragover="onDragOverBo(event,\'cancelado\')" ondragleave="onDragLeaveBo(event)" ondrop="onDropBo(event,\'cancelado\')"':'')+'>'
+    +'<div class="kanban-col-header-dark"><div style="width:7px;height:7px;border-radius:50%;background:'+ETAPA_CANCELADO_BACKOFFICE.cor+';flex-shrink:0;"></div><div class="kanban-col-nome">'+ETAPA_CANCELADO_BACKOFFICE.nome+'</div><span class="kanban-col-count">'+canc.length+'</span></div>'
+    +'<div class="kanban-col-body-dark">'+cardsCanc+'</div></div>';
 
   // ===== Ativos: agrupados por mês de ativação, somem por padrão ao virar o mês =====
   const todosAtivos=getBackoffice().filter(function(p){return p.status==='ativo';});
@@ -2543,6 +2660,7 @@ function renderBackoffice(){
             +'<div class="kc-resp">'+(p.responsavel||'—')+'</div>'
             +'<div class="kc-tags">'
             +(p.dataAtivacao?'<span class="kc-tag" style="background:var(--green-bg);color:var(--green-ink);">'+new Date(p.dataAtivacao+'T12:00').toLocaleDateString('pt-BR')+'</span>':'')
+            +numeroPedidoBO(p)
             +(tot.qtd?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+tot.qtd+'ln</span>':'')
             +(tot.valor?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">R$'+tot.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>':'')
             +((currentUser==='master'&&nomeConsultor(p))?'<span class="kc-tag" style="background:var(--chip);color:var(--ink-2);">'+nomeConsultor(p)+'</span>':'')
@@ -2569,8 +2687,9 @@ async function onDropBo(e,statusId){
   if(!dragIdBo||!podeMoverBackoffice()){console.warn('Soltar ignorado: sem card arrastado ou sem permissão');return;}
   const p=backofficeLista.find(x=>x._docId===dragIdBo);
   if(!p||p.status===statusId){dragIdBo=null;return;}
+  if(statusId==='cancelado'){dragIdBo=null;abrirCancelamentoBO(p._docId);return;}
   const texto='Moveu de "'+nomeEtapaBackoffice(p.status)+'" para "'+nomeEtapaBackoffice(statusId)+'"';
-  try{await db.collection('backoffice').doc(dragIdBo).update({status:statusId,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(dragIdBo,texto)});showNotif('Movido para: '+ETAPAS_BACKOFFICE.find(e=>e.id===statusId).nome);}
+  try{await db.collection('backoffice').doc(dragIdBo).update({status:statusId,etapaDesde:Date.now(),atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(dragIdBo,texto)});showNotif('Movido para: '+ETAPAS_BACKOFFICE.find(e=>e.id===statusId).nome);}
   catch(err){console.error('Erro ao mover pedido',err);showNotif('Erro ao mover'+(err&&err.code?' ('+err.code+')':'')+'.',true);}
   dragIdBo=null;
 }
@@ -2709,6 +2828,7 @@ async function salvarBackoffice(){
     else{
       dados.status=document.getElementById('bo-status').value||ETAPAS_BACKOFFICE[0].id;
       dados.criadoEm=Date.now();
+      dados.etapaDesde=Date.now();
       dados.historico=[{data:Date.now(),autor:currentUser,texto:'Pedido criado'}];
       await db.collection('backoffice').add(dados);
     }
@@ -2725,7 +2845,7 @@ async function avancarBackoffice(docId,statusAtual){
   if(idx>=ETAPAS_BACKOFFICE.length-1){abrirModalAtivacaoBackoffice(docId);return;}
   const novo=ETAPAS_BACKOFFICE[idx+1].id;
   const texto='Moveu de "'+ETAPAS_BACKOFFICE[idx].nome+'" para "'+ETAPAS_BACKOFFICE[idx+1].nome+'"';
-  try{await db.collection('backoffice').doc(docId).update({status:novo,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});showNotif('Avançou para: '+ETAPAS_BACKOFFICE[idx+1].nome);}
+  try{await db.collection('backoffice').doc(docId).update({status:novo,etapaDesde:Date.now(),atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});showNotif('Avançou para: '+ETAPAS_BACKOFFICE[idx+1].nome);}
   catch(e){showNotif('Erro ao atualizar.',true);}
 }
 window.avancarBackoffice=avancarBackoffice;
@@ -2747,7 +2867,7 @@ async function confirmarAtivacaoBackoffice(){
   if(!p){showNotif('Pedido não encontrado.',true);return;}
   const texto='Ativado em '+new Date(dataAtivacao+'T12:00').toLocaleDateString('pt-BR');
   try{
-    await db.collection('backoffice').doc(docId).update({status:'ativo',dataAtivacao,atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});
+    await db.collection('backoffice').doc(docId).update({status:'ativo',dataAtivacao,etapaDesde:Date.now(),atualizadoEm:Date.now(),historico:novoHistoricoBackoffice(docId,texto)});
 
     // A proposta só vira "Ganha" quando o pedido é ativado.
     try{
@@ -4054,7 +4174,7 @@ function errCampo(id,msg){
 // Confere motivo (e detalhe, mínimo 10 caracteres em "Outro"). Devolve true se está tudo certo.
 function validarMotivoPerda(motivoId,detId){
   const motivo=document.getElementById(motivoId).value,det=document.getElementById(detId).value.trim();
-  let ok=errCampo(motivoId,motivo?'':'Escolha o motivo da perda.');
+  let ok=errCampo(motivoId,motivo?'':'Escolha o motivo.');
   const outro=motivo.indexOf('Outro')===0;
   ok=errCampo(detId,(outro&&det.length<10)?'Descreva o motivo (mínimo 10 caracteres).':'')&&ok;
   return ok;
@@ -4152,6 +4272,7 @@ async function salvarProposta(){
       dados.etapa=existente?existente.etapa:2;
     }
   }
+  if(!existente||existente.etapa!==dados.etapa)dados.etapaDesde=Date.now();
   try{
     setSyncStatus('carregando');
     let idFinal=docId;
@@ -4179,7 +4300,7 @@ async function avancarEtapa(docId,etapaAtual){
   const nova=etapaAtual+1;
   if(nova===3){fecharModal('modal-detalhe');abrirChecklistParaTransferencia(docId);return;}
   try{
-    await db.collection('propostas').doc(docId).update({etapa:nova,atualizadoEm:Date.now()});
+    await db.collection('propostas').doc(docId).update({etapa:nova,etapaDesde:Date.now(),atualizadoEm:Date.now()});
     showNotif('Avançou para: '+ETAPAS[nova].nome);
     if(currentTab==='followup')renderFollowup();
   }catch(e){showNotif('Erro ao atualizar.',true);}
@@ -4216,7 +4337,7 @@ async function confirmarPerda(){
   const detalhes=document.getElementById('mp-detalhes').value.trim();
   const motivoCompleto=textoMotivoPerda(motivo,detalhes);
   try{
-    await db.collection('propostas').doc(docId).update({etapa:'perdida',resultado:'perdida',motivoPerda:motivoCompleto,atualizadoEm:Date.now()});
+    await db.collection('propostas').doc(docId).update({etapa:'perdida',resultado:'perdida',motivoPerda:motivoCompleto,etapaDesde:Date.now(),atualizadoEm:Date.now()});
     showNotif('Marcada como perdida.');
     fecharModal('modal-motivo-perda');
   }catch(e){showNotif('Erro.',true);}
@@ -4232,6 +4353,7 @@ async function duplicarProposta(docId){
   delete novosDados._docId;
   novosDados.razao=p.razao+' (c\u00f3pia)';
   novosDados.etapa=0;
+  novosDados.etapaDesde=Date.now();
   novosDados.resultado='aberta';
   delete novosDados.backofficeId;delete novosDados.motivoPerda;
   novosDados.historico=[];
@@ -4249,7 +4371,7 @@ window.duplicarProposta=duplicarProposta;
 
 async function reativar(docId){
   if(bloquearPerfilLeitura())return;
-  try{await db.collection('propostas').doc(docId).update({etapa:0,resultado:'aberta',atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
+  try{await db.collection('propostas').doc(docId).update({etapa:0,resultado:'aberta',etapaDesde:Date.now(),atualizadoEm:Date.now()});showNotif('Proposta reativada.');}
   catch(e){showNotif('Erro.',true);}
 }
 window.reativar=reativar;
@@ -5423,6 +5545,14 @@ async function salvarPrefs(){
 }
 window.salvarPrefs=salvarPrefs;
 
+// etapaDesde (quando entrou na etapa atual) para propostas e pedidos antigos: usa a última atualização como melhor estimativa.
+window.migracoes.etapaDesde=async function(opts){
+  const decide=function(d){return d.etapaDesde?null:{novo:{etapaDesde:d.atualizadoEm||d.criadoEm||Date.now()}};};
+  const r={};
+  for(const col of ['propostas','backoffice'])r[col]=await _migrarColecao('etapaDesde',col,decide,opts);
+  return r;
+};
+
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
   try{
@@ -5774,6 +5904,7 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
 document.getElementById('cfg-msg-whatsapp').addEventListener('input',previaMsgWhatsApp);
 document.getElementById('mp-motivo').innerHTML=opcoesMotivoPerda();
 document.getElementById('p-motivo').innerHTML=opcoesMotivoPerda();
+document.getElementById('cb-motivo').addEventListener('change',function(){document.getElementById('cb-det-obrig').style.display=this.value.indexOf('Outro')===0?'inline':'none';});
 document.getElementById('mp-motivo').addEventListener('change',function(){document.getElementById('mp-det-obrig').style.display=this.value.indexOf('Outro')===0?'inline':'none';});
 document.getElementById('p-etapa').addEventListener('change',atualizarMotivoForm);
 document.getElementById('p-cnpj').addEventListener('blur',verificarCnpjDuplicado);
