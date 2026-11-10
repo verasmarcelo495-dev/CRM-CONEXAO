@@ -38,16 +38,26 @@ service cloud.firestore {
       );
     }
 
+    // Perfil "Backoffice" (config/usuarios.<chave>.perfil == 'backoffice'): lê todas as propostas e renovações
+    // e trabalha nos pedidos, mas não altera propostas nem renovações existentes.
+    function perfilBackoffice() {
+      return registrado()
+        && get(/databases/$(database)/documents/config/usuarios).data
+          .get(minhaChave(), {}).get('perfil', '') == 'backoffice';
+    }
+
     // Propostas: master vê/edita tudo; consultor só as próprias (campo "consultor"
     // = chave dele). O app já consulta com where('consultor','==',chave).
     // Excluir: só o master.
     match /propostas/{docId} {
       allow read: if souMaster()
+        || perfilBackoffice()
         || (registrado() && resource.data.consultor == minhaChave());
       allow create: if souMaster()
-        || (registrado() && request.resource.data.consultor == minhaChave());
+        || (registrado() && !perfilBackoffice() && request.resource.data.consultor == minhaChave());
       allow update: if souMaster()
         || (registrado()
+            && !perfilBackoffice()
             && resource.data.consultor == minhaChave()
             && request.resource.data.consultor == minhaChave());
       allow delete: if souMaster();
@@ -56,12 +66,14 @@ service cloud.firestore {
     // Renovações: master e quem tem acesso ao Backoffice veem tudo (o Backoffice cria
     // a renovação do consultor ao ativar um pedido); consultor só as próprias.
     match /renovacoes/{docId} {
-      allow read, delete: if souBackoffice()
+      allow read: if souBackoffice()
         || (registrado() && resource.data.consultor == minhaChave());
+      allow delete: if (souBackoffice() && !perfilBackoffice())
+        || (registrado() && !perfilBackoffice() && resource.data.consultor == minhaChave());
       allow create: if souBackoffice()
         || (registrado() && request.resource.data.consultor == minhaChave());
-      allow update: if souBackoffice()
-        || (registrado()
+      allow update: if (souBackoffice() && !perfilBackoffice())
+        || (registrado() && !perfilBackoffice()
             && resource.data.consultor == minhaChave()
             && request.resource.data.consultor == minhaChave());
     }
