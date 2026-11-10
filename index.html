@@ -728,7 +728,10 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
           <div style="font-size:16px;font-weight:500;">Gerenciar consultores</div>
           <div style="font-size:13px;color:var(--ink-3);margin-top:2px;">Adicione, edite ou remova consultores</div>
         </div>
-        <button class="btn btn-verde" onclick="abrirModalUsuario()"><i class="ti ti-user-plus"></i> Novo consultor</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn" onclick="abrirModalFreelancer()" title="Vendedor sem acesso ao CRM, só para atribuir a venda"><i class="ti ti-user-star"></i> Novo freelancer</button>
+          <button class="btn btn-verde" onclick="abrirModalUsuario()"><i class="ti ti-user-plus"></i> Novo consultor</button>
+        </div>
       </div>
       <div id="lista-usuarios"></div>
       <div style="margin-top:2rem;max-width:560px;" id="cfg-prefs">
@@ -1293,6 +1296,22 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
   </div>
 </div>
 
+<!-- MODAL FREELANCER -->
+<div class="modal-bg" id="modal-freelancer">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="modal-freelancer-titulo"><i class="ti ti-user-plus"></i> Novo freelancer</h3>
+    <input type="hidden" id="fr-key"/>
+    <div style="font-size:13px;color:var(--ink-2);margin-bottom:1rem;">Freelancer não tem login nem vê o CRM. Ele só serve para colocar a venda no nome dele; quem lança as propostas e pedidos é o master ou o Backoffice.</div>
+    <div class="form-group"><label class="form-label" for="fr-nome">Nome *</label><input type="text" id="fr-nome" placeholder="Ex: João Silva" maxlength="60"/><div class="campo-err" id="err-fr-nome"></div></div>
+    <div class="form-group"><label class="form-label" for="fr-meta">Meta mensal de receita (opcional)</label><input type="text" id="fr-meta" placeholder="Ex: 3.000,00"/><div class="campo-err" id="err-fr-meta"></div></div>
+    <div style="font-size:11px;color:var(--ink-3);">Os dados desta lista são visíveis para todos os usuários do CRM: não cadastre CPF, PIX nem dados bancários aqui.</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-freelancer')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFreelancer()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIRMAR (substitui o confirm() do navegador) -->
 <div class="modal-bg" id="modal-confirmar" style="z-index:400;">
   <div class="modal" style="max-width:420px;" role="dialog" aria-modal="true" aria-labelledby="cf-titulo">
@@ -1527,7 +1546,11 @@ function bloquearPerfilLeitura(oque){
   if(podeEditarPropostas())return false;
   showNotif('O perfil Backoffice só visualiza '+(oque||'propostas')+'.',true);return true;
 }
-function getListaConsultores(){return Object.keys(USERS).filter(function(k){return k!=='master'&&USERS[k].perfil!=='backoffice';});}
+function getListaConsultores(){
+  return Object.keys(USERS).filter(function(k){return k!=='master'&&USERS[k].perfil!=='backoffice';})
+    .sort(function(a,b){return(USERS[a].freelancer?1:0)-(USERS[b].freelancer?1:0);});
+}
+function rotuloConsultor(k){const u=USERS[k];return u?u.nome+(u.freelancer?' (freelancer)':''):k;}
 function getPropostas(incluirArquivadas){const base=veTudoPropostas()?propostas:propostas.filter(p=>p.consultor===currentUser);return incluirArquivadas?base:base.filter(p=>!p.arquivada);}
 function podeMoverBackoffice(){return currentUser==='master'||ehPerfilBackoffice()||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
 function veTudoBackoffice(){return podeMoverBackoffice();} // master e usuários com acesso ao Backoffice veem todos os pedidos/renovações
@@ -2190,7 +2213,7 @@ function renderPipeline(){
     const valorAtual=filtroEl.value;
     const consultores=getListaConsultores();
     filtroEl.innerHTML='<option value="">Todos os consultores</option>'+consultores.map(function(k){
-      return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+      return '<option value="'+k+'">'+rotuloConsultor(k)+'</option>';
     }).join('');
     filtroEl.value=valorAtual;
     filtroEl.style.display='';
@@ -2811,7 +2834,7 @@ function abrirModalBackoffice(docId,readOnly){
   const footer=document.querySelector('#modal-backoffice .modal-footer');
   const selConsultor=document.getElementById('bo-consultor');
   const consultores=getListaConsultores();
-  selConsultor.innerHTML='<option value="">—</option>'+consultores.map(function(k){return '<option value="'+k+'">'+USERS[k].nome+'</option>';}).join('');
+  selConsultor.innerHTML='<option value="">—</option>'+consultores.map(function(k){return '<option value="'+k+'">'+rotuloConsultor(k)+'</option>';}).join('');
 
   const p=docId?backofficeLista.find(function(x){return x._docId===docId;}):null;
   document.getElementById('bo-id').value=docId||'';
@@ -2965,7 +2988,7 @@ function abrirModalFechamentoBackoffice(){
   const selConsultor=document.getElementById('fc-filtro-consultor');
   const consultoresComAtivo=Array.from(new Set(todosAtivos.map(function(p){return p.consultor;}).filter(Boolean)));
   selConsultor.innerHTML='<option value="">Todos os consultores</option>'
-    +consultoresComAtivo.map(function(k){return '<option value="'+k+'">'+(USERS[k]?USERS[k].nome:k)+'</option>';}).join('');
+    +consultoresComAtivo.map(function(k){return '<option value="'+k+'">'+(USERS[k]?rotuloConsultor(k):k)+'</option>';}).join('');
 
   document.getElementById('modal-fechamento-bo').classList.add('open');
 }
@@ -3246,7 +3269,7 @@ function abrirModalRenovacao(docId){
   const consultores=getListaConsultores();
   const selConsultor=document.getElementById('ren-consultor');
   selConsultor.innerHTML='<option value="">Sem consultor definido</option>'+consultores.map(function(k){
-    return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+    return '<option value="'+k+'">'+rotuloConsultor(k)+'</option>';
   }).join('');
   
   _linhasRenovacao=[];
@@ -3466,7 +3489,7 @@ function renderRenovacoes(){
     const consultores=getListaConsultores();
     if(consEl.options.length!==consultores.length+1){
       const valorCons=consEl.value;
-      consEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){return '<option value="'+k+'">'+USERS[k].nome+'</option>';}).join('');
+      consEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){return '<option value="'+k+'">'+rotuloConsultor(k)+'</option>';}).join('');
       consEl.value=valorCons;
     }
     consEl.style.display='';
@@ -3993,7 +4016,7 @@ function renderLista(){
     const consultores=getListaConsultores();
     const valorAtual=fcEl.value;
     fcEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){
-      return '<option value="'+k+'">'+USERS[k].nome+'</option>';
+      return '<option value="'+k+'">'+rotuloConsultor(k)+'</option>';
     }).join('');
     fcEl.value=valorAtual;
   }
@@ -5729,6 +5752,48 @@ function acessibilizar(raiz){
 let _acessTimer=null;
 new MutationObserver(function(){if(_acessTimer)return;_acessTimer=setTimeout(function(){_acessTimer=null;acessibilizar();},150);}).observe(document.body,{childList:true,subtree:true});
 
+// ===== Vendedores freelancer: só um nome para atribuir a venda (sem login, sem acesso ao CRM) =====
+function abrirModalFreelancer(key){
+  if(currentUser!=='master')return;
+  const u=key?USERS[key]:null;
+  document.getElementById('fr-key').value=key||'';
+  document.getElementById('fr-nome').value=u?u.nome:'';
+  document.getElementById('fr-meta').value=u?valorParaInput(u.meta):'';
+  errCampo('fr-nome','');errCampo('fr-meta','');
+  document.getElementById('modal-freelancer-titulo').innerHTML=key?'<i class="ti ti-edit"></i> Editar freelancer':'<i class="ti ti-user-plus"></i> Novo freelancer';
+  document.getElementById('modal-freelancer').classList.add('open');
+}
+async function salvarFreelancer(){
+  if(currentUser!=='master')return;
+  const keyOrig=document.getElementById('fr-key').value;
+  const nome=document.getElementById('fr-nome').value.trim();
+  const meta=parseMoedaBR(document.getElementById('fr-meta').value);
+  const repetido=Object.keys(USERS).some(function(k){return k!==keyOrig&&String(USERS[k].nome||'').trim().toLowerCase()===nome.toLowerCase();});
+  let ok=errCampo('fr-nome',nome.length<2?'Informe o nome do freelancer.':(repetido?'Já existe alguém com esse nome.':''));
+  ok=errCampo('fr-meta',isNaN(meta)?'Valor inválido. Ex.: 3.000,00':'')&&ok;
+  if(!ok)return;
+  const antes=JSON.stringify(USERS);
+  let chave=keyOrig;
+  if(keyOrig){
+    USERS[keyOrig].nome=nome;USERS[keyOrig].nomeCompleto=nome;USERS[keyOrig].meta=meta;
+  }else{
+    const slug=nome.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'novo';
+    chave='free_'+slug;
+    for(let i=2;USERS[chave];i++)chave='free_'+slug+'_'+i;
+    let h=0;for(let i=0;i<chave.length;i++)h=((h<<5)-h+chave.charCodeAt(i))|0;
+    const cor=CORES_DISPONIVEIS[Math.abs(h)%CORES_DISPONIVEIS.length];
+    USERS[chave]={nome:nome,nomeCompleto:nome,role:'Freelancer',freelancer:true,bg:cor.bg,c:cor.c,meta:meta,podeBackoffice:false};
+  }
+  const gravou=await saveUsers();
+  if(!gravou){
+    Object.keys(USERS).forEach(function(k){delete USERS[k];});Object.assign(USERS,JSON.parse(antes));
+    errCampo('fr-nome','Não foi possível salvar. Verifique a conexão e tente de novo.');return;
+  }
+  fecharModal('modal-freelancer');renderUsuarios();
+  showNotif(keyOrig?'Freelancer atualizado.':'Freelancer cadastrado. Ele já aparece para escolher como consultor nas propostas e pedidos.');
+}
+window.abrirModalFreelancer=abrirModalFreelancer;window.salvarFreelancer=salvarFreelancer;
+
 // ===== Configurações (master) =====
 function preencherPrefs(){
   const t=document.getElementById('cfg-msg-whatsapp');if(!t||currentUser!=='master')return;
@@ -5806,13 +5871,16 @@ async function saveUsers(){
     await db.collection('config').doc('usuarios').set(toSave);
     // Cache local
     localStorage.setItem('crm_users_v1',JSON.stringify(toSave));
+    return true;
   }catch(e){
+    console.error('Erro ao salvar usuários',e);
     // Fallback localStorage
     try{
       const toSave={};
       Object.keys(USERS).forEach(function(k){if(k!=='master')toSave[k]=USERS[k];});
       localStorage.setItem('crm_users_v1',JSON.stringify(toSave));
     }catch(e2){}
+    return false;
   }
 }
 
@@ -5826,7 +5894,7 @@ function renderUsuarios(){
       <div class="avatar" style="background:${u.bg};color:${u.c};flex-shrink:0;">${initials(u.nome)}</div>
       <div class="user-card-info">
         <div class="user-card-nome">${u.nome}</div>
-        <div class="user-card-role">${u.role}${isMaster?' · Acesso total':' · Chave: '+k}</div>
+        <div class="user-card-role">${u.freelancer?'Freelancer · sem acesso ao CRM':u.role+(isMaster?' · Acesso total':' · Chave: '+k)}</div>
       </div>
       <div style="display:flex;gap:6px;">
         ${!isMaster?`<button class="btn-sm" onclick="trocarCorUsuario('${k}')" title="Trocar cor"><i class="ti ti-palette"></i></button>`:''}
@@ -5888,7 +5956,7 @@ window.selecionarCor=selecionarCor;
 
 function atualizarSelectsConsultor(){
   const consultores=getListaConsultores();
-  const opts=consultores.map(k=>`<option value="${k}">${USERS[k].nome}</option>`).join('');
+  const opts=consultores.map(k=>`<option value="${k}">${rotuloConsultor(k)}</option>`).join('');
   ['filtro-consultor','p-consultor'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
@@ -5900,6 +5968,7 @@ function atualizarSelectsConsultor(){
 }
 
 function abrirModalUsuario(key){
+  if(key&&USERS[key]&&USERS[key].freelancer){abrirModalFreelancer(key);return;}
   document.getElementById('u-err').style.display='none';
   if(key){
     const u=USERS[key];
@@ -5950,7 +6019,7 @@ function editarUsuario(key){
 window.editarUsuario=editarUsuario;
 
 async function removerUsuario(key){
-  const ru=await confirmarAcao({titulo:'Remover consultor',html:'Remover <strong>'+escHtml(USERS[key].nome)+'</strong>? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).',botoes:[{id:'ok',rotulo:'Remover',classe:'btn-del'}]});
+  const ru=await confirmarAcao({titulo:'Remover consultor',html:USERS[key].freelancer?'Remover o freelancer <strong>'+escHtml(USERS[key].nome)+'</strong>? As propostas e pedidos no nome dele continuam existindo, mas ele deixa de aparecer nas listas.':'Remover <strong>'+escHtml(USERS[key].nome)+'</strong>? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).',botoes:[{id:'ok',rotulo:'Remover',classe:'btn-del'}]});
   if(ru!=='ok')return;
   delete USERS[key];
   saveUsers().then(async function(){
@@ -6122,7 +6191,7 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
   }
 });
 
-['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
+['p-receita','u-meta','ren-valor-total','ck-valor','fr-meta'].forEach(function(id){ligarMoeda(document.getElementById(id));});
 document.getElementById('cfg-msg-whatsapp').addEventListener('input',previaMsgWhatsApp);
 document.getElementById('busca-global').addEventListener('input',renderBuscaGlobal);
 document.getElementById('busca-global').addEventListener('keydown',function(e){if(e.key==='Enter'){const b=document.querySelector('#busca-global-res .bg-item');if(b)b.click();}});
