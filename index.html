@@ -768,7 +768,7 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
     </div>
     <div class="grid-2">
       <div class="form-group"><label class="form-label">Etapa</label><select id="p-etapa"></select></div>
-      <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor</label><select id="p-consultor"><option value="karla">Karla</option><option value="lucas">Lucas</option></select></div>
+      <div class="form-group" id="wrap-consultor-sel" style="display:none;"><label class="form-label">Consultor</label><select id="p-consultor"><option value="">Selecione</option></select></div>
     </div>
     <div class="form-group"><label class="form-label">Observação inicial (opcional)</label><textarea id="p-obs" placeholder="Informações relevantes..."></textarea></div>
     <div class="modal-footer">
@@ -2034,7 +2034,7 @@ function renderPipeline(){
   // Popular filtro de consultor (só master)
   if(currentUser==='master'&&filtroEl){
     const valorAtual=filtroEl.value;
-    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+    const consultores=getListaConsultores();
     filtroEl.innerHTML='<option value="">Todos os consultores</option>'+consultores.map(function(k){
       return '<option value="'+k+'">'+USERS[k].nome+'</option>';
     }).join('');
@@ -3227,9 +3227,11 @@ function renderRenovacoes(){
   }
   
   if(veTudoPropostas()&&consEl){
-    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
-    if(consEl.options.length<=1){
+    const consultores=getListaConsultores();
+    if(consEl.options.length!==consultores.length+1){
+      const valorCons=consEl.value;
       consEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){return '<option value="'+k+'">'+USERS[k].nome+'</option>';}).join('');
+      consEl.value=valorCons;
     }
     consEl.style.display='';
   }
@@ -3635,8 +3637,8 @@ function renderLista(){
   
   // Popular filtro consultor dinamicamente (só master)
   const fcEl=document.getElementById('filtro-consultor');
-  if(veTudoPropostas()&&fcEl&&fcEl.options.length<=1){
-    const consultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+  if(veTudoPropostas()&&fcEl&&fcEl.options.length!==getListaConsultores().length+1){
+    const consultores=getListaConsultores();
     const valorAtual=fcEl.value;
     fcEl.innerHTML='<option value="">Todos</option>'+consultores.map(function(k){
       return '<option value="'+k+'">'+USERS[k].nome+'</option>';
@@ -3752,7 +3754,7 @@ function renderMetricas(){
   }).join('');
 
   const consDiv=document.getElementById('met-consultores');
-  const todosConsultores=Object.keys(USERS).filter(function(k){return k!=='master';});
+  const todosConsultores=getListaConsultores();
   if(currentUser==='master'){
     consDiv.innerHTML=todosConsultores.map(function(c){
       const u=USERS[c];const cl=lista.filter(function(p){return p.consultor===c;});const cf=cl.filter(function(p){return p.etapa===3;});const cr=cf.reduce(function(s,p){return s+(+p.receita||0);},0);
@@ -3819,7 +3821,7 @@ function abrirModalNova(){
   document.getElementById('p-retorno').value='';
   document.getElementById('p-etapa').value='0';
   document.getElementById('p-tipo').value='novo';
-  document.getElementById('p-consultor').value=currentUser!=='master'?currentUser:'karla';
+  document.getElementById('p-consultor').value=currentUser!=='master'?currentUser:'';
   document.getElementById('modal-proposta').classList.add('open');
 }
 window.abrirModalNova=abrirModalNova;
@@ -3834,7 +3836,7 @@ function editarProposta(docId){
   document.getElementById('p-linhas').value=p.linhas||'';document.getElementById('p-receita').value=valorParaInput(p.receita);
   document.getElementById('p-retorno').value=p.retorno||'';document.getElementById('p-etapa').value=p.etapa;
   document.getElementById('p-tipo').value=p.tipo||'novo';
-  document.getElementById('p-consultor').value=p.consultor||'karla';
+  document.getElementById('p-consultor').value=p.consultor||'';
   document.getElementById('p-obs').value=p.obs||'';
   document.getElementById('modal-proposta').classList.add('open');
 }
@@ -5119,7 +5121,7 @@ function atualizarSelectsConsultor(){
     if(!el)return;
     const val=el.value;
     if(id==='filtro-consultor')el.innerHTML='<option value="">Todos</option>'+opts;
-    else el.innerHTML=opts;
+    else el.innerHTML=(id==='p-consultor'?'<option value="">Selecione</option>':'')+opts;
     el.value=val;
   });
 }
