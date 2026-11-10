@@ -1276,8 +1276,8 @@ function infoEtapa(etapa){
 function etapaEmAndamento(etapa){return etapa===0||etapa===1||etapa===2;}
 const TIPOS={novo:{label:'Novo',cls:'tipo-novo'},portado:{label:'Portado',cls:'tipo-portado'},renovacao:{label:'Renovação',cls:'tipo-renovacao'}};
 const USERS={master:{nome:'Marcelo',role:'Gestor master',bg:'#FCEBEB',c:'#791F1F'},karla:{nome:'Karla',role:'Consultora',bg:'#EEEDFE',c:'#3C3489'},lucas:{nome:'Lucas',role:'Consultor',bg:'#E1F5EE',c:'#085041'}};
-const SK_SENHAS='crm_senhas_v2';
-const SENHAS_PADRAO={master:'marcelo123',karla:'karla123',lucas:'lucas123'};
+// Senhas em texto puro (legado) não existem mais: o login é só Firebase Auth. Limpa o resto que ficou no navegador.
+try{localStorage.removeItem('crm_senhas_v2');}catch(e){}
 
 let propostas=[],currentUser=null,currentTab='pipeline',_chart=null,_nt=null,_unsub=null;
 let dragId=null,dragOverCol=null;
@@ -1290,15 +1290,6 @@ function diffDays(s){return Math.round((toDate(s)-TODAY)/86400000);}
 const TODAY_STR=dateStr(TODAY);
 const TMRW=new Date(TODAY);TMRW.setDate(TMRW.getDate()+1);
 const TMRW_STR=dateStr(TMRW);
-
-function getSenhas(){
-  try{
-    const d=localStorage.getItem(SK_SENHAS);
-    const local=d?JSON.parse(d):{};
-    return Object.assign({},SENHAS_PADRAO,local);
-  }catch(e){return SENHAS_PADRAO;}
-}
-function setSenhas(s){try{localStorage.setItem(SK_SENHAS,JSON.stringify(s));}catch(e){}}
 
 // ===== TEMA CLARO/ESCURO =====
 function temaAtual(){
@@ -4306,27 +4297,6 @@ function gerarPropostaPDF(){
 }
 window.gerarPropostaPDF=gerarPropostaPDF;
 
-// ========= SENHAS NO FIREBASE =========
-async function loadSenhasFirebase(){
-  try{
-    const snap=await db.collection('config').doc('senhas').get();
-    if(snap.exists){
-      const data=snap.data();
-      localStorage.setItem('crm_senhas_v2',JSON.stringify(data));
-    }
-  }catch(e){}
-}
-
-async function saveSenhaFirebase(user,senha){
-  try{
-    const snap=await db.collection('config').doc('senhas').get();
-    const atual=snap.exists?snap.data():{};
-    atual[user]=senha;
-    await db.collection('config').doc('senhas').set(atual);
-    localStorage.setItem('crm_senhas_v2',JSON.stringify(atual));
-  }catch(e){}
-}
-
 // ========= CONSULTA CNPJ =========
 
 // ========= CONSULTA DE CNPJ (BrasilAPI, dados públicos da Receita Federal) =========
@@ -5017,7 +4987,6 @@ window.editarUsuario=editarUsuario;
 function removerUsuario(key){
   if(!confirm(`Remover o consultor ${USERS[key].nome}? Isso não remove as propostas dele, nem a conta de login dele no Firebase Authentication (isso só pode ser feito pelo painel do Firebase).`))return;
   delete USERS[key];
-  const senhas=getSenhas();delete senhas[key];setSenhas(senhas);
   saveUsers().then(async function(){
     try{
       const mapSnap=await db.collection('config').doc('uid_map').get();
@@ -5192,7 +5161,6 @@ if(pipeFiltroMes)pipeFiltroMes.addEventListener('change',function(){renderPipeli
 
 document.getElementById('cal-prev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCal();});
 document.getElementById('cal-next').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCal();});
-loadSenhasFirebase();
 // Listeners de login - garantir que funcionem com type="module"
 const btnLogin=document.getElementById('btn-login');
 if(btnLogin){
