@@ -279,6 +279,18 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
 .cnpj-loading{font-size:12px;color:var(--ink-3);margin-top:4px;display:none;}
 .cnpj-ok{font-size:12px;color:var(--green-ink);margin-top:4px;display:none;}
 .cnpj-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
+.pop-fu{position:absolute;z-index:300;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;width:270px;display:none;}
+.pop-fu textarea{min-height:64px;}
+.pop-fu .pf-rapidos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.fu-nota{font-size:11px;color:var(--ink-3);font-style:italic;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.tabela-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
+.tabela-lista{width:100%;border-collapse:collapse;font-size:13px;}
+.tabela-lista th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+.tabela-lista td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+.tabela-lista tr:last-child td{border-bottom:none;}
+.tabela-lista .tl-sub{font-size:11px;color:var(--ink-3);}
+.tabela-lista .tl-acoes{white-space:nowrap;text-align:right;}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;font-size:13px;color:var(--ink-2);flex-wrap:wrap;}
 .campo-err{font-size:12px;color:var(--red-ink);margin-top:4px;display:none;}
 .input-erro{border-color:var(--bad)!important;}
 .aviso-dup{background:var(--amber-bg);color:var(--amber-ink);border-radius:var(--radius);padding:8px 10px;font-size:12px;margin-top:6px;display:none;}
@@ -707,20 +719,40 @@ textarea{height:72px;padding:8px 12px;resize:vertical;line-height:1.5;}
         <button class="btn btn-verde" onclick="abrirModalUsuario()"><i class="ti ti-user-plus"></i> Novo consultor</button>
       </div>
       <div id="lista-usuarios"></div>
+      <div style="margin-top:2rem;max-width:560px;" id="cfg-prefs">
+        <div style="font-size:16px;font-weight:500;margin-bottom:2px;">Configurações</div>
+        <div style="font-size:13px;color:var(--ink-3);margin-bottom:1rem;">Valem para todos os usuários.</div>
+        <div class="form-group"><label class="form-label" for="cfg-msg-whatsapp">Mensagem do WhatsApp (botões de WhatsApp das propostas)</label>
+          <textarea id="cfg-msg-whatsapp" maxlength="500"></textarea>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:3px;">Use {responsavel}, {consultor} e {razao}.</div>
+          <div id="cfg-msg-previa" style="font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:6px;"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label" for="cfg-sla-verde">SLA do Backoffice: verde até (dias na etapa)</label><input type="number" id="cfg-sla-verde" min="1" max="60"/></div>
+          <div class="form-group"><label class="form-label" for="cfg-sla-amarelo">Amarelo até (dias; acima disso fica vermelho)</label><input type="number" id="cfg-sla-amarelo" min="2" max="90"/></div>
+        </div>
+        <div class="login-err" id="cfg-err"><i class="ti ti-alert-circle"></i> <span id="cfg-err-msg"></span></div>
+        <button class="btn btn-primary" onclick="salvarPrefs()"><i class="ti ti-check"></i> Salvar configurações</button>
+      </div>
     </div>
 
     <!-- LISTA -->
     <div id="view-lista" style="display:none;">
       <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
-        <input type="text" id="lista-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:280px;"/>
-        <select id="filtro-etapa" onchange="renderLista()" style="max-width:200px;"></select>
-        <select id="filtro-tipo" onchange="renderLista()" style="max-width:150px;"><option value="">Todos os tipos</option><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
-        <select id="filtro-consultor" onchange="renderLista()" style="max-width:160px;display:none;"><option value="">Todos</option></select>
-        <select id="lista-ordenar" onchange="renderLista()" style="max-width:190px;">
+        <input type="text" id="lista-busca" placeholder="Buscar por CNPJ ou razão social..." style="max-width:280px;" aria-label="Buscar proposta"/>
+        <select id="filtro-etapa" onchange="listaFiltrar()" style="max-width:200px;" aria-label="Filtrar por etapa"></select>
+        <select id="filtro-tipo" onchange="listaFiltrar()" style="max-width:150px;" aria-label="Filtrar por tipo"><option value="">Todos os tipos</option><option value="novo">Novo</option><option value="portado">Portado</option><option value="renovacao">Renovação</option></select>
+        <select id="filtro-consultor" onchange="listaFiltrar()" style="max-width:160px;display:none;" aria-label="Filtrar por consultor"><option value="">Todos</option></select>
+        <select id="lista-ordenar" onchange="listaFiltrar()" style="max-width:190px;" aria-label="Ordenar">
           <option value="urgencia">Mais urgente primeiro</option>
           <option value="recente">Mais recente primeiro</option>
           <option value="razao">Ordem alfabética</option>
         </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);"><input type="checkbox" id="lista-encerradas" style="width:auto;" onchange="listaFiltrar()"/> Mostrar encerradas</label>
+        <div style="display:flex;gap:4px;margin-left:auto;">
+          <button class="btn-sm" type="button" id="lista-modo-cards" onclick="listaModo('cards')" title="Ver em cards" aria-label="Ver em cards"><i class="ti ti-layout-cards"></i> Cards</button>
+          <button class="btn-sm" type="button" id="lista-modo-tabela" onclick="listaModo('tabela')" title="Ver em tabela" aria-label="Ver em tabela"><i class="ti ti-table"></i> Tabela</button>
+        </div>
       </div>
       <div id="lista-propostas"></div>
     </div>
@@ -1280,6 +1312,25 @@ function infoEtapa(etapa){
   return ETAPAS[etapa]||ETAPAS_ARQUIVADAS[etapa]||{nome:'Etapa '+etapa,cor:'#888',bg:'var(--surface-2)',tc:'var(--ink-2)'};
 }
 function etapaEmAndamento(etapa){return etapa===0||etapa===1||etapa===2;}
+// ===== Preferências do CRM (config/preferencias): mensagem do WhatsApp e limites de SLA =====
+const PREFS_PADRAO={msgWhatsapp:'Olá {responsavel}, aqui é {consultor} da M3 Solutions / TIM Empresas. Estou retornando sobre a proposta para {razao}. Podemos falar?',slaVerde:3,slaAmarelo:7};
+let PREFS=Object.assign({},PREFS_PADRAO);
+async function carregarPrefs(){
+  try{const sn=await db.collection('config').doc('preferencias').get();if(sn.exists)PREFS=Object.assign({},PREFS_PADRAO,sn.data());}catch(e){console.warn('Preferências padrão em uso',e);}
+}
+function textoWhatsApp(p){
+  const cons=USERS[p.consultor];
+  return String(PREFS.msgWhatsapp||PREFS_PADRAO.msgWhatsapp)
+    .replace(/\{responsavel\}/g,(p.responsavel||'').trim())
+    .replace(/\{consultor\}/g,cons?(cons.nomeCompleto||cons.nome):'')
+    .replace(/\{razao\}/g,p.razao||'')
+    .replace(/\s+,/g,',').replace(/\s{2,}/g,' ').trim();
+}
+function linkWhatsApp(p){
+  const d=telPrincipal(p.telefone||'');
+  if(!d)return'';
+  return'https://wa.me/55'+d+'?text='+encodeURIComponent(textoWhatsApp(p));
+}
 // resultado: 'aberta' | 'ganha' (pedido ativado no Backoffice) | 'perdida'. Registros antigos sem o campo: perdida pela etapa, o resto aberta.
 function resultadoDe(p){return p.resultado||(p.etapa==='perdida'?'perdida':'aberta');}
 function badgeResultado(p,e){
@@ -1429,7 +1480,7 @@ function getPropostas(){return veTudoPropostas()?propostas:propostas.filter(p=>p
 function podeMoverBackoffice(){return currentUser==='master'||ehPerfilBackoffice()||!!(USERS[currentUser]&&USERS[currentUser].podeBackoffice);}
 function veTudoBackoffice(){return podeMoverBackoffice();} // master e usuários com acesso ao Backoffice veem todos os pedidos/renovações
 function tipoBadge(tipo){const t=TIPOS[tipo]||TIPOS.novo;return`<span class="badge ${t.cls}">${t.label}</span>`;}
-function telLinks(tel){if(!tel)return'';const d=telPrincipal(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="https://wa.me/55${d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
+function telLinks(tel,p){if(!tel)return'';const d=telPrincipal(tel);return`<div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;"><a class="tel-link tel" href="tel:+55${d}"><i class="ti ti-phone" style="font-size:12px;"></i> ${fmtTel(tel)}</a><a class="tel-link wpp" href="${p?linkWhatsApp(p):'https://wa.me/55'+d}" target="_blank"><i class="ti ti-brand-whatsapp" style="font-size:12px;"></i> WhatsApp</a></div>`;}
 
 function iniciarSync(){
   if(_unsub)_unsub();setSyncStatus('carregando');
@@ -1589,6 +1640,7 @@ async function login(user){
   document.getElementById('filtro-etapa').innerHTML='<option value="">Todas as etapas</option>'+ETAPAS.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')+'<option value="perdida">Perdida</option>';
   // Perfis precisam estar carregados antes dos listeners (a permissão de Backoffice define quais consultas são feitas)
   await loadUsersFirebase();
+  await carregarPrefs();
   renderUsuarios();atualizarSelectsConsultor();
   if(user==='master')sincronizarUidRev();
   iniciarSync();iniciarSyncRenovacoes();iniciarSyncBackoffice();setTab('dashboard');
@@ -1664,7 +1716,7 @@ function setTab(tab){
   else if(tab==='renovacoes')renderRenovacoes();
   else if(tab==='backoffice')renderBackoffice();
   else if(tab==='disparo')renderDisparo();
-  else if(tab==='usuarios')renderUsuarios();
+  else if(tab==='usuarios'){renderUsuarios();preencherPrefs();}
 }
 window.setTab=setTab;
 
@@ -3568,7 +3620,7 @@ function showCalDetalhe(ds){
         </div>
         ${p.telefone?`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;">
           <a href="tel:+55${telNum}" style="font-size:11px;color:var(--accent);text-decoration:none;"><i class="ti ti-phone" style="font-size:11px;"></i> ${fmtTel(p.telefone)}</a>
-          <a href="https://wa.me/55${telNum}" target="_blank" style="font-size:11px;color:var(--green-ink);text-decoration:none;"><i class="ti ti-brand-whatsapp" style="font-size:11px;"></i> WhatsApp</a>
+          <a href="${linkWhatsApp(p)}" target="_blank" style="font-size:11px;color:var(--green-ink);text-decoration:none;"><i class="ti ti-brand-whatsapp" style="font-size:11px;"></i> WhatsApp</a>
         </div>`:''}
       </div>`;
     }).join('');
@@ -3577,6 +3629,74 @@ function showCalDetalhe(ds){
 }
 
 // ========= FOLLOW-UP =========
+// ===== Follow-up: ações rápidas na linha =====
+function somarDias(n){const d=new Date(TODAY);d.setDate(d.getDate()+n);return dateStr(d);}
+function dataBR(s){return s?new Date(s+'T12:00').toLocaleDateString('pt-BR'):'—';}
+function fecharPopFu(){const el=document.getElementById('pop-fu');if(el)el.style.display='none';}
+function abrirPopFu(btn,html){
+  let el=document.getElementById('pop-fu');
+  if(!el){el=document.createElement('div');el.id='pop-fu';el.className='pop-fu';document.body.appendChild(el);}
+  el.innerHTML=html;el.style.display='block';
+  const r=btn.getBoundingClientRect();
+  el.style.left=Math.max(8,Math.min(r.left+window.scrollX,window.innerWidth-290))+'px';
+  el.style.top=(r.bottom+window.scrollY+4)+'px';
+  const f=el.querySelector('textarea,input');if(f)f.focus();
+}
+document.addEventListener('click',function(e){if(!e.target.closest('#pop-fu')&&!e.target.closest('[data-popfu]'))fecharPopFu();});
+function fuInfo(p){
+  const d=p.retorno?diffDays(p.retorno):0;
+  const atraso=d<0?'<div style="font-size:11px;font-weight:600;color:var(--red-ink);margin-top:3px;">há '+(-d)+'d de atraso</div>':'';
+  const h=p.historico||[];const ult=h.length?h[h.length-1]:null;
+  const txt=ult?String(ult.texto||''):'';
+  const nota=txt?'<div class="fu-nota" title="'+escHtml(txt)+'">“'+escHtml(txt.slice(0,80))+(txt.length>80?'…':'')+'”</div>':'';
+  return atraso+nota;
+}
+function fuBotoes(p){
+  const id=p._docId;
+  return '<button class="btn-sm btn-verde" type="button" data-popfu="1" title="Registrar contato" aria-label="Registrar contato" onclick="fuRegistrarContato(\''+id+'\',this)"><i class="ti ti-message-plus"></i> Registrar contato</button>'
+    +'<button class="btn-sm" type="button" data-popfu="1" title="Reagendar retorno" aria-label="Reagendar retorno" onclick="fuReagendar(\''+id+'\',this)"><i class="ti ti-calendar-time"></i> Reagendar</button>'
+    +'<button class="btn-sm btn-del" type="button" title="Marcar como perdida" aria-label="Marcar como perdida" onclick="marcarPerdida(\''+id+'\')"><i class="ti ti-x"></i> Marcar perdida</button>';
+}
+function fuRegistrarContato(id,btn){
+  if(bloquearPerfilLeitura())return;
+  abrirPopFu(btn,'<label class="form-label" for="pf-texto">O que foi combinado?</label><textarea id="pf-texto" placeholder="Ex: Falei com o Carlos, vai enviar os documentos"></textarea>'
+    +'<label class="form-label" for="pf-data" style="margin-top:8px;">Novo retorno</label><input type="date" id="pf-data" min="'+TODAY_STR+'" value="'+somarDias(1)+'"/>'
+    +'<div class="campo-err" id="pf-err"></div>'
+    +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;"><button class="btn-sm" type="button" onclick="fecharPopFu()">Cancelar</button><button class="btn-sm btn-verde" type="button" onclick="fuSalvarContato(\''+id+'\')"><i class="ti ti-check"></i> Salvar</button></div>');
+}
+async function fuSalvarContato(id){
+  if(bloquearPerfilLeitura())return;
+  const texto=document.getElementById('pf-texto').value.trim(),data=document.getElementById('pf-data').value;
+  const err=document.getElementById('pf-err');
+  const erro=!texto?'Escreva a anotação do contato.':(!data?'Informe a nova data de retorno.':(data<TODAY_STR?'A data não pode estar no passado.':''));
+  if(erro){err.textContent=erro;err.style.display='block';return;}
+  const p=propostas.find(function(x){return x._docId===id;});if(!p)return;
+  const hist=(p.historico||[]).concat([{data:Date.now(),autor:currentUser,texto:texto+' (novo retorno: '+dataBR(data)+')'}]);
+  try{
+    await db.collection('propostas').doc(id).update({historico:hist,retorno:data,atualizadoEm:Date.now()});
+    fecharPopFu();showNotif('Contato registrado. Retorno em '+dataBR(data)+'.');
+  }catch(e){console.error(e);err.textContent='Não foi possível salvar'+(e&&e.code?' ('+e.code+')':'')+'.';err.style.display='block';}
+}
+function fuReagendar(id,btn){
+  if(bloquearPerfilLeitura())return;
+  abrirPopFu(btn,'<div class="form-label">Reagendar retorno</div>'
+    +'<div class="pf-rapidos"><button class="btn-sm" type="button" onclick="fuAplicarReagendar(\''+id+'\',1)">+1 dia</button><button class="btn-sm" type="button" onclick="fuAplicarReagendar(\''+id+'\',3)">+3 dias</button><button class="btn-sm" type="button" onclick="fuAplicarReagendar(\''+id+'\',7)">+7 dias</button></div>'
+    +'<label class="form-label" for="pf-data">Ou escolha a data</label><input type="date" id="pf-data" min="'+TODAY_STR+'" value="'+somarDias(1)+'"/>'
+    +'<div class="campo-err" id="pf-err"></div>'
+    +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;"><button class="btn-sm" type="button" onclick="fecharPopFu()">Cancelar</button><button class="btn-sm btn-azul" type="button" onclick="fuAplicarReagendar(\''+id+'\',null)">Aplicar</button></div>');
+}
+async function fuAplicarReagendar(id,dias){
+  if(bloquearPerfilLeitura())return;
+  const data=dias?somarDias(dias):document.getElementById('pf-data').value;
+  const err=document.getElementById('pf-err');
+  if(!data||data<TODAY_STR){err.textContent=!data?'Informe a data.':'A data não pode estar no passado.';err.style.display='block';return;}
+  const p=propostas.find(function(x){return x._docId===id;});if(!p)return;
+  const hist=(p.historico||[]).concat([{data:Date.now(),autor:currentUser,texto:'Retorno reagendado de '+dataBR(p.retorno)+' para '+dataBR(data)}]);
+  try{
+    await db.collection('propostas').doc(id).update({historico:hist,retorno:data,atualizadoEm:Date.now()});
+    fecharPopFu();showNotif('Retorno reagendado para '+dataBR(data)+'.');
+  }catch(e){console.error(e);err.textContent='Não foi possível salvar'+(e&&e.code?' ('+e.code+')':'')+'.';err.style.display='block';}
+}
 function renderFollowup(){
   renderCal();
   const lista=getPropostas().filter(p=>etapaEmAndamento(p.etapa)&&p.retorno);
@@ -3602,13 +3722,15 @@ function renderFollowup(){
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:500;">${p.razao}</div>
         <div style="font-size:12px;color:var(--ink-2);">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
+        ${fuInfo(p)}
         <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">
           <span class="badge ${t.cls}" style="font-size:10px;">${t.label}</span>
           ${p.linhas?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:var(--purple-bg);color:var(--purple-ink);">${p.linhas} linhas</span>`:''}
           ${currentUser==='master'?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
         </div>
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;">${fuBotoes(p)}</div>
       </div>
-      ${p.telefone?`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;"><a href="tel:+55${telNum}" style="font-size:11px;color:var(--accent);text-decoration:none;"><i class="ti ti-phone" style="font-size:11px;"></i> ${fmtTel(p.telefone)}</a><a href="https://wa.me/55${telNum}" target="_blank" style="font-size:11px;color:var(--green-ink);text-decoration:none;"><i class="ti ti-brand-whatsapp" style="font-size:11px;"></i> WhatsApp</a></div>`:''}
+      ${p.telefone?`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;"><a href="tel:+55${telNum}" style="font-size:11px;color:var(--accent);text-decoration:none;"><i class="ti ti-phone" style="font-size:11px;"></i> ${fmtTel(p.telefone)}</a><a href="${linkWhatsApp(p)}" target="_blank" style="font-size:11px;color:var(--green-ink);text-decoration:none;"><i class="ti ti-brand-whatsapp" style="font-size:11px;"></i> WhatsApp</a></div>`:''}
     </div>`;
   }
 
@@ -3639,16 +3761,61 @@ function renderFollowup(){
             <span class="badge" style="background:${e.bg};color:${e.tc};">${e.nome}</span>
           </div>
           <div style="font-size:13px;color:var(--ink-2);">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
-          ${telLinks(p.telefone||'')}
+          ${telLinks(p.telefone||'',p)}
         </div>
       </div>
+      ${fuInfo(p)}
       <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
+        ${fuBotoes(p)}
         ${etapaEmAndamento(p.etapa)?`<button class="btn-sm btn-azul" onclick="avancarEtapa('${p._docId}',${p.etapa})"><i class="ti ti-arrow-right"></i> Avançar etapa</button>`:''}
         <button class="btn-sm btn-purple" onclick="editarProposta('${p._docId}')"><i class="ti ti-edit"></i> Editar</button>
       </div>
     </div>`;
   }
   document.getElementById('fu-lista').innerHTML=todos.length?todos.map(fuListCard).join(''):'<div class="empty">Nenhum retorno agendado.</div>';
+}
+
+const LISTA_POR_PAG=25;
+let _listaPagina=1;
+function modoLista(){try{return localStorage.getItem('crm_lista_modo')==='tabela'?'tabela':'cards';}catch(e){return'cards';}}
+function listaModo(m){try{localStorage.setItem('crm_lista_modo',m);}catch(e){}renderLista();}
+function listaFiltrar(){_listaPagina=1;renderLista();}
+function listaPagina(n){_listaPagina=n;renderLista();const el=document.getElementById('view-lista');if(el)el.scrollIntoView({block:'start'});}
+window.listaModo=listaModo;window.listaFiltrar=listaFiltrar;window.listaPagina=listaPagina;
+// Encerrada = ganha, perdida ou etapa antiga arquivada.
+function propostaEncerrada(p){return resultadoDe(p)!=='aberta'||(p.etapa!=='perdida'&&!ETAPAS[p.etapa]);}
+// Urgência: mais dias de atraso primeiro, depois retorno hoje, depois o retorno mais próximo; sem retorno e encerradas vão para o fim.
+function urgenciaChave(p){
+  if(propostaEncerrada(p))return[3,0];
+  if(!p.retorno)return[2,0];
+  const d=diffDays(p.retorno);
+  return d<0?[0,d]:[1,d];
+}
+function htmlPaginacao(total,paginas){
+  const ini=total?(_listaPagina-1)*LISTA_POR_PAG+1:0,fim=Math.min(total,_listaPagina*LISTA_POR_PAG);
+  return '<div class="pager"><span>'+ini+'–'+fim+' de '+total+' propostas</span>'
+    +(paginas>1?'<button class="btn-sm" type="button" '+(_listaPagina<=1?'disabled':'')+' onclick="listaPagina('+(_listaPagina-1)+')" aria-label="Página anterior"><i class="ti ti-chevron-left"></i></button><span>Página '+_listaPagina+' de '+paginas+'</span><button class="btn-sm" type="button" '+(_listaPagina>=paginas?'disabled':'')+' onclick="listaPagina('+(_listaPagina+1)+')" aria-label="Próxima página"><i class="ti ti-chevron-right"></i></button>':'')
+    +'</div>';
+}
+function htmlTabelaLista(ps){
+  const linhas=ps.map(function(p){
+    const e=infoEtapa(p.etapa),u=USERS[p.consultor];
+    const wa=linkWhatsApp(p);
+    return '<tr><td><strong>'+escHtml(p.razao||'')+'</strong><div class="tl-sub">'+escHtml(p.responsavel||'')+'</div></td>'
+      +'<td>'+escHtml(p.cnpj||'—')+'</td>'
+      +'<td>'+escHtml(u?u.nome:(p.consultor||'—'))+'</td>'
+      +'<td>'+tipoBadge(p.tipo)+'</td>'
+      +'<td>'+(p.linhas||'—')+'</td>'
+      +'<td>'+(p.receita?fmtMoeda(valorNum(p.receita)):'—')+'</td>'
+      +'<td>'+badgeResultado(p,e)+'</td>'
+      +'<td>'+dataBR(p.retorno)+'</td>'
+      +'<td class="tl-acoes">'
+      +'<button class="btn-sm" type="button" title="Ver detalhes" aria-label="Ver detalhes" onclick="verDetalhe(\''+p._docId+'\')"><i class="ti ti-eye"></i></button> '
+      +(wa?'<a class="btn-sm" href="'+wa+'" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a> ':'')
+      +(podeEditarPropostas()?'<button class="btn-sm btn-purple" type="button" title="Editar" aria-label="Editar proposta" onclick="editarProposta(\''+p._docId+'\')"><i class="ti ti-edit"></i></button>':'')
+      +'</td></tr>';
+  }).join('');
+  return '<div class="tabela-wrap"><table class="tabela-lista"><thead><tr><th>Razão social</th><th>CNPJ</th><th>Consultor</th><th>Tipo</th><th>Linhas</th><th>Receita</th><th>Etapa</th><th>Retorno</th><th></th></tr></thead><tbody>'+linhas+'</tbody></table></div>';
 }
 
 function renderLista(){
@@ -3676,7 +3843,10 @@ function renderLista(){
   if(fe!=='')lista=lista.filter(p=>String(p.etapa)===fe);
   if(ft)lista=lista.filter(p=>p.tipo===ft);
   if(fc)lista=lista.filter(p=>p.consultor===fc);
-  
+  const encEl=document.getElementById('lista-encerradas');
+  const mostrarEnc=(encEl&&encEl.checked)||fe==='perdida'||(fe!==''&&!ETAPAS[fe]);
+  if(!mostrarEnc)lista=lista.filter(p=>!propostaEncerrada(p));
+
   if(busca){
     lista=lista.filter(function(p){
       const cnpjLimpo=(p.cnpj||'').replace(/\D/g,'');
@@ -3690,11 +3860,8 @@ function renderLista(){
   lista=lista.slice();
   if(ordenar==='urgencia'){
     lista.sort(function(a,b){
-      // Sem retorno vai pro final; quem tem retorno mais próximo (ou mais atrasado) vem primeiro
-      if(!a.retorno&&!b.retorno)return 0;
-      if(!a.retorno)return 1;
-      if(!b.retorno)return -1;
-      return a.retorno>b.retorno?1:-1;
+      const ka=urgenciaChave(a),kb=urgenciaChave(b);
+      return ka[0]-kb[0]||ka[1]-kb[1];
     });
   }else if(ordenar==='recente'){
     lista.sort(function(a,b){return (b.criadoEm||0)-(a.criadoEm||0);});
@@ -3702,7 +3869,14 @@ function renderLista(){
     lista.sort(function(a,b){return (a.razao||'').localeCompare(b.razao||'');});
   }
   const c=document.getElementById('lista-propostas');
-  if(!lista.length){c.innerHTML='<div class="empty">Nenhuma proposta encontrada.</div>';return;}
+  const modo=modoLista();
+  document.getElementById('lista-modo-cards').classList.toggle('btn-azul',modo==='cards');
+  document.getElementById('lista-modo-tabela').classList.toggle('btn-azul',modo==='tabela');
+  if(!lista.length){c.innerHTML='<div class="empty">Nenhuma proposta encontrada.'+(mostrarEnc?'':' As encerradas (ganhas e perdidas) estão ocultas.')+'</div>';return;}
+  const totalLista=lista.length,paginasLista=Math.max(1,Math.ceil(totalLista/LISTA_POR_PAG));
+  if(_listaPagina>paginasLista)_listaPagina=paginasLista;
+  lista=lista.slice((_listaPagina-1)*LISTA_POR_PAG,_listaPagina*LISTA_POR_PAG);
+  if(modo==='tabela'){c.innerHTML=htmlTabelaLista(lista)+htmlPaginacao(totalLista,paginasLista);return;}
   c.innerHTML=lista.map(p=>{
     const e=infoEtapa(p.etapa);
     const u=USERS[p.consultor]||USERS.karla;
@@ -3729,7 +3903,7 @@ function renderLista(){
             ${veTudoPropostas()?`<span class="badge" style="background:${u.bg};color:${u.c};">${(USERS[p.consultor]||{nome:'?'}).nome}</span>`:''}
           </div>
           <div style="font-size:13px;color:var(--ink-2);">${p.responsavel||''}${p.cnpj?' · '+p.cnpj:''}</div>
-          ${telLinks(p.telefone||'')}
+          ${telLinks(p.telefone||'',p)}
           <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">
             ${p.linhas?`<span style="font-size:12px;color:var(--ink-2);"><i class="ti ti-sim-card" style="font-size:12px;vertical-align:-1px;"></i> ${p.linhas} linhas</span>`:''}
             ${p.receita?`<span style="font-size:12px;color:var(--ink-2);"><i class="ti ti-currency-dollar" style="font-size:12px;vertical-align:-1px;"></i> ${fmtMoeda(p.receita)}/mês</span>`:''}
@@ -3749,7 +3923,7 @@ function renderLista(){
         ${currentUser==='master'?`<button class="btn-sm btn-del" onclick="excluirProposta('${p._docId}')"><i class="ti ti-trash"></i> Excluir</button>`:''}
       </div>
     </div>`;
-  }).join('');
+  }).join('')+htmlPaginacao(totalLista,paginasLista);
 }
 
 function renderMetricas(){
@@ -4328,7 +4502,7 @@ function verDetalhe(docId){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:10px;">
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">CNPJ</div><div>${p.cnpj||'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Responsável</div><div>${p.responsavel||'—'}</div></div>
-      <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Telefone</div><div>${p.telefone?`<a href="tel:+55${telPrincipal(p.telefone)}" style="color:var(--accent);text-decoration:none;">${fmtTel(p.telefone)}</a> · <a href="https://wa.me/55${telPrincipal(p.telefone)}" target="_blank" style="color:var(--green-ink);text-decoration:none;">WhatsApp</a>`:'—'}</div></div>
+      <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Telefone</div><div>${p.telefone?`<a href="tel:+55${telPrincipal(p.telefone)}" style="color:var(--accent);text-decoration:none;">${fmtTel(p.telefone)}</a> · <a href="${linkWhatsApp(p)}" target="_blank" style="color:var(--green-ink);text-decoration:none;">WhatsApp</a>`:'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Retorno</div><div>${p.retorno?new Date(p.retorno+'T12:00').toLocaleDateString('pt-BR'):'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Qtd. linhas</div><div>${p.linhas||'—'}</div></div>
       <div><div style="color:var(--ink-3);font-size:11px;margin-bottom:2px;">Receita mensal</div><div>${p.receita?fmtMoeda(p.receita):'—'}</div></div>
@@ -5213,6 +5387,42 @@ window.migracoes.ajuda=function(){
   ].join('\n'));
 };
 
+// ===== Configurações (master) =====
+function preencherPrefs(){
+  const t=document.getElementById('cfg-msg-whatsapp');if(!t||currentUser!=='master')return;
+  t.value=PREFS.msgWhatsapp;
+  document.getElementById('cfg-sla-verde').value=PREFS.slaVerde;
+  document.getElementById('cfg-sla-amarelo').value=PREFS.slaAmarelo;
+  previaMsgWhatsApp();
+}
+function previaMsgWhatsApp(){
+  const t=document.getElementById('cfg-msg-whatsapp');if(!t)return;
+  const antes=PREFS.msgWhatsapp;PREFS.msgWhatsapp=t.value||PREFS_PADRAO.msgWhatsapp;
+  const exemplo=textoWhatsApp({responsavel:'Maria',razao:'Silva Ltda',consultor:currentUser});
+  PREFS.msgWhatsapp=antes;
+  document.getElementById('cfg-msg-previa').textContent='Prévia: '+exemplo;
+}
+async function salvarPrefs(){
+  if(currentUser!=='master')return;
+  const msg=document.getElementById('cfg-msg-whatsapp').value.trim();
+  const verde=parseInt(document.getElementById('cfg-sla-verde').value,10);
+  const amarelo=parseInt(document.getElementById('cfg-sla-amarelo').value,10);
+  const errEl=document.getElementById('cfg-err'),msgEl=document.getElementById('cfg-err-msg');
+  errEl.style.display='none';
+  let erro='';
+  if(!msg)erro='Escreva a mensagem do WhatsApp.';
+  else if(!(verde>=1))erro='Informe o limite verde do SLA (mínimo 1 dia).';
+  else if(!(amarelo>verde))erro='O limite amarelo precisa ser maior que o verde.';
+  if(erro){msgEl.textContent=erro;errEl.style.display='flex';return;}
+  try{
+    await db.collection('config').doc('preferencias').set({msgWhatsapp:msg,slaVerde:verde,slaAmarelo:amarelo});
+    PREFS={msgWhatsapp:msg,slaVerde:verde,slaAmarelo:amarelo};
+    showNotif('Configurações salvas.');
+    if(currentTab==='backoffice')renderBackoffice();
+  }catch(e){console.error(e);msgEl.textContent='Não foi possível salvar'+(e&&e.code?' ('+e.code+')':'')+'.';errEl.style.display='flex';}
+}
+window.salvarPrefs=salvarPrefs;
+
 // ========= GERENCIAR USUÁRIOS =========
 async function loadUsersFirebase(){
   try{
@@ -5507,7 +5717,7 @@ document.getElementById('ck-cnpj').addEventListener('input',function(){
 const pipeBusca=document.getElementById('pipe-busca');
 if(pipeBusca)pipeBusca.addEventListener('input',function(){renderPipeline();});
 const listaBusca=document.getElementById('lista-busca');
-if(listaBusca)listaBusca.addEventListener('input',function(){renderLista();});
+if(listaBusca)listaBusca.addEventListener('input',function(){listaFiltrar();});
 
 // Listener global para botões e cards do kanban dark
 document.addEventListener('click', function(e){
@@ -5561,6 +5771,7 @@ if(renTelefone)renTelefone.addEventListener('input',function(){
 });
 
 ['p-receita','u-meta','ren-valor-total','ck-valor'].forEach(function(id){ligarMoeda(document.getElementById(id));});
+document.getElementById('cfg-msg-whatsapp').addEventListener('input',previaMsgWhatsApp);
 document.getElementById('mp-motivo').innerHTML=opcoesMotivoPerda();
 document.getElementById('p-motivo').innerHTML=opcoesMotivoPerda();
 document.getElementById('mp-motivo').addEventListener('change',function(){document.getElementById('mp-det-obrig').style.display=this.value.indexOf('Outro')===0?'inline':'none';});

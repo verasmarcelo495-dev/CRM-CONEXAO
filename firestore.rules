@@ -143,6 +143,12 @@ service cloud.firestore {
       allow write: if souMaster();
     }
 
+    // Preferências do CRM (mensagem do WhatsApp, limites de SLA): cadastrados leem, só master escreve.
+    match /config/preferencias {
+      allow read: if registrado();
+      allow write: if souMaster();
+    }
+
     // Legado: senhas em texto puro (pré-Firebase Auth). Só o master pode ver/editar.
     match /config/senhas {
       allow read, write: if souMaster();
